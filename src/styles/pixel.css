@@ -728,3 +728,45 @@ small, .notice, .progress-label, .stage-track span, .game-message,
   .preview-word-card { padding-block: 14px; }
   .sentence-zone, .sentence-bank { gap: 5px; padding: 6px; }
 }
+
+/* Keep the next action at the bottom while the content stays in document order. */
+.onboarding { place-items: stretch center; }
+.onboarding > :is(.splash, .selection) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-block: clamp(12px, 5dvh, 48px) 0;
+}
+.onboarding .onboarding-back { align-self: flex-start; }
+.onboarding .splash { text-align: center; align-items: center; }
+.onboarding > :is(.splash, .selection) > .button:last-child {
+  margin-block-start: auto;
+}
+.main:is([data-stage="preview"], [data-stage="match"], [data-stage="sentence"],
+  [data-screen="smalltalkquiz"]) > .game-page,
+.search-page:has(.search-ready), .result-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  justify-content: flex-start;
+}
+.game-page > :is(.preview-word-card, .sentence-card, .search-ready) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.preview-word-card, .search-ready { align-items: center; }
+.game-page > :is(.preview-word-card, .sentence-card, .search-ready) > .button:last-child {
+  margin-block-start: auto;
+  align-self: stretch;
+  max-width: none;
+}
+.match-actions, .result-page > .button:last-child {
+  margin-block-start: auto;
+}
+.match-actions > .button { flex: 1; }
+.result-page { align-items: center; }
+.result-page > .button:last-child { align-self: stretch; }
+@media (max-height: 600px) {
+  .onboarding > :is(.splash, .selection) { padding-block-start: 8px; }
+}
