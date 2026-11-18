@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -53,6 +54,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
 
   static final _onlineUri = Uri.https('smalltalk-2ijuwon.vercel.app', '/');
   bool _usingLocal = false;
+  Timer? _connectionTimer;
   HttpServer? _server;
   WebViewController? _controller;
   String? _error;
@@ -77,6 +79,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
                   _error == null &&
                   host == (_usingLocal ? '127.0.0.1' : _onlineUri.host)) {
                 setState(() => _loading = false);
+                _watchConnection(_controller!);
               }
             },
             onWebResourceError: (error) {
@@ -92,7 +95,10 @@ class _EnglishWebViewState extends State<EnglishWebView> {
         );
       setState(() => _controller = controller);
       if (await _siteAvailable()) {
-        if (mounted) await controller.loadRequest(_onlineUri);
+        if (mounted) {
+          await controller.loadRequest(_onlineUri);
+          _watchConnection(controller);
+        }
       } else if (mounted) {
         await _openLocal(controller: controller);
       }
@@ -116,9 +122,50 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     }
   }
 
+  void _watchConnection(WebViewController controller) {
+    _connectionTimer?.cancel();
+    if (!mounted || _controller != controller) return;
+    _connectionTimer = Timer(const Duration(seconds: 5), () async {
+      final available = await _siteAvailable();
+      if (!mounted || _controller != controller) return;
+      if (!_loading && available == _usingLocal) {
+        bool canSwitch = false;
+        try {
+          final result = await controller.runJavaScriptReturningResult(
+            "document.documentElement.dataset.webviewSwitchSafe === 'true'",
+          );
+          canSwitch = result == true || result == 'true';
+        } catch (_) {
+          // Keep the current page if its state cannot be checked.
+        }
+        if (!mounted || _controller != controller) return;
+        if (canSwitch) {
+          if (available) {
+            setState(() {
+              _usingLocal = false;
+              _loading = true;
+            });
+            try {
+              await controller.loadRequest(_onlineUri);
+            } catch (_) {
+              if (mounted) await _openLocal(controller: controller);
+            }
+          } else {
+            await _openLocal(controller: controller);
+          }
+        }
+      }
+      _watchConnection(controller);
+    });
+  }
+
   Future<void> _openLocal({required WebViewController controller}) async {
     if (_usingLocal) return;
-    _usingLocal = true;
+    _connectionTimer?.cancel();
+    setState(() {
+      _usingLocal = true;
+      _loading = true;
+    });
     try {
       final server =
           _server ??
@@ -180,6 +227,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
 
   @override
   void dispose() {
+    _connectionTimer?.cancel();
     _server?.close(force: true);
     super.dispose();
   }
@@ -189,40 +237,91 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     return Scaffold(
       backgroundColor: _background,
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            if (_controller case final controller?)
-              WebViewWidget(controller: controller),
-            if (_loading) const Center(child: CircularProgressIndicator()),
-            if (_error case final error?)
-              Center(
+            if (_usingLocal && !_loading && _error == null)
+              Align(
+                alignment: Alignment.centerRight,
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('화면을 불러오지 못했습니다.'),
-                      const SizedBox(height: 8),
-                      Text(error, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: () {
-                          setState(() {
-                            _error = null;
-                            _loading = true;
-                          });
-                          _usingLocal = false;
-                          _openSite();
-                        },
-                        child: const Text('다시 시도'),
-                      ),
-                    ],
+                  padding: const EdgeInsets.only(right: 12, bottom: 2),
+                  child: Semantics(
+                    label: '오프라인 모드',
+                    child: const CustomPaint(
+                      size: Size(20, 16),
+                      painter: _OfflineWifiPainter(),
+                    ),
                   ),
                 ),
               ),
+            Expanded(
+              child: Stack(
+                children: [
+                  if (_controller case final controller?)
+                    WebViewWidget(controller: controller),
+                  if (_loading)
+                    const Center(child: CircularProgressIndicator()),
+                  if (_error case final error?)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('화면을 불러오지 못했습니다.'),
+                            const SizedBox(height: 8),
+                            Text(error, textAlign: TextAlign.center),
+                            const SizedBox(height: 16),
+                            FilledButton(
+                              onPressed: () {
+                                setState(() {
+                                  _error = null;
+                                  _loading = true;
+                                });
+                                _usingLocal = false;
+                                _openSite();
+                              },
+                              child: const Text('다시 시도'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _OfflineWifiPainter extends CustomPainter {
+  const _OfflineWifiPainter();
+
+  static const _pixels = [
+    'X..####...',
+    'XX#....##.',
+    '.XX.##....',
+    '..XX..##..',
+    '...XX.....',
+    '....XX....',
+    '....#XX...',
+    '......XX..',
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFFC32D42);
+    final unit = size.width / 10;
+    for (var y = 0; y < _pixels.length; y++) {
+      for (var x = 0; x < _pixels[y].length; x++) {
+        if (_pixels[y][x] == '.') continue;
+        canvas.drawRect(Rect.fromLTWH(x * unit, y * unit, unit, unit), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_OfflineWifiPainter oldDelegate) => false;
 }

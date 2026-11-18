@@ -1295,6 +1295,9 @@ function animateFluidLayout(previous) {
 }
 
 function render({ resetScroll = false } = {}) {
+  document.documentElement.dataset.webviewSwitchSafe = String(
+    screen === 'home' || screen === 'onboarding' && onboardingStep === 0
+  );
   const nextViewKey = currentViewKey();
   const isViewChange = paintedViewKey && paintedViewKey !== nextViewKey;
   const previousScreen = paintedViewKey?.split(':')[0];
