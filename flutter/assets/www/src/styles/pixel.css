@@ -695,3 +695,36 @@ small, .notice, .progress-label, .stage-track span, .game-message,
 .spell-clue > span, .talk-level, .boss-meter span, .fixed-goal {
   font-weight: 700;
 }
+
+/* Let panels fill the available width, with spacing that follows screen height. */
+:root {
+  --panel-gap: clamp(9px, 1.7dvh, 20px);
+  --panel-padding: clamp(12px, 2dvh, 22px);
+  --control-height: clamp(44px, 7dvh, 58px);
+}
+.main { padding: var(--panel-gap) clamp(8px, 2vi, 30px); }
+.page { gap: var(--panel-gap); width: min(100%, 980px); }
+.page--narrow { width: min(100%, 680px); }
+.home-page, .game-page, .typing-page { width: min(100%, 1440px); }
+.splash, .selection { width: min(100%, 560px); gap: var(--panel-gap); }
+.card, .sentence-card { padding: var(--panel-padding); }
+.dashboard-grid, .choices, .sentence-card, .talk-detail,
+.match-column, .typing-form { gap: clamp(7px, 1.3dvh, 14px); }
+.sentence-zone, .sentence-bank { gap: 8px; padding: 8px; }
+.button, .choice, .listen-button { min-height: var(--control-height); }
+.game-exit, .word-token, .match-tile { min-height: clamp(38px, 6dvh, 50px); }
+.game-links .button {
+  gap: 5px;
+  min-height: clamp(68px, 12dvh, 104px);
+  font-size: max(19px, .98rem);
+}
+.preview-meaning { font-size: 1.1rem; }
+@media (min-width: 900px) {
+  .home-page { align-content: start; }
+  .duel-choices { width: min(100%, 720px); }
+}
+@media (max-height: 600px) {
+  .card, .sentence-card { padding: 10px; }
+  .preview-word-card { padding-block: 14px; }
+  .sentence-zone, .sentence-bank { gap: 5px; padding: 6px; }
+}
