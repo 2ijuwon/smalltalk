@@ -625,3 +625,44 @@ strong, b { font-weight: 800; }
   .game-exit { padding-inline: 7px; }
   .match-tile { font-size: 15px; }
 }
+
+/* Give labels more room before reducing type on narrow screens. */
+:root { font-size: clamp(17px, calc(16px + .4vi), 20px); }
+.bottom-nav button { font-size: clamp(15px, 4vi, 17px); }
+.xp span, .eyebrow, .daily-count small, .progress-label,
+.game-message, .match-column p, .talk-level, .talk-detail span,
+.search-toolbar span, .search-toolbar .search-score,
+.search-ready small, .duel-intro > small { font-size: .89rem; }
+.game-links .button, .game-exit, .fixed-goal,
+.sentence-zone p, .typing-rules, .duel-choices .button { font-size: .94rem; }
+.game-links .button small, .typing-upgrades small,
+.typing-offers small, .duel-difficulties .button small { font-size: .83rem; }
+.stage-track span, .spell-clue > small, .spell-clue > span { font-size: .86rem; }
+.match-board { gap: clamp(16px, 5vi, 64px); }
+.match-column, .match-tile { min-inline-size: 0; }
+.match-tile { font-size: .94rem; padding-inline: 5px; }
+.game-header > div { min-inline-size: 0; }
+.game-header h1 { font-size: clamp(22px, 5.5vi, 30px); }
+.stage-track span, .game-exit, .typing-hud > span { white-space: nowrap; }
+.typing-hud { font-size: .88rem; gap: 6px; }
+.typing-form input { font-size: 1rem; }
+.letter-grid button { font-size: clamp(16px, 4vi, 21px); }
+.spell-clue > span, .duel-choices .button, .review-words li {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.stats-grid span { font-size: .89rem; }
+.stats-grid--three .card { min-inline-size: 0; }
+.stats-grid--three .card span { word-break: keep-all; }
+
+@media (max-width: 440px) {
+  .game-links .button { padding-inline: 4px; }
+  .stage-track { gap: 2px; }
+  .stats-grid--three { grid-template-columns: minmax(0, 1fr); }
+  .stats-grid--three .card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+}
