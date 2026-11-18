@@ -169,17 +169,19 @@ strong, b { font-weight: 800; }
 }
 .pixel-sprite--slime::before { display: none; }
 .pixel-sprite--slime svg { display: block; width: 100%; height: 100%; image-rendering: pixelated; overflow: visible; }
-.slime-frame { opacity: 0; }
-.slime-frame--0 { animation: slime-frame-0 960ms steps(1, end) infinite; }
-.slime-frame--1 { animation: slime-frame-1 960ms steps(1, end) infinite; }
-.slime-frame--2 { animation: slime-frame-2 960ms steps(1, end) infinite; }
-.slime-frame--3 { animation: slime-frame-3 960ms steps(1, end) infinite; }
-.slime-frame--4 { animation: slime-frame-4 960ms steps(1, end) infinite; }
-@keyframes slime-frame-0 { 0%, 12.49% { opacity: 1; } 12.5%, 100% { opacity: 0; } }
-@keyframes slime-frame-1 { 0%, 12.49%, 25%, 87.49% { opacity: 0; } 12.5%, 24.99%, 87.5%, 100% { opacity: 1; } }
-@keyframes slime-frame-2 { 0%, 24.99%, 37.5%, 74.99%, 87.5%, 100% { opacity: 0; } 25%, 37.49%, 75%, 87.49% { opacity: 1; } }
-@keyframes slime-frame-3 { 0%, 37.49%, 50%, 62.49%, 75%, 100% { opacity: 0; } 37.5%, 49.99%, 62.5%, 74.99% { opacity: 1; } }
-@keyframes slime-frame-4 { 0%, 49.99%, 62.5%, 100% { opacity: 0; } 50%, 62.49% { opacity: 1; } }
+.pixel-sprite--slime svg {
+  transform-origin: 50% 85%;
+  animation: slime-sway 4.4s ease-in-out infinite;
+}
+.slime-frame--0 { animation: slime-eyes-open 5.16s steps(1, end) infinite; }
+.slime-frame--1 { opacity: 0; animation: slime-eyes-closed 5.16s steps(1, end) infinite; }
+@keyframes slime-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+@keyframes slime-eyes-open { 0% { opacity: 1; } 96.9%, 100% { opacity: 0; } }
+@keyframes slime-eyes-closed { 0% { opacity: 0; } 96.9%, 100% { opacity: 1; } }
+
 .home-hero > .pixel-sprite {
   --sprite-scale: 3;
   width: 48px;
@@ -780,19 +782,6 @@ small, .notice, .progress-label, .stage-track span, .game-message,
   place-items: center;
   inline-size: 100%;
   min-block-size: clamp(92px, 27dvh, 270px);
-  background: #d2edff;
-  border: 2px solid #93bddf;
-  border-radius: var(--radius);
-  box-shadow: inset 0 -12px #b6def8;
-}
-.splash-scene::before {
-  content: "";
-  position: absolute;
-  inset: auto 18% 17% 18%;
-  height: 10px;
-  background: #a9d5f1;
-  clip-path: var(--pixel-corners);
-  z-index: -1;
 }
 .splash-scene .pixel-sprite {
   width: clamp(80px, 18dvh, 152px);

@@ -180,13 +180,12 @@ function slimeFrames(name) {
   const base = spriteRows[name];
   const fill = name === 'boss' ? 'v' : 's';
   const light = name === 'boss' ? 'm' : 'l';
-  return [
-    base,
-    base.map((row, y) => y === 1 ? '......oooo......' : y === 14 ? '....oooooooo....' : row),
-    base.map((row, y) => y === 1 ? '....oooooooo....' : y === 2 ? `..oo${fill.repeat(8)}oo..` : y === 13 ? `..oo${fill.repeat(8)}oo..` : row),
-    base.map((row, y) => y === 6 ? `o${fill}${light.repeat(5)}kk${light.repeat(5)}${fill}o` : y === 7 ? `o${fill}${light.repeat(12)}${fill}o` : row),
-    base.map((row, y) => y === 1 ? '.....oooooo.....' : y === 6 ? `o${fill}${light.repeat(4)}k${light.repeat(2)}k${light.repeat(4)}${fill}o` : y === 14 ? '......oooo......' : row),
-  ];
+  const blink = base.map((row, y) => {
+    if (y === 6) return row.replaceAll('k', light);
+    if (y === 7) return `o${fill}${light.repeat(3)}kk${light.repeat(2)}kk${light.repeat(3)}${fill}o`;
+    return row;
+  });
+  return [base, blink];
 }
 
 function brandMark() { return `<span class="brand-mark">${pixelSprite('mascot')}</span>`; }
