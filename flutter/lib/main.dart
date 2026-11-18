@@ -51,6 +51,8 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     '/src/styles/Galmuri11-Bold.woff2': 'src/styles/Galmuri11-Bold.woff2',
   };
 
+  static final _onlineUri = Uri.https('smalltalk-2ijuwon.vercel.app', '/');
+  bool _usingLocal = false;
   HttpServer? _server;
   WebViewController? _controller;
   String? _error;
@@ -64,46 +66,83 @@ class _EnglishWebViewState extends State<EnglishWebView> {
 
   Future<void> _openSite() async {
     try {
-      final server = await shelf_io.serve(
-        _serveAsset,
-        InternetAddress.loopbackIPv4,
-        _localPort,
-      );
-      if (!mounted) {
-        await server.close(force: true);
-        return;
-      }
-      _server = server;
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(_background)
         ..setNavigationDelegate(
           NavigationDelegate(
-            onPageFinished: (_) {
-              if (mounted) setState(() => _loading = false);
+            onPageFinished: (url) {
+              final host = Uri.tryParse(url)?.host;
+              if (mounted &&
+                  _error == null &&
+                  host == (_usingLocal ? '127.0.0.1' : _onlineUri.host)) {
+                setState(() => _loading = false);
+              }
             },
             onWebResourceError: (error) {
-              if (mounted && error.isForMainFrame == true) {
-                setState(() {
-                  _loading = false;
-                  _error = error.description;
-                });
+              if (!mounted || error.isForMainFrame != true) return;
+              if (!_usingLocal) {
+                _openLocal(controller: _controller!);
+              } else if (Uri.tryParse(error.url ?? '')?.host !=
+                  _onlineUri.host) {
+                _showError(error.description);
               }
             },
           ),
         );
       setState(() => _controller = controller);
-      await controller.loadRequest(
-        Uri.parse('http://127.0.0.1:${server.port}/'),
-      );
-    } catch (error) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = error.toString();
-        });
+      if (await _siteAvailable()) {
+        if (mounted) await controller.loadRequest(_onlineUri);
+      } else if (mounted) {
+        await _openLocal(controller: controller);
       }
+    } catch (error) {
+      if (mounted) _showError(error.toString());
     }
+  }
+
+  Future<bool> _siteAvailable() async {
+    final client = HttpClient();
+    try {
+      return await (() async {
+        final request = await client.headUrl(_onlineUri);
+        final response = await request.close();
+        return response.statusCode >= 200 && response.statusCode < 300;
+      })().timeout(const Duration(seconds: 4));
+    } catch (_) {
+      return false;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<void> _openLocal({required WebViewController controller}) async {
+    if (_usingLocal) return;
+    _usingLocal = true;
+    try {
+      final server =
+          _server ??
+          await shelf_io.serve(
+            _serveAsset,
+            InternetAddress.loopbackIPv4,
+            _localPort,
+          );
+      if (!mounted) {
+        await server.close(force: true);
+        return;
+      }
+      _server = server;
+      await controller.loadRequest(Uri.http('127.0.0.1:${server.port}', '/'));
+    } catch (error) {
+      if (mounted) _showError(error.toString());
+    }
+  }
+
+  void _showError(String description) {
+    setState(() {
+      _loading = false;
+      _error = description;
+    });
   }
 
   Future<shelf.Response> _serveAsset(shelf.Request request) async {
@@ -154,8 +193,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
           children: [
             if (_controller case final controller?)
               WebViewWidget(controller: controller),
-            if (_loading)
-              const Center(child: CircularProgressIndicator()),
+            if (_loading) const Center(child: CircularProgressIndicator()),
             if (_error case final error?)
               Center(
                 child: Padding(
@@ -173,7 +211,8 @@ class _EnglishWebViewState extends State<EnglishWebView> {
                             _error = null;
                             _loading = true;
                           });
-                          _controller?.reload();
+                          _usingLocal = false;
+                          _openSite();
                         },
                         child: const Text('다시 시도'),
                       ),
