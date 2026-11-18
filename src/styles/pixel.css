@@ -627,8 +627,8 @@ strong, b { font-weight: 800; }
 }
 
 /* Give labels more room before reducing type on narrow screens. */
-:root { font-size: clamp(17px, calc(16px + .4vi), 20px); }
-.bottom-nav button { font-size: clamp(15px, 4vi, 17px); }
+:root { font-size: clamp(18px, calc(17px + .4vi), 21px); }
+.bottom-nav button { font-size: clamp(16px, 4vi, 18px); }
 .xp span, .eyebrow, .daily-count small, .progress-label,
 .game-message, .match-column p, .talk-level, .talk-detail span,
 .search-toolbar span, .search-toolbar .search-score,
