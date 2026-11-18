@@ -1,0 +1,404 @@
+:root {
+  --surface: #fffdf8;
+  --shadow-sm: 0 3px 14px #24392d0c;
+  --shadow-md: 0 10px 28px #24392d14;
+  background: #f6f3e9;
+  color: var(--text);
+}
+
+body { background: #f6f3e9; }
+body::before, body::after, .quest::before, .onboarding::before { display: none; }
+.topbar::before, .bottom-nav { background: #fffdf8; backdrop-filter: none; }
+.card, .sentence-card, .preview-word-card { background: var(--surface); backdrop-filter: none; }
+.brand-mark, .bottom-nav button.active, .quest {
+  background: var(--brand-soft);
+}
+.button--primary { background: var(--brand-dark); color: #fffdf8; box-shadow: 0 3px 0 var(--brand-deep); }
+.button--primary:not(:disabled):active { box-shadow: 0 1px 0 var(--brand-deep); }
+.feedback--correct, .match-tile.matched { background: var(--correct-soft); }
+.feedback--correct { border-color: #9dc1a8; }
+.game-header h1, .sentence-prompt h2 { color: var(--brand-deep); }
+.stage-track { background: var(--surface); }
+.stage-track span.active { background: var(--brand-soft); color: var(--brand-deep); }
+.match-tile, .search-toolbar > div, .word-token { background: var(--surface); }
+.sentence-zone { background: var(--brand-faint); border-color: #9db7a6; }
+.sentence-bank { background: #f4f0e5; }
+.button { line-height: 1.25; padding: .55em .75em; }
+.game-message, .choice, .match-tile, .match-tile strong, .word-token, .preview-meaning { font-size: max(14px, 1em); }
+.game-message { font-size: 14px; line-height: 1.3; }
+.game-header h1, .sentence-prompt h2, .talk-sentence { line-height: 1.2; }
+.main > .page { width: min(100%, 74rem); margin-inline: auto; }
+.main > .page--narrow { width: min(100%, 40rem); }
+.main[data-stage="sentence"] .sentence-zone,
+.main[data-stage="sentence"] .sentence-bank { overflow: visible; align-self: stretch; }
+.main[data-stage="match"] .match-column { grid-template-rows: auto; grid-auto-rows: minmax(0, 1fr); }
+
+.main[data-screen="home"] .home-page {
+  grid-template-areas: "hero quest" "hero actions";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: clamp(10px, 2vmin, 22px);
+}
+.main[data-screen="home"] .home-hero {
+  grid-area: hero;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.main[data-screen="home"] .quest { grid-area: quest; display: block; }
+.home-actions { grid-area: actions; display: grid; gap: 10px; }
+.game-links h2 { font-size: 14px; margin: 0 0 5px; }
+.home-actions .dashboard-grid { gap: 7px; }
+.game-links p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.quest-copy > .progress-wrap { margin-top: 10px; }
+.quest--start .button { max-width: none; margin-top: 10px; }
+.orb-card {
+  display: grid;
+  inline-size: clamp(64px, 12vmin, 150px);
+  padding: 0;
+  background: #d9eadf;
+  box-shadow: none;
+  animation: none;
+  overflow: visible;
+}
+.orb-card::after {
+  inset: 4%;
+  border: 0;
+  background: conic-gradient(var(--brand-dark) var(--daily-progress), #8fb4a3 var(--daily-progress));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+}
+.orb-copy { display: grid; justify-items: center; align-content: center; text-align: center; }
+.orb-card strong { font-size: clamp(21px, 32cqi, 48px); line-height: 1; }
+.orb-card small { font-size: clamp(10px, 11cqi, 14px); margin-top: 3px; }
+
+.main[data-screen="review"] .review-page { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.review-words { align-self: start; }
+.review-words h2 { font-size: 16px; margin: 0 0 8px; }
+.review-words ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
+.review-words li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  padding: clamp(5px, 1.25vmin, 12px);
+  border-radius: 9px;
+  background: var(--surface);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.review-words small { font-variant-numeric: tabular-nums; }
+.review-pager .button { width: auto; }
+
+.main[data-stage="search"] .search-page {
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+}
+.main[data-stage="search"] .search-page:has(> .button) {
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+}
+.main[data-stage="search"] .search-page--arcade {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+.main[data-stage="search"] .search-page--arcade:has(> .button) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+}
+.search-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  gap: 8px;
+  min-height: 0;
+}
+.spell-list { display: grid; gap: 5px; align-content: center; }
+.spell-clue { background: var(--surface); padding: 5px 7px; border-radius: 9px; display: grid; gap: 3px; }
+.spell-clue strong, .spell-clue span { font-size: 14px; overflow-wrap: anywhere; }
+.spell-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.spell-choices .button { min-height: 32px; padding: 2px; }
+.puzzle-space { container-type: size; display: grid; place-items: center; min-height: 0; }
+.main[data-stage="search"] .puzzle-space .letter-grid {
+  width: min(100cqw, 100cqh, 34rem);
+  height: auto;
+  padding: clamp(3px, 1.3cqw, 10px);
+  gap: clamp(1px, .45cqw, 4px);
+}
+.puzzle-space .letter-grid button { font-size: clamp(10px, min(3.7cqw, 3.7cqh), 19px); line-height: 1; }
+.letter-grid--drag button.first-letter {
+  position: relative;
+  z-index: 1;
+  color: #271900;
+  background: #ffd365;
+  border-color: #8c5610;
+  outline: 2px solid #a86108;
+  outline-offset: -2px;
+  box-shadow: 0 0 0 2px #fff4be;
+  animation: firstLetterGlow 1.25s ease-in-out infinite alternate;
+}
+@keyframes firstLetterGlow { to { box-shadow: 0 0 0 2px #fff4be, 0 0 9px 2px #ca8a28; } }
+.search-bonus { grid-column: 1 / -1; align-self: center; padding: 10px; }
+.search-bonus .quiz-choices { display: grid; gap: 5px; }
+.search-bonus .button { min-height: 32px; }
+
+.duel-page {
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  justify-items: center;
+  gap: clamp(5px, 1.4vmin, 14px);
+}
+.duel-page:has(> .button) { grid-template-rows: auto minmax(0, 1fr) auto auto auto auto; }
+.duel-page .game-header { width: 100%; }
+.duel-page > h2 { margin: 0; font-size: clamp(16px, 4vmin, 26px); text-align: center; }
+.duel-page > .button { width: min(100%, 18rem); }
+.duel-arena {
+  position: relative;
+  container-type: size;
+  width: min(100%, 40rem);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 40%, #405955, #233436 70%);
+}
+.duel-arena::before {
+  content: "";
+  position: absolute;
+  inset: 78% 0 0;
+  background: linear-gradient(#d7bd8c30, #111c20a3);
+}
+.duel-opponent {
+  --apple-size: clamp(52px, 56cqh, 194px);
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+}
+.duel-score {
+  position: absolute;
+  z-index: 2;
+  inset: 7px 8px auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+  color: #fff9ed;
+  font-size: clamp(11px, 2.9vi, 15px);
+}
+.duel-score span:last-child { text-align: right; }
+.duel-score strong { font-variant-numeric: tabular-nums; }
+
+.duel-apple {
+  position: relative;
+  inline-size: var(--apple-size);
+  block-size: var(--apple-size);
+  border-radius: 46% 49% 44% 48%;
+  background: radial-gradient(circle at 34% 25%, #ee7b54, #ad383d 65%);
+}
+.duel-apple::before {
+  content: "";
+  position: absolute;
+  left: 48%;
+  top: -9%;
+  width: 6%;
+  height: 16%;
+  border-radius: 90% 30% 20% 40%;
+  background: #523724;
+  transform: rotate(19deg);
+}
+.duel-status { min-height: 1.4em; }
+.duel-scar, .duel-strike {
+  position: absolute;
+  top: var(--scar-y);
+  left: var(--scar-x);
+  pointer-events: none;
+}
+.duel-scar {
+  width: 47%;
+  height: clamp(2px, .8cqh, 5px);
+  border-radius: 100%;
+  background: #632620;
+  box-shadow: 0 1px 0 #ffc58e;
+  transform: translate(-50%, -50%) rotate(var(--cut));
+}
+.duel-strike { width: 1px; height: 1px; z-index: 3; }
+
+.duel-cut, .duel-rays, .duel-parry-burst { position: absolute; inset: 0; pointer-events: none; }
+.duel-cut { z-index: 4; transform: rotate(var(--cut)); }
+.duel-cut > i {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(70vi, 560px);
+  height: 3px;
+  border-radius: 100%;
+  background: linear-gradient(90deg, transparent, #ffd24c 26%, #fffdf0 53%, #ffc044 78%, transparent);
+  box-shadow: 0 0 9px #fff0a5, 0 0 22px #efa130;
+}
+.duel-cut > i + i { height: 18px; filter: blur(7px); opacity: .65; }
+.duel-rays > i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--spark-size);
+  height: 2px;
+  color: #fff3b7;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+.duel-parry-burst { z-index: 4; }
+.duel-parry-ring {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 82px;
+  aspect-ratio: 1;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 30px white, inset 0 0 24px white;
+}
+.duel-parry-burst .duel-rays > i { color: white; }
+
+.duel-choices { width: min(100%, max(40%, 15rem)); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.duel-choices .button { font-size: max(14px, 1em); overflow-wrap: anywhere; }
+.duel-choices [aria-disabled="true"] { cursor: default; }
+.duel-page[data-phase="hit"] .duel-selected { background: #ffe182; box-shadow: 0 0 20px #efb92d; }
+.duel-page[data-phase="locked"] .duel-selected { color: #7f2632; background: #f7d9d9; }
+.app--duel > :is(.topbar, .main, .notice) {
+  translate: var(--duel-x, 0px) var(--duel-y, 0px);
+}
+.duel-page[data-phase="parry-window"] .duel-opponent { animation: duelLunge 200ms ease-in both; }
+.duel-page[data-phase="parried"] .duel-arena { animation: parryLight 570ms ease-out; }
+.duel-page[data-phase="hit"] .duel-arena { animation: goldenLight 540ms ease-out; }
+.duel-screen-effect {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+}
+.duel-screen-effect[data-critical="true"] { box-shadow: inset 0 0 52px #a5203bb8; }
+@keyframes duelLunge { to { transform: scale(1.17) translateY(4px); } }
+
+
+@keyframes parryLight { 15% { background: #fff; } }
+@keyframes goldenLight { 25% { background: #f6dea1; } }
+
+
+
+@media (max-aspect-ratio: 6/5), (max-width: 560px) {
+  .main[data-screen="home"] .home-page {
+    grid-template-areas: "hero" "quest" "actions";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+  .search-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .search-workspace:has(.search-bonus) { grid-template-rows: minmax(0, 1fr); }
+  .spell-list { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+}
+
+@media (max-width: 360px), (max-height: 520px) {
+  .main { padding-inline: 9px; }
+  .topbar { min-height: 40px; }
+  .bottom-nav { padding: 3px; gap: 2px; }
+  .bottom-nav button { padding: 3px 0; white-space: normal; }
+  .page-intro h1 { font-size: clamp(22px, 7vw, 32px); margin: 0; }
+  .selection, .splash { width: 100%; gap: 6px; }
+  .selection h1, .splash h1, .selection p { margin: 2px 0; }
+  .selection .choices { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin: 2px 0; }
+  .selection .choice { min-height: 40px; padding: 6px; gap: 4px; font-size: 14px; }
+  .selection .radio-dot { width: 13px; height: 13px; }
+  .stage-track span { font-size: 11px; }
+  .main[data-stage="sentence"] .sentence-card { padding: 8px; gap: 5px; }
+  .main[data-stage="sentence"] .word-token { font-size: 14px; }
+  .search-toolbar > div { min-width: 0; gap: 4px; }
+}
+
+@media (max-height: 450px) and (min-aspect-ratio: 6/5) {
+  .main[data-screen="home"] .home-page { grid-template-areas: "hero quest" "hero actions"; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); grid-template-rows: auto auto; }
+  .search-workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .spell-list { grid-template-columns: minmax(0, 1fr); }
+  .spell-clue { grid-template-columns: minmax(0, 1fr) minmax(0, .9fr) minmax(0, 1fr); align-items: center; }
+  .main[data-stage="match"] .match-tile { font-size: 14px; }
+  .main[data-stage="match"] .match-tile strong { font-size: 14px; }
+  .search-bonus .quiz-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main[data-screen="settings"] .form-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main[data-screen="settings"] .fixed-goal { grid-template-columns: minmax(0, 1fr); padding: 8px; }
+  .main[data-screen="review"] .review-words ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.form-card .effects-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding-inline: 10px;
+  background: var(--brand-faint);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.form-card .effects-setting input {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--brand-dark);
+}
+.duel-page[data-motion="reduced"] .duel-arena,
+.duel-page[data-motion="reduced"] .duel-opponent { animation: none; }
+
+
+
+
+
+@media (max-width: 600px) {
+  .main { padding-inline: clamp(8px, 3vi, 16px); }
+  .main > .page { gap: clamp(6px, 1.6dvh, 13px); }
+  .main[data-screen="home"] .home-page { align-content: start; }
+  .main[data-screen="home"] .page-intro h1 { font-size: clamp(26px, 8vi, 38px); }
+  .main[data-screen="home"] .quest h2 { font-size: 23px; }
+  .main[data-screen="home"] .home-actions { gap: 12px; }
+  .bottom-nav { width: calc(100% - 16px); }
+  .bottom-nav button { min-height: 44px; font-size: 12px; }
+  .game-header h1 { font-size: clamp(22px, 6.4vi, 29px); }
+  .game-header .eyebrow, .stage-track span, .progress-label { font-size: 12px; }
+  .game-exit { font-size: 14px; }
+  .main .button, .main .choice, .main .listen-button { font-size: 16px; }
+  .main[data-stage="match"] .match-tile,
+  .main[data-stage="match"] .match-tile strong,
+  .main[data-stage="sentence"] .word-token { font-size: 16px; }
+  .main[data-stage="match"] .match-tile { line-height: 1.18; padding: 3px 7px; }
+  .main[data-stage="sentence"] .word-token { min-height: 38px; }
+  .main[data-stage="sentence"] .sentence-card { grid-template-rows: auto minmax(min-content, 1fr) minmax(min-content, 1fr) auto auto; }
+  .preview-meaning, .talk-detail p, .review-words li { font-size: 16px; }
+  .main[data-screen="stats"] .stats-grid span { font-size: 13px; }
+  .game-message { font-size: 14px; }
+  .search-toolbar span { font-size: 13px; }
+  .search-workspace { gap: 5px; }
+  .spell-clue { padding: 4px; gap: 2px; }
+  .spell-clue strong, .spell-clue span { font-size: 15px; line-height: 1.15; }
+  .spell-clue small { font-size: 12px; }
+  .main .spell-choices .button { min-height: 36px; padding: 1px; }
+  .puzzle-space .letter-grid button { font-size: clamp(12px, min(4.6cqw, 4.6cqh), 18px); }
+  .duel-page .duel-choices { width: 100%; }
+  .duel-page .duel-choices .button { min-height: 48px; font-size: 17px; touch-action: manipulation; }
+  .duel-page > h2 { font-size: clamp(20px, 7vi, 27px); }
+}
+
+@media (max-height: 520px) {
+  .app--immersive .topbar { display: none; }
+  .app--immersive .page { gap: 4px; }
+  .main[data-stage="sentence"] .sentence-card { padding: 7px; }
+}
+
+@media (max-height: 460px) and (min-aspect-ratio: 6/5) {
+  .duel-page {
+    grid-template-areas: "header header" "arena prompt" "arena answers" "arena status";
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .duel-page:has(> .button) {
+    grid-template-areas: "header header" "arena prompt" "arena answers" "arena status" "arena start";
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  }
+  .duel-page .game-header { grid-area: header; }
+  .duel-arena { grid-area: arena; width: 100%; }
+  .duel-page > h2 { grid-area: prompt; }
+  .duel-choices { grid-area: answers; width: 100%; align-content: center; }
+  .duel-status { grid-area: status; }
+  .duel-page > .button { grid-area: start; }
+  .main[data-stage="sentence"] .sentence-card { grid-template-rows: minmax(min-content, 1fr) minmax(min-content, 1fr) auto auto; }
+}

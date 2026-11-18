@@ -1,0 +1,11 @@
+{
+  "name": "small-talk-vocabulary",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:server": "node scripts/smoke-server.mjs"
+  }
+}
