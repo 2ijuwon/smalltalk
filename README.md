@@ -35,3 +35,9 @@ flutter test
 ```
 
 첫 학습을 완료하면 단어 찾기, 사과 베기, 타자 게임을 계속 이용할 수 있습니다. 각 게임의 최고 점수는 홈과 통계에 표시됩니다. Supabase 연동은 이후 작업입니다.
+
+## 웹 배포
+
+GitHub `2ijuwon/smalltalk`의 `main` 브랜치를 Vercel `smalltalk` 프로젝트에 연결했습니다. Vercel은 `npm run build`를 실행하고 `dist/`를 배포합니다. 이 빌드는 웹 파일과 로컬 폰트만 복사합니다. Flutter 소스는 배포하지 않습니다.
+
+Supabase `smalltalk` 프로젝트는 생성했습니다. 현재 앱의 학습 기록은 기기에 저장되며, Supabase 데이터베이스 동기화는 아직 연결하지 않았습니다.
