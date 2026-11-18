@@ -300,14 +300,13 @@ class _OfflineWifiPainter extends CustomPainter {
   const _OfflineWifiPainter();
 
   static const _pixels = [
-    'X..####...',
-    'XX#....##.',
-    '.XX.##....',
-    '..XX..##..',
-    '...XX.....',
+    'XX.####...',
+    '.XX....##.',
+    '..XX##....',
+    '...XX.##..',
     '....XX....',
-    '....#XX...',
-    '......XX..',
+    '.....XX...',
+    '....#.XX..',
   ];
 
   @override
