@@ -679,3 +679,19 @@ strong, b { font-weight: 800; }
 @media (min-width: 900px) {
   .bottom-nav { grid-template-columns: 1fr; }
 }
+
+/* Give supporting copy enough weight to stay legible in the pixel font. */
+.eyebrow, .game-links p, .search-ready small, .duel-intro > small,
+.talk-detail span, .sentence-zone p, .typing-rules > span {
+  font-size: max(18px, .95rem);
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.splash .eyebrow { font-size: max(20px, 1rem); }
+small, .notice, .progress-label, .stage-track span, .game-message,
+.match-column p, .stats-grid span, .search-toolbar span,
+.spell-clue > span, .talk-level, .boss-meter span, .fixed-goal {
+  font-weight: 700;
+}
