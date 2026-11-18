@@ -702,7 +702,7 @@ small, .notice, .progress-label, .stage-track span, .game-message,
   --panel-padding: clamp(12px, 2dvh, 22px);
   --control-height: clamp(44px, 7dvh, 58px);
 }
-.main { padding: var(--panel-gap) clamp(8px, 2vi, 30px); }
+.main { padding: var(--panel-gap) calc(10px + clamp(8px, 2vi, 30px)); }
 .page { gap: var(--panel-gap); width: min(100%, 980px); }
 .page--narrow { width: min(100%, 680px); }
 .home-page, .game-page, .typing-page { width: min(100%, 1440px); }
