@@ -264,7 +264,7 @@ strong, b { font-weight: 800; }
 .typing-hud { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; font: 700 14px Galmuri11, monospace; }
 .typing-field { position: relative; overflow: hidden; border: 2px solid var(--line); background: #d8efff; min-height: 0; }
 .typing-ground { position: absolute; bottom: 0; left: 0; right: 0; height: 10px; background: #78acd2; border-top: 3px solid var(--blue-dark); }
-.typing-enemy { position: absolute; z-index: 1; display: grid; gap: 2px; transform: translateX(-50%); padding: 4px 6px; background: white; border: 2px solid var(--blue); color: var(--ink); font: 700 clamp(13px, 3.4vw, 18px) Galmuri11, monospace; white-space: nowrap; }
+.typing-enemy { position: absolute; z-index: 1; display: grid; gap: 2px; transform: translateX(-50%); padding: 4px 6px; background: white; border: 2px solid var(--blue); color: var(--ink); font: 700 clamp(17px, 3.8vw, 21px) Galmuri11, monospace; white-space: nowrap; }
 .typing-eyes { display: block; justify-self: center; width: 4px; height: 4px; background: #18263b; box-shadow: 9px 0 #18263b; margin-right: 9px; margin-block: 1px 3px; }
 .typing-enemy-hp { width: 100%; height: 8px; background: #badcf1; border: 1px solid #426e9d; }
 .typing-enemy-hp i { display: block; height: 100%; background: #4c99d0; }
@@ -385,7 +385,7 @@ strong, b { font-weight: 800; }
 @media (max-width: 600px) {
   .main { padding-inline: 9px; }
   .page { gap: 9px; }
-  .game-page { font-size: 16px; }
+  .game-page { font-size: 1rem; }
   .game-message, .spell-clue, .match-tile { font-size: 15px; }
   .bottom-nav button { font-size: 13px; }
 }
@@ -509,7 +509,7 @@ strong, b { font-weight: 800; }
   gap: 4px;
   align-items: center;
   color: var(--ink);
-  font-size: clamp(11px, 2.9vi, 15px);
+  font-size: clamp(16px, 3.6vi, 19px);
 }
 .duel-score span:last-child { text-align: right; }
 .duel-score strong { font-variant-numeric: tabular-nums; }
@@ -627,8 +627,8 @@ strong, b { font-weight: 800; }
 }
 
 /* Give labels more room before reducing type on narrow screens. */
-:root { font-size: clamp(18px, calc(17px + .4vi), 21px); }
-.bottom-nav button { font-size: clamp(16px, 4vi, 18px); }
+:root { font-size: clamp(20px, calc(19px + .4vi), 23px); }
+.bottom-nav button { font-size: clamp(17px, 4vi, 19px); }
 .xp span, .eyebrow, .daily-count small, .progress-label,
 .game-message, .match-column p, .talk-level, .talk-detail span,
 .search-toolbar span, .search-toolbar .search-score,
@@ -636,17 +636,17 @@ strong, b { font-weight: 800; }
 .game-links .button, .game-exit, .fixed-goal,
 .sentence-zone p, .typing-rules, .duel-choices .button { font-size: .94rem; }
 .game-links .button small, .typing-upgrades small,
-.typing-offers small, .duel-difficulties .button small { font-size: .83rem; }
+.typing-offers small, .duel-difficulties .button small { font-size: .85rem; }
 .stage-track span, .spell-clue > small, .spell-clue > span { font-size: .86rem; }
 .match-board { gap: clamp(16px, 5vi, 64px); }
 .match-column, .match-tile { min-inline-size: 0; }
 .match-tile { font-size: .94rem; padding-inline: 5px; }
 .game-header > div { min-inline-size: 0; }
-.game-header h1 { font-size: clamp(22px, 5.5vi, 30px); }
+.game-header h1 { font-size: clamp(24px, 5.5vi, 32px); }
 .stage-track span, .game-exit, .typing-hud > span { white-space: nowrap; }
 .typing-hud { font-size: .88rem; gap: 6px; }
 .typing-form input { font-size: 1rem; }
-.letter-grid button { font-size: clamp(16px, 4vi, 21px); }
+.letter-grid button { font-size: clamp(18px, 4vi, 23px); }
 .spell-clue > span, .duel-choices .button, .review-words li {
   word-break: keep-all;
   overflow-wrap: break-word;
@@ -665,4 +665,17 @@ strong, b { font-weight: 800; }
     justify-content: space-between;
     gap: 8px;
   }
+}
+
+/* Keep secondary information readable at the same scale as the controls. */
+.notice, .game-links h2 small, .game-links p,
+.boss-meter span, .boss-meter strong, .typing-enemy small,
+.typing-rules strong, .success-burst small, .success-burst--talk small {
+  font-size: .85rem;
+}
+.typing-rules strong { font-size: 1rem; }
+.game-links .button small { white-space: normal; overflow-wrap: break-word; }
+.bottom-nav { grid-template-columns: 1fr 1.4fr repeat(3, 1fr); }
+@media (min-width: 900px) {
+  .bottom-nav { grid-template-columns: 1fr; }
 }
