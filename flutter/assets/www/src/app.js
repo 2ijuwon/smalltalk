@@ -298,11 +298,11 @@ function nav() {
 }
 
 function onboarding() {
-  if (onboardingStep === 0) return `<div class="onboarding"><div class="splash">${brandMark()}<p class="eyebrow">하루 5단어 · 약 5분</p><h1>전공 영어</h1><p>단어 뜻, 문장, 퍼즐로 학습합니다.</p>${button('시작하기', 'onboarding-next')}</div></div>`;
+  if (onboardingStep === 0) return `<div class="onboarding"><div class="splash"><div class="splash-scene" aria-hidden="true">${pixelSprite("mascot")}</div><div class="splash-copy"><h1>전공 영어</h1><p class="eyebrow">하루 5단어 · 약 5분</p><p>단어 뜻, 문장, 퍼즐로 학습합니다.</p></div>${button('시작하기', 'onboarding-next')}</div></div>`;
   const isMajor = onboardingStep === 1;
   const values = isMajor ? Object.entries(majorLabels) : Object.entries(difficultyLabels);
   const selected = isMajor ? draftMajor : draftDifficulty;
-  return `<div class="onboarding"><div class="selection"><button class="onboarding-back" data-action="onboarding-back" aria-label="이전 단계로 돌아가기">← 뒤로</button><p class="eyebrow">${isMajor ? '01 / 02 · 전공' : '02 / 02 · 난이도'}</p><h1>${isMajor ? '전공 선택' : '난이도 선택'}</h1><p>${isMajor ? '전공에 맞는 단어를 추천해요.' : '처음에는 짧고 쉬운 단어부터 나와요.'}</p><div class="choices" role="radiogroup">${values.map(([value, label]) => `<button class="choice ${selected === value ? 'choice--selected' : ''}" data-select="${isMajor ? 'major' : 'difficulty'}" data-value="${value}" role="radio" aria-checked="${selected === value}"><span class="radio-dot"></span>${label}</button>`).join('')}</div>${button(isMajor ? '다음' : '학습 시작', isMajor ? 'onboarding-next' : 'onboarding-finish')}</div></div>`;
+  return `<div class="onboarding"><div class="selection"><button class="onboarding-back" data-action="onboarding-back" aria-label="이전 단계로 돌아가기">← 뒤로</button><div class="selection-intro"><p class="eyebrow">${isMajor ? '01 / 02 · 전공' : '02 / 02 · 난이도'}</p><h1>${isMajor ? '전공 선택' : '난이도 선택'}</h1><p>${isMajor ? '전공에 맞는 단어를 추천해요.' : '처음에는 짧고 쉬운 단어부터 나와요.'}</p></div><div class="choices" role="radiogroup">${values.map(([value, label]) => `<button class="choice ${selected === value ? 'choice--selected' : ''}" data-select="${isMajor ? 'major' : 'difficulty'}" data-value="${value}" role="radio" aria-checked="${selected === value}"><span class="radio-dot"></span>${label}</button>`).join('')}</div>${button(isMajor ? '다음' : '학습 시작', isMajor ? 'onboarding-next' : 'onboarding-finish')}</div></div>`;
 }
 
 function home() {
@@ -369,7 +369,7 @@ function startLearning(ids, mode = 'new', curriculum = {}) {
 function previewGame() {
   const session = learningSession;
   const item = session.items[session.previewIndex];
-  return `<div class="page game-page">${stageHeader(1, '단어 확인', '')}${progress(session.previewIndex + 1, session.items.length, '단어 확인')}<section class="preview-word-card"><span>${session.previewIndex + 1} / ${session.items.length}</span><h2>${item.word}</h2><p class="preview-meaning">${item.meaning}</p><button class="listen-button" data-action="speak-word" aria-label="${item.word} 발음 듣기"><b>▶</b> 발음 듣기</button><p class="micro-copy">소리를 듣고 단어와 뜻을 함께 기억해 보세요.</p>${button(session.previewIndex === session.items.length - 1 ? '뜻 맞추기' : '다음 단어', 'preview-next')}</section></div>`;
+  return `<div class="page game-page">${stageHeader(1, '단어 확인', '')}${progress(session.previewIndex + 1, session.items.length, '단어 확인')}<section class="preview-word-card"><div class="preview-word-content"><span>${session.previewIndex + 1} / ${session.items.length}</span><h2>${item.word}</h2><p class="preview-meaning">${item.meaning}</p><button class="listen-button" data-action="speak-word" aria-label="${item.word} 발음 듣기"><b>▶</b> 발음 듣기</button><p class="micro-copy">소리를 듣고 단어와 뜻을 함께 기억해 보세요.</p></div>${button(session.previewIndex === session.items.length - 1 ? '뜻 맞추기' : '다음 단어', 'preview-next')}</section></div>`;
 }
 
 function matchingGame() {
