@@ -697,11 +697,13 @@ function currentTalk() {
 
 function rotateTalk() {
   const { entries } = currentTalk();
-  const remaining = entries.map((_, index) => index).filter((index) => !talkChoice.seen.includes(index));
+  const alternatives = entries.map((_, index) => index).filter((index) => index !== talkChoice.index);
+  const unseen = alternatives.filter((index) => !talkChoice.seen.includes(index));
+  const remaining = unseen.length ? unseen : alternatives;
   if (!remaining.length) return;
   stopSpeech();
   const index = remaining[randomInt(remaining.length)];
-  talkChoice = { ...talkChoice, index, seen: [...talkChoice.seen, index] };
+  talkChoice = { ...talkChoice, index, seen: unseen.length ? [...talkChoice.seen, index] : [index] };
   state.talkRotation = talkChoice;
   persist();
   render();
@@ -710,7 +712,7 @@ function rotateTalk() {
 function smallTalk() {
   const { entries, selected } = currentTalk();
   const spoken = clickableSentence(selected[0]);
-  return `<div class="page page--narrow"><div class="page-intro"><p class="eyebrow">TODAY'S SMALL TALK</p><h1>스몰토크</h1></div>${card(`<span class="talk-level">${difficultyLabels[state.preferences.difficulty].split(' · ')[0]}</span><div class="talk-sentence-row"><h2 class="talk-sentence">${spoken}</h2><button class="talk-refresh" data-action="talk-refresh" aria-label="다른 스몰토크 보기" title="다른 스몰토크" ${talkChoice.seen.length >= entries.length ? 'disabled' : ''}>${pixelIcon('refresh')}</button></div><button class="listen-button" data-action="speak-smalltalk">▶ 발음 듣기</button><div class="talk-detail"><div><span>뜻</span><p>${selected[1]}</p></div><div><span>언제 쓰나요?</span><p>${selected[2]}</p></div></div>`, 'small-talk-card')}${button('맞춰보기', 'talk-quiz')}${button('대화하기', 'talk-conversation', 'secondary')}</div>`;
+  return `<div class="page page--narrow"><div class="page-intro"><p class="eyebrow">TODAY'S SMALL TALK</p><h1>스몰토크</h1></div>${card(`<span class="talk-level">${difficultyLabels[state.preferences.difficulty].split(' · ')[0]}</span><div class="talk-sentence-row"><h2 class="talk-sentence">${spoken}</h2><button class="talk-refresh" data-action="talk-refresh" aria-label="다른 스몰토크 보기" title="다른 스몰토크" ${entries.length < 2 ? 'disabled' : ''}>${pixelIcon('refresh')}</button></div><button class="listen-button" data-action="speak-smalltalk">▶ 발음 듣기</button><div class="talk-detail"><div><span>뜻</span><p>${selected[1]}</p></div><div><span>언제 쓰나요?</span><p>${selected[2]}</p></div></div>`, 'small-talk-card')}${button('맞춰보기', 'talk-quiz')}${button('대화하기', 'talk-conversation', 'secondary')}</div>`;
 }
 
 function openTalkQuiz() {
@@ -806,15 +808,24 @@ async function requestConversation(text = '') {
         learnedIds: getLearnedIds(state).slice(-80),
       }),
     });
-    if (!response.ok) throw new Error(String(response.status));
-    const { english, korean } = await response.json();
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload) throw new Error(payload?.error || 'unavailable');
+    const { english, korean } = payload;
     if (epoch !== conversationEpoch) return;
     if (text) conversation.push({ english: text, user: true });
     conversation.push({ english, korean });
     conversationDraft = '';
-  } catch {
+  } catch (error) {
     if (epoch === conversationEpoch) {
-      conversationError = 'AI에 연결하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
+      if (error.message === 'provider_setup') {
+        conversationError = 'AI 서비스 계정 인증이 필요해요. 인증이 끝나면 대화할 수 있어요.';
+      } else if (error.message === 'rate') {
+        conversationError = '요청이 많아요. 잠시 후 다시 시도해 주세요.';
+      } else if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
+        conversationError = 'AI 대화는 온라인 화면에서 할 수 있어요.';
+      } else {
+        conversationError = 'AI 서비스가 응답하지 않았어요. 잠시 후 다시 시도해 주세요.';
+      }
     }
   } finally {
     clearTimeout(timeout);
@@ -1386,13 +1397,13 @@ function showLaunch() {
   const overlay = document.createElement('div');
   overlay.className = 'launch-overlay';
   overlay.setAttribute('aria-hidden', 'true');
-  overlay.innerHTML = `<i></i><i></i><div class="launch-lockup">${pixelSprite('mascot')}<strong>smalltalk</strong></div>`;
+  overlay.innerHTML = `<i></i><i></i><div class="launch-lockup">${pixelSprite('mascot')}<strong>smalltalk</strong><span class="launch-sparks"></span></div>`;
   document.body.append(overlay);
   const timer = setTimeout(() => {
     overlay.classList.add('launch-overlay--open');
     playEffect('launch');
     setTimeout(() => overlay.remove(), 410);
-  }, 1360);
+  }, 1240);
   overlay.addEventListener('click', () => { clearTimeout(timer); playEffect('launch'); overlay.remove(); }, { once: true });
 }
 

@@ -18,8 +18,9 @@ function takeTurn(key) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
-  const token = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'];
-  if (!token) return res.status(503).json({ error: 'unavailable' });
+  const directKey = process.env.OPENAI_API_KEY;
+  const token = directKey || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'];
+  if (!token) return res.status(503).json({ error: 'provider_setup' });
 
   const { turns, learnedIds, topic } = req.body ?? {};
   if (!Array.isArray(turns) || !Array.isArray(learnedIds) ||
@@ -48,11 +49,14 @@ export default async function handler(req, res) {
   ].join(' ');
 
   try {
-    const response = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
+    const endpoint = directKey
+      ? 'https://api.openai.com/v1/chat/completions'
+      : 'https://ai-gateway.vercel.sh/v1/chat/completions';
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'openai/gpt-4.1-mini',
+        model: directKey ? 'gpt-4.1-mini' : 'openai/gpt-4.1-mini',
         messages: [
           { role: 'system', content: instruction },
           { role: 'user', content: JSON.stringify({ topic, learned, turns }) },
@@ -63,8 +67,9 @@ export default async function handler(req, res) {
       signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) {
-      console.warn('slime gateway status', response.status);
-      return res.status(503).json({ error: 'unavailable' });
+      console.warn('slime provider status', response.status);
+      const setup = [401, 402, 403].includes(response.status);
+      return res.status(503).json({ error: setup ? 'provider_setup' : 'unavailable' });
     }
     const completion = await response.json();
     const reply = JSON.parse(completion.choices[0].message.content);
