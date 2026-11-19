@@ -47,10 +47,10 @@ Supabase `smalltalk` 프로젝트는 생성했습니다. 현재 앱의 학습 �
 English clips are generated at build preparation time with Piper's
 [en_US-ljspeech-medium voice](https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/ljspeech/medium/MODEL_CARD).
 The app plays the generated WAV files directly. Small talk sentences are synthesized as complete phrases. Word cues are
-estimated from phoneme counts and follow the audio playback clock. To regenerate the files on Windows:
+read from the Piper model’s phoneme durations and follow the audio playback clock. To regenerate the files on Windows:
 
 ```powershell
-python -m pip install piper-tts
+python -m pip install piper-tts onnx
 python -m piper.download_voices --download-dir "$env:TEMP/smalltalk-voice" en_US-ljspeech-medium
 python scripts/generate-speech.py
 .\flutter\scripts\sync-web.ps1

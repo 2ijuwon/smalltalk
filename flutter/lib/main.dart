@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,7 +97,8 @@ class _EnglishWebViewState extends State<EnglishWebView> {
             },
           ),
         );
-      if (Platform.isAndroid) {
+      if (controller.platform case final AndroidWebViewController android) {
+        await android.setMediaPlaybackRequiresUserGesture(false);
         await controller.addJavaScriptChannel(
           'SmalltalkMic',
           onMessageReceived: (_) => _recognizeSpeech(controller),
@@ -236,9 +238,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     final path = request.requestedUri.path;
     final file =
         _assets[path] ??
-        (RegExp(
-              r'^/src/audio/(?:[0-9]+|fx-(?:surface|tap|word|place|correct|retry|hit|finish))\.wav$',
-            ).hasMatch(path)
+        (RegExp(r'^/src/audio/(?:[0-9]+|fx-[a-z]+)\.wav$').hasMatch(path)
             ? path.substring(1)
             : null);
     if (file == null) return shelf.Response.notFound('Not found');

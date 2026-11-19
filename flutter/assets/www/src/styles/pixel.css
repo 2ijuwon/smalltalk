@@ -892,3 +892,103 @@ small, .notice, .progress-label, .stage-track span, .game-message,
 @media (prefers-reduced-motion: reduce) {
   .match-line--draw { animation: none; stroke-dasharray: none; }
 }
+
+.duel-apple {
+  --apple-outline: polygon(14% 8%, 34% 8%, 40% 13%, 60% 13%, 66% 8%, 85% 8%, 94% 23%, 100% 42%, 96% 69%, 83% 88%, 65% 100%, 35% 100%, 16% 88%, 4% 69%, 0 42%, 6% 23%);
+  --wound-light: #ffab89;
+  --wound-depth: #631d29;
+}
+.duel-apple::before { clip-path: var(--apple-outline); }
+.duel-wounds { position: absolute; inset: 16% 0 0; clip-path: var(--apple-outline); z-index: 2; pointer-events: none; }
+.duel-scar {
+  top: calc((var(--scar-y) - 16%) / .84);
+  width: 53%;
+  height: clamp(7px, 9%, 16px);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--wound-light);
+  clip-path: polygon(0 47%, 18% 35%, 38% 32%, 57% 13%, 75% 22%, 100% 43%, 78% 50%, 62% 77%, 39% 88%, 23% 64%);
+}
+.duel-scar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--wound-depth);
+  clip-path: polygon(0 47%, 18% 35%, 38% 32%, 57% 13%, 75% 22%, 100% 43%, 78% 41%, 61% 56%, 38% 70%, 23% 54%);
+}
+[data-difficulty="normal"] .duel-opponent .duel-apple { --wound-light: #ffdb91; --wound-depth: #775018; }
+[data-difficulty="hard"] .duel-opponent .duel-apple { --wound-light: #c4a3e6; --wound-depth: #422d64; }
+.spell-clue { gap: 5px; }
+.spell-choices .button { min-height: 36px; }
+.typing-levels, .game-over-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.game-over { display: grid; gap: 8px; width: min(100%, 440px); justify-self: center; }
+.record-banner:not([hidden]) { text-align: center; color: #754800; background: #ffe79c; padding: 5px; animation: record-pop 480ms ease-out both; }
+@keyframes record-pop { from { scale: .75; opacity: .2; } 55% { scale: 1.08; } }
+.typing-field { container-type: inline-size; }
+.typing-enemy {
+  left: clamp(23%, var(--enemy-x), 77%);
+  max-width: 45cqi;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+@supports (width: 1cqi) {
+  .typing-enemy { left: clamp(23cqi, var(--enemy-x), 77cqi); }
+}
+.typing-enemy strong { line-height: 1.1; }
+.typing-item { border-color: #a37337; background: #fff1b9; text-align: center; z-index: 2; }
+.typing-enemy--burning { box-shadow: 0 0 0 3px #ec8a51; }
+.typing-enemy--frozen { background: #beeaff; border-color: #589abf; }
+body:has(.typing-time-stop) { filter: grayscale(1); }
+.typing-projectile--queued { opacity: .7; }
+.typing-offers { position: fixed; z-index: 8; top: 50%; left: 50%; translate: -50% -50%; width: min(92vw, 670px); grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.typing-offers .button { min-height: clamp(110px, 23dvh, 195px); padding: 6px; animation: offer-in .36s ease-out both; }
+.typing-offers .button:first-child { rotate: -5deg; }
+.typing-offers .button:last-child { rotate: 5deg; }
+.typing-offers .button[aria-pressed="true"] { rotate: 0deg; translate: 0 -10px; outline: 3px solid #3183be; background: #d4edff; }
+@keyframes offer-in { from { transform: translateY(28px); opacity: 0; } }
+.special-flash { position: fixed; inset: 0; z-index: 100; pointer-events: none; box-shadow: inset 0 0 48px 8px var(--flash); animation: special-flash .52s ease-out both; }
+@keyframes special-flash { from { opacity: .82; } to { opacity: 0; } }
+.pixel-sprite--slime { cursor: pointer; filter: hue-rotate(var(--slime-tint, 0deg)); }
+.slime-delighted .slime-mouth { scale: 1.2 1.4; transform-box: view-box; transform-origin: center 65%; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --sky: #151d29; --tile: #202e3e; --panel: #1a2634; --ink: #e3ecf6;
+  --muted: #adc2d8; --line: #466682; --blue: #235a89; --blue-dark: #99caff;
+  --select: #293f54; --good: #244b53; --wrong: #6e5732;
+}
+[data-theme="dark"] :is(body, .main) { background: var(--sky); color: var(--ink); }
+[data-theme="dark"] :is(.quest, .practice-panel, .game-links, .game-links .button, .spell-clue, .typing-enemy, .search-toolbar > div, .typing-rules, .conversation-line, .sentence-zone, .boss-status, .listen-button, .button--quiet, .word-gloss) { background: var(--panel); color: var(--ink); box-shadow: none; }
+[data-theme="dark"] :is(.typing-field, .duel-arena) { background: #202c3a; box-shadow: none; }
+[data-theme="dark"] .pixel-sprite--slime rect { fill: #202a39; }
+[data-theme="dark"] .pixel-sprite--slime [data-pixel="o"],
+[data-theme="dark"] .pixel-sprite--slime [data-pixel="k"] { fill: #73b8ed; }
+.launch-overlay { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; isolation: isolate; overflow: hidden; }
+.launch-overlay > i { position: absolute; inset: 0 50% 0 0; background: var(--sky); z-index: -1; transition: transform 380ms cubic-bezier(.65,0,.25,1); }
+.launch-overlay > i + i { inset: 0 0 0 50%; }
+.launch-lockup { display: flex; gap: 10px; align-items: center; font-size: clamp(1.5rem, 8vw, 3rem); }
+.launch-lockup .pixel-sprite { width: 84px; height: 84px; animation: launch-hop 1.15s ease-in-out both; }
+.launch-lockup strong { animation: launch-name .55s .58s steps(9, end) both; }
+.launch-overlay--open > i { transform: translateX(-101%); }
+.launch-overlay--open > i + i { transform: translateX(101%); }
+.launch-overlay--open .launch-lockup { opacity: 0; transition: opacity 100ms ease-out; }
+@keyframes launch-hop {
+  0%, 28% { transform: translateX(80px) scale(2); }
+  62% { transform: translate(36px, -55px) scale(1.45); }
+  88% { transform: scale(1.12, .84); }
+}
+@keyframes launch-name { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .launch-overlay, .special-flash { display: none; }
+}
+
+.typing-enemy.slime-delighted .typing-eyes { border-radius: 0 0 50% 50%; }
+.typing-enemy.slime-delighted { filter: hue-rotate(var(--slime-tint, 0deg)); }
+
+.typing-page:not([data-phase="playing"]) {
+  grid-template-rows: auto auto minmax(44px, 1fr) auto auto;
+}
+.typing-offers .button strong, .typing-offers .button small { white-space: normal; word-break: keep-all; }
+[data-theme="dark"] :is(.topbar, .bottom-nav, .xp, .notice, .typing-form input) { background: var(--panel); color: var(--ink); }
+[data-theme="dark"] .typing-enemy--frozen { background: #243e57; }
+[data-theme="dark"] .typing-item { background: #423924; }
+[data-theme="dark"] .inline-word:focus-visible { outline-color: #99caff; }

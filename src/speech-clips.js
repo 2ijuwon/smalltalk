@@ -3,64 +3,64 @@ export const speechClips = {
     "0.wav",
     [
       0.0,
-      0.2158,
-      0.3777,
-      0.6474
+      0.1393,
+      0.2554,
+      0.5224
     ]
   ],
   "That sounds good.": [
     "1.wav",
     [
       0.0,
-      0.3077,
-      0.8461
+      0.2786,
+      0.7314
     ]
   ],
   "See you tomorrow.": [
     "2.wav",
     [
       0.0,
-      0.2815,
-      0.4927
+      0.267,
+      0.4644
     ]
   ],
   "Let me think about it.": [
     "3.wav",
     [
       0.0,
-      0.2808,
-      0.5615,
-      0.9124,
-      1.3336
+      0.3251,
+      0.5921,
+      0.894,
+      1.2423
     ]
   ],
   "Could you explain that again?": [
     "4.wav",
     [
       0.0,
-      0.2572,
-      0.4501,
-      1.0288,
-      1.286
+      0.1741,
+      0.3367,
+      0.9752,
+      1.2074
     ]
   ],
   "I appreciate your perspective.": [
     "5.wav",
     [
       0.0,
-      0.1811,
-      0.966,
-      1.1471
+      0.1741,
+      0.8011,
+      0.9752
     ]
   ],
   "Let us revisit this later.": [
     "6.wav",
     [
       0.0,
-      0.2358,
-      0.4126,
-      0.8841,
-      1.1199
+      0.1509,
+      0.3831,
+      0.8475,
+      1.1146
     ]
   ],
   "Hi! How are you today?": [
@@ -135,686 +135,986 @@ export const speechClips = {
       0
     ]
   ],
-  "about": [
+  "The algorithm solves the problem quickly.": [
     "19.wav",
     [
       0
     ]
   ],
-  "again": [
+  "The database stores customer information.": [
     "20.wav",
     [
       0
     ]
   ],
-  "algorithm": [
+  "Our network connects every office computer.": [
     "21.wav",
     [
       0
     ]
   ],
-  "am": [
+  "This variable keeps the final score.": [
     "22.wav",
     [
       0
     ]
   ],
-  "anything": [
+  "The function checks the user input.": [
     "23.wav",
     [
       0
     ]
   ],
-  "appreciate": [
+  "The server sends data to clients.": [
     "24.wav",
     [
       0
     ]
   ],
-  "archive": [
+  "The browser displays the new website.": [
     "25.wav",
     [
       0
     ]
   ],
-  "are": [
+  "Encryption protects private user data.": [
     "26.wav",
     [
       0
     ]
   ],
-  "asset": [
+  "The interface feels simple and clear.": [
     "27.wav",
     [
       0
     ]
   ],
-  "battery": [
+  "The compiler finds an error in the code.": [
     "28.wav",
     [
       0
     ]
   ],
-  "browser": [
+  "The company increased its annual revenue.": [
     "29.wav",
     [
       0
     ]
   ],
-  "budget": [
+  "The store made a small profit.": [
     "30.wav",
     [
       0
     ]
   ],
-  "can": [
+  "We prepared a budget for marketing.": [
     "31.wav",
     [
       0
     ]
   ],
-  "circuit": [
+  "Demand for the product is rising.": [
     "32.wav",
     [
       0
     ]
   ],
-  "clinic": [
+  "The factory increased the product supply.": [
     "33.wav",
     [
       0
     ]
   ],
-  "compiler": [
+  "The market changes very quickly.": [
     "34.wav",
     [
       0
     ]
   ],
-  "context": [
+  "The building is a valuable asset.": [
     "35.wav",
     [
       0
     ]
   ],
-  "could": [
+  "Please send the invoice today.": [
     "36.wav",
     [
       0
     ]
   ],
-  "course": [
+  "Our strategy focuses on loyal customers.": [
     "37.wav",
     [
       0
     ]
   ],
-  "culture": [
+  "Every customer received a quick reply.": [
     "38.wav",
     [
       0
     ]
   ],
-  "current": [
+  "The doctor confirmed the diagnosis.": [
     "39.wav",
     [
       0
     ]
   ],
-  "customer": [
+  "The patient needs enough rest.": [
     "40.wav",
     [
       0
     ]
   ],
-  "database": [
+  "A fever can be a symptom.": [
     "41.wav",
     [
       0
     ]
   ],
-  "debate": [
+  "The treatment reduced her pain.": [
     "42.wav",
     [
       0
     ]
   ],
-  "demand": [
+  "Check the correct dosage before use.": [
     "43.wav",
     [
       0
     ]
   ],
-  "diagnosis": [
+  "The surgery lasted two hours.": [
     "44.wav",
     [
       0
     ]
   ],
-  "do": [
+  "Her recovery was faster than expected.": [
     "45.wav",
     [
       0
     ]
   ],
-  "dosage": [
+  "The clinic opens at nine.": [
     "46.wav",
     [
       0
     ]
   ],
-  "else": [
+  "The vaccine prevents serious illness.": [
     "47.wav",
     [
       0
     ]
   ],
-  "encryption": [
+  "The nurse checked his pulse.": [
     "48.wav",
     [
       0
     ]
   ],
-  "ethics": [
+  "Measure the voltage before testing.": [
     "49.wav",
     [
       0
     ]
   ],
-  "evidence": [
+  "The current flows through the wire.": [
     "50.wav",
     [
       0
     ]
   ],
-  "explain": [
+  "This circuit controls the motor.": [
     "51.wav",
     [
       0
     ]
   ],
-  "first": [
+  "The sensor detects sudden movement.": [
     "52.wav",
     [
       0
     ]
   ],
-  "function": [
+  "The motor produces enough torque.": [
     "53.wav",
     [
       0
     ]
   ],
-  "glad": [
+  "The motor drives the small wheel.": [
     "54.wav",
     [
       0
     ]
   ],
-  "good": [
+  "The signal travels through the cable.": [
     "55.wav",
     [
       0
     ]
   ],
-  "great": [
+  "The battery powers the sensor.": [
     "56.wav",
     [
       0
     ]
   ],
-  "happened": [
+  "The gauge shows high pressure.": [
     "57.wav",
     [
       0
     ]
   ],
-  "happy": [
+  "The team tested a new prototype.": [
     "58.wav",
     [
       0
     ]
   ],
-  "hear": [
+  "Read the sentence in context.": [
     "59.wav",
     [
       0
     ]
   ],
-  "help": [
+  "Technology changes our society.": [
     "60.wav",
     [
       0
     ]
   ],
-  "hi": [
+  "Language reflects local culture.": [
     "61.wav",
     [
       0
     ]
   ],
-  "how": [
+  "The writer provided clear evidence.": [
     "62.wav",
     [
       0
     ]
   ],
-  "i": [
+  "The theory explains social change.": [
     "63.wav",
     [
       0
     ]
   ],
-  "identity": [
+  "The debate continued for an hour.": [
     "64.wav",
     [
       0
     ]
   ],
-  "interface": [
+  "Ethics guides responsible research.": [
     "65.wav",
     [
       0
     ]
   ],
-  "invoice": [
+  "The archive preserves old documents.": [
     "66.wav",
     [
       0
     ]
   ],
-  "is": [
+  "The policy protects student rights.": [
     "67.wav",
     [
       0
     ]
   ],
-  "it": [
+  "Language shapes personal identity.": [
     "68.wav",
     [
       0
     ]
   ],
-  "later": [
+  "about": [
     "69.wav",
     [
       0
     ]
   ],
-  "let": [
+  "again": [
     "70.wav",
     [
       0
     ]
   ],
-  "made": [
+  "algorithm": [
     "71.wav",
     [
       0
     ]
   ],
-  "market": [
+  "am": [
     "72.wav",
     [
       0
     ]
   ],
-  "me": [
+  "anything": [
     "73.wav",
     [
       0
     ]
   ],
-  "more": [
+  "appreciate": [
     "74.wav",
     [
       0
     ]
   ],
-  "motor": [
+  "archive": [
     "75.wav",
     [
       0
     ]
   ],
-  "need": [
+  "are": [
     "76.wav",
     [
       0
     ]
   ],
-  "network": [
+  "asset": [
     "77.wav",
     [
       0
     ]
   ],
-  "no": [
+  "battery": [
     "78.wav",
     [
       0
     ]
   ],
-  "of": [
+  "browser": [
     "79.wav",
     [
       0
     ]
   ],
-  "opinion": [
+  "budget": [
     "80.wav",
     [
       0
     ]
   ],
-  "part": [
+  "can": [
     "81.wav",
     [
       0
     ]
   ],
-  "patient": [
+  "circuit": [
     "82.wav",
     [
       0
     ]
   ],
-  "perspective": [
+  "clinic": [
     "83.wav",
     [
       0
     ]
   ],
-  "policy": [
+  "compiler": [
     "84.wav",
     [
       0
     ]
   ],
-  "pressure": [
+  "context": [
     "85.wav",
     [
       0
     ]
   ],
-  "problem": [
+  "could": [
     "86.wav",
     [
       0
     ]
   ],
-  "profit": [
+  "course": [
     "87.wav",
     [
       0
     ]
   ],
-  "prototype": [
+  "culture": [
     "88.wav",
     [
       0
     ]
   ],
-  "pulse": [
+  "current": [
     "89.wav",
     [
       0
     ]
   ],
-  "recovery": [
+  "customer": [
     "90.wav",
     [
       0
     ]
   ],
-  "revenue": [
+  "database": [
     "91.wav",
     [
       0
     ]
   ],
-  "revisit": [
+  "debate": [
     "92.wav",
     [
       0
     ]
   ],
-  "see": [
+  "demand": [
     "93.wav",
     [
       0
     ]
   ],
-  "sensor": [
+  "diagnosis": [
     "94.wav",
     [
       0
     ]
   ],
-  "server": [
+  "do": [
     "95.wav",
     [
       0
     ]
   ],
-  "should": [
+  "dosage": [
     "96.wav",
     [
       0
     ]
   ],
-  "signal": [
+  "else": [
     "97.wav",
     [
       0
     ]
   ],
-  "society": [
+  "encryption": [
     "98.wav",
     [
       0
     ]
   ],
-  "sorry": [
+  "ethics": [
     "99.wav",
     [
       0
     ]
   ],
-  "sounds": [
+  "evidence": [
     "100.wav",
     [
       0
     ]
   ],
-  "strategy": [
+  "explain": [
     "101.wav",
     [
       0
     ]
   ],
-  "supply": [
+  "first": [
     "102.wav",
     [
       0
     ]
   ],
-  "sure": [
+  "function": [
     "103.wav",
     [
       0
     ]
   ],
-  "surgery": [
+  "glad": [
     "104.wav",
     [
       0
     ]
   ],
-  "symptom": [
+  "good": [
     "105.wav",
     [
       0
     ]
   ],
-  "take": [
+  "great": [
     "106.wav",
     [
       0
     ]
   ],
-  "talk": [
+  "happened": [
     "107.wav",
     [
       0
     ]
   ],
-  "tell": [
+  "happy": [
     "108.wav",
     [
       0
     ]
   ],
-  "thank": [
+  "hear": [
     "109.wav",
     [
       0
     ]
   ],
-  "that": [
+  "help": [
     "110.wav",
     [
       0
     ]
   ],
-  "theory": [
+  "hi": [
     "111.wav",
     [
       0
     ]
   ],
-  "think": [
+  "how": [
     "112.wav",
     [
       0
     ]
   ],
-  "this": [
+  "i": [
     "113.wav",
     [
       0
     ]
   ],
-  "time": [
+  "identity": [
     "114.wav",
     [
       0
     ]
   ],
-  "to": [
+  "interface": [
     "115.wav",
     [
       0
     ]
   ],
-  "today": [
+  "invoice": [
     "116.wav",
     [
       0
     ]
   ],
-  "tomorrow": [
+  "is": [
     "117.wav",
     [
       0
     ]
   ],
-  "torque": [
+  "it": [
     "118.wav",
     [
       0
     ]
   ],
-  "treatment": [
+  "later": [
     "119.wav",
     [
       0
     ]
   ],
-  "unclear": [
+  "let": [
     "120.wav",
     [
       0
     ]
   ],
-  "us": [
+  "made": [
     "121.wav",
     [
       0
     ]
   ],
-  "vaccine": [
+  "market": [
     "122.wav",
     [
       0
     ]
   ],
-  "variable": [
+  "me": [
     "123.wav",
     [
       0
     ]
   ],
-  "voltage": [
+  "more": [
     "124.wav",
     [
       0
     ]
   ],
-  "was": [
+  "motor": [
     "125.wav",
     [
       0
     ]
   ],
-  "we": [
+  "need": [
     "126.wav",
     [
       0
     ]
   ],
-  "welcome": [
+  "network": [
     "127.wav",
     [
       0
     ]
   ],
-  "what": [
+  "no": [
     "128.wav",
     [
       0
     ]
   ],
-  "when": [
+  "of": [
     "129.wav",
     [
       0
     ]
   ],
-  "which": [
+  "opinion": [
     "130.wav",
     [
       0
     ]
   ],
-  "you": [
+  "part": [
     "131.wav",
     [
       0
     ]
   ],
-  "your": [
+  "patient": [
     "132.wav",
+    [
+      0
+    ]
+  ],
+  "perspective": [
+    "133.wav",
+    [
+      0
+    ]
+  ],
+  "policy": [
+    "134.wav",
+    [
+      0
+    ]
+  ],
+  "pressure": [
+    "135.wav",
+    [
+      0
+    ]
+  ],
+  "problem": [
+    "136.wav",
+    [
+      0
+    ]
+  ],
+  "profit": [
+    "137.wav",
+    [
+      0
+    ]
+  ],
+  "prototype": [
+    "138.wav",
+    [
+      0
+    ]
+  ],
+  "pulse": [
+    "139.wav",
+    [
+      0
+    ]
+  ],
+  "recovery": [
+    "140.wav",
+    [
+      0
+    ]
+  ],
+  "revenue": [
+    "141.wav",
+    [
+      0
+    ]
+  ],
+  "revisit": [
+    "142.wav",
+    [
+      0
+    ]
+  ],
+  "see": [
+    "143.wav",
+    [
+      0
+    ]
+  ],
+  "sensor": [
+    "144.wav",
+    [
+      0
+    ]
+  ],
+  "server": [
+    "145.wav",
+    [
+      0
+    ]
+  ],
+  "should": [
+    "146.wav",
+    [
+      0
+    ]
+  ],
+  "signal": [
+    "147.wav",
+    [
+      0
+    ]
+  ],
+  "society": [
+    "148.wav",
+    [
+      0
+    ]
+  ],
+  "sorry": [
+    "149.wav",
+    [
+      0
+    ]
+  ],
+  "sounds": [
+    "150.wav",
+    [
+      0
+    ]
+  ],
+  "strategy": [
+    "151.wav",
+    [
+      0
+    ]
+  ],
+  "supply": [
+    "152.wav",
+    [
+      0
+    ]
+  ],
+  "sure": [
+    "153.wav",
+    [
+      0
+    ]
+  ],
+  "surgery": [
+    "154.wav",
+    [
+      0
+    ]
+  ],
+  "symptom": [
+    "155.wav",
+    [
+      0
+    ]
+  ],
+  "take": [
+    "156.wav",
+    [
+      0
+    ]
+  ],
+  "talk": [
+    "157.wav",
+    [
+      0
+    ]
+  ],
+  "tell": [
+    "158.wav",
+    [
+      0
+    ]
+  ],
+  "thank": [
+    "159.wav",
+    [
+      0
+    ]
+  ],
+  "that": [
+    "160.wav",
+    [
+      0
+    ]
+  ],
+  "theory": [
+    "161.wav",
+    [
+      0
+    ]
+  ],
+  "think": [
+    "162.wav",
+    [
+      0
+    ]
+  ],
+  "this": [
+    "163.wav",
+    [
+      0
+    ]
+  ],
+  "time": [
+    "164.wav",
+    [
+      0
+    ]
+  ],
+  "to": [
+    "165.wav",
+    [
+      0
+    ]
+  ],
+  "today": [
+    "166.wav",
+    [
+      0
+    ]
+  ],
+  "tomorrow": [
+    "167.wav",
+    [
+      0
+    ]
+  ],
+  "torque": [
+    "168.wav",
+    [
+      0
+    ]
+  ],
+  "treatment": [
+    "169.wav",
+    [
+      0
+    ]
+  ],
+  "unclear": [
+    "170.wav",
+    [
+      0
+    ]
+  ],
+  "us": [
+    "171.wav",
+    [
+      0
+    ]
+  ],
+  "vaccine": [
+    "172.wav",
+    [
+      0
+    ]
+  ],
+  "variable": [
+    "173.wav",
+    [
+      0
+    ]
+  ],
+  "voltage": [
+    "174.wav",
+    [
+      0
+    ]
+  ],
+  "was": [
+    "175.wav",
+    [
+      0
+    ]
+  ],
+  "we": [
+    "176.wav",
+    [
+      0
+    ]
+  ],
+  "welcome": [
+    "177.wav",
+    [
+      0
+    ]
+  ],
+  "what": [
+    "178.wav",
+    [
+      0
+    ]
+  ],
+  "when": [
+    "179.wav",
+    [
+      0
+    ]
+  ],
+  "which": [
+    "180.wav",
+    [
+      0
+    ]
+  ],
+  "you": [
+    "181.wav",
+    [
+      0
+    ]
+  ],
+  "your": [
+    "182.wav",
     [
       0
     ]
