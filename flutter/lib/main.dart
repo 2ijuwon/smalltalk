@@ -43,6 +43,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     '/': 'index.html',
     '/index.html': 'index.html',
     '/src/app.js': 'src/app.js',
+    '/src/apple-slice.js': 'src/apple-slice.js',
     '/src/speech-clips.js': 'src/speech-clips.js',
     '/src/slime-dialogue.js': 'src/slime-dialogue.js',
     '/src/data.js': 'src/data.js',

@@ -1,12 +1,11 @@
 import { speechClips } from './speech-clips.js';
 import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
-import { animateDuelEffect, strikeDuration } from './duel-motion.js';
-import { addDuelPoints, duelDifficulties, duelPoints, opponentAttackMs } from './duel-rules.js';
+import { sliceDuration, sliceFlight, sliceReward, swipeHit } from './apple-slice.js';
 import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments } from './typing-game.js';
 import {
   applyGradedResult, applyLearningBatch, getStats, getTodayStats, loadState, saveState,
-  nextStage, rankedWords, pickReviewWords, getLearnedIds, bestScore, withBestScore,
+  STORAGE_KEY, initialState, nextStage, rankedWords, pickReviewWords, getLearnedIds, bestScore, withBestScore,
 } from './domain.js';
 
 const root = document.querySelector('#app');
@@ -28,13 +27,12 @@ let draftDifficulty = state.preferences.difficulty;
 let notice = loaded.error;
 let learningSession = null;
 let quickSession = null;
-let duel = null;
-let duelTimer = 0;
-let duelOpponentTimer = 0;
-let duelClockTimer = 0;
-let duelClockDisplay = 0;
-let duelChimeTimer = 0;
-let duelShakeTimer = 0;
+let apples = null;
+let appleFrame = 0;
+let appleWait = 0;
+let appleGesture = null;
+let suppressAppleClickUntil = 0;
+let resetOpen = false;
 const effectPlayers = new Map();
 let draggedToken = '';
 let matchFeedbackTimer = 0;
@@ -240,13 +238,8 @@ function navigate(next) {
     window.clearTimeout(searchTransitionTimer);
     searchTransitionTimer = 0;
   }
-  if (screen === 'duel') {
-    window.clearTimeout(duelTimer);
-    window.clearTimeout(duelOpponentTimer);
-    window.clearTimeout(duelChimeTimer);
-    stopDuelShake();
-    pauseDuelClock();
-  }
+  if (screen === 'duel') stopAppleGame();
+  if (next !== 'settings') resetOpen = false;
   if (screen === 'typing') { stopTyping(); typing.phase = 'stopped'; }
   screen = next;
   notice = '';
@@ -310,14 +303,16 @@ function home() {
   const stage = nextStage(state, major);
   const count = Math.min(getTodayStats(state).learned, 5);
   const hasLesson = state.sessions.some((session) => session.mode === 'new');
-  const canPlay = hasLesson && validIds(getLearnedIds(state)).length >= 3;
+  const learned = validIds(getLearnedIds(state)).map(byId);
+  const canPlay = hasLesson && learned.length >= 3;
+  const canSlice = canPlay && new Set(learned.map(({ word }) => word.toLowerCase())).size >= 3;
   return `<div class="page home-page">
     <section class="home-hero">${pixelSprite('mascot')}<div><p class="eyebrow">${majorLabels[major]}</p><h1>오늘의 학습</h1></div>
       <div class="daily-count"><strong>${count}<small> / 5</small></strong><div class="pixel-meter" aria-label="오늘 5단어 중 ${count}개">${Array.from({ length: 5 }, (_, i) => `<i class="${i < count ? 'filled' : ''}"></i>`).join('')}</div></div></section>
     <section class="card quest"><div class="quest-title"><div><p class="eyebrow">다음 목표 · ${Math.min(stage, stageCount)}/${stageCount}</p><h2>${stage > stageCount ? '학습 완료' : `레슨 ${String(stage).padStart(2, '0')}`}</h2></div>${pixelSprite('book')}</div>
       ${progress(stage - 1, stageCount, '레벨 진행')}${button('학습 시작', 'start-new', 'primary', stage > stageCount)}</section>
     <section class="card practice-panel"><h2>연습</h2><div class="dashboard-grid">${button('빠른 확인', 'start-quick', 'secondary', stage === 1 && !validIds(state.lastBatchIds).length)}<button class="button button--secondary" data-nav="review">복습</button></div></section>
-    <section class="card game-links"><h2>게임</h2><div class="dashboard-grid">${button(`${pixelSprite('search')}단어 찾기<small>최고 ${bestScore(state, 'search')}점</small>`, 'arcade-search', 'secondary', !canPlay)}${button(`${pixelSprite('duel')}사과 베기<small>최고 ${bestScore(state, 'duel')}점</small>`, 'arcade-duel', 'secondary', !canPlay)}${button(`<span class="game-emoji" aria-hidden="true">⌨</span>타자 게임<small>최고 ${bestScore(state, 'typing')}점</small>`, 'arcade-typing', 'secondary', !canPlay)}</div>${canPlay ? '' : hasLesson ? '<p>단어를 3개 이상 배우면 게임을 할 수 있어요.</p>' : '<p>첫 학습을 마치면 게임을 할 수 있어요.</p>'}</section>
+    <section class="card game-links"><h2>게임</h2><div class="dashboard-grid">${button(`${pixelSprite('search')}단어 찾기<small>최고 ${bestScore(state, 'search')}점</small>`, 'arcade-search', 'secondary', !canPlay)}${button(`${pixelSprite('duel')}사과 베기<small>최고 ${bestScore(state, 'slice')}점</small>`, 'arcade-duel', 'secondary', !canSlice)}${button(`<span class="game-emoji" aria-hidden="true">⌨</span>타자 게임<small>최고 ${bestScore(state, 'typing')}점</small>`, 'arcade-typing', 'secondary', !canPlay)}</div>${canPlay ? '' : hasLesson ? '<p>단어를 3개 이상 배우면 게임을 할 수 있어요.</p>' : '<p>첫 학습을 마치면 게임을 할 수 있어요.</p>'}</section>
   </div>`;
 }
 
@@ -859,58 +854,203 @@ function recognizeConversation() {
   try { recognition.start(); } catch { receive(''); }
 }
 
-function duelScore(game) { return game.score; }
-
 function gameOverActions(restart, score, startingBest) {
   return `<div class="game-over"><strong class="record-banner" ${score > startingBest ? '' : 'hidden'}>신기록 달성!</strong><div class="game-over-actions"><button class="button button--secondary" data-nav="home">게임 종료</button>${button('다시 시작', restart)}</div></div>`;
-}
-
-function duelView() {
-  const phase = duel.phase;
-  const canAnswer = phase === 'ready';
-  const sparks = (count) => Array.from({ length: count }, (_, index) => {
-    const angle = index * 360 / count + randomInt(15);
-    return `<i style="--ray:${angle}deg;--reach:${28 + randomInt(65)}px;--spark-size:${2 + randomInt(5)}px"></i>`;
-  }).join('');
-  const cut = duel.cuts.at(-1);
-  const scars = duel.cuts.map(({ angle, x, y }, index) =>
-    `<i class="duel-scar ${phase === 'hit' && index === duel.cuts.length - 1 ? 'duel-scar--fresh' : ''}" style="--cut:${angle}deg;--scar-x:${x}%;--scar-y:${y}%"></i>`).join('');
-  const strike = phase === 'hit'
-    ? `<i class="duel-strike" style="--cut:${cut.angle}deg;--scar-x:${cut.x}%;--scar-y:${cut.y}%"><i class="duel-cut"><i></i><i></i></i><i class="duel-rays">${sparks(16)}</i></i>`
-    : '';
-  const apple = (scars = '', effect = '') => `<i class="duel-apple"><i class="apple-stem"></i><i class="apple-leaf"></i><i class="duel-wounds">${scars}</i>${effect}</i>`;
-  const playerScars = duel.playerCuts.map(({ angle, x, y }) => `<i class="duel-scar" style="--cut:${angle}deg;--scar-x:${x}%;--scar-y:${y}%"></i>`).join('');
-  return `<div class="page duel-page" data-phase="${phase}" data-difficulty="${duel.difficulty}" data-critical="${duel.critical}">
-    <div class="game-header"><div><h1>사과 베기</h1><p class="eyebrow">${duelScore(duel)}점 · 최고 ${bestScore(state, 'duel')}점 · 상대 ${duel.victories + 1}</p></div><button class="game-exit" data-nav="home">나가기</button></div>
-    <div class="duel-arena">
-      <div class="duel-score"><span>내 상처 <b>${duel.losses}</b></span><strong role="timer" aria-label="남은 시간" data-duel-clock>${Math.ceil(duelTimeLeft() / 1000)}초</strong><span>상대 상처 <b>${duel.cuts.length}</b></span></div>
-      <div class="duel-player" aria-hidden="true">${apple(playerScars)}</div><div class="duel-opponent" aria-hidden="true">${apple(scars, strike)}</div>
-    </div>
-    ${phase === 'idle' ? `<div class="duel-intro"><p>20초 동안 상대보다 상처를 더 많이 내세요. 상대 공격은 막을 수 없어요.</p><div class="duel-difficulties">${[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(([value,label]) => `<button class="button ${duel.difficulty === value ? 'button--primary' : 'button--secondary'}" data-action="duel-difficulty:${value}">${label}<small>×${duelDifficulties[value].multiplier}</small></button>`).join('')}</div><small>승리할 때마다 다음 상대가 빨라집니다 · 최대 3,000점</small></div>` : `<h2>${phase === 'intermission' ? '다음 상대가 옵니다' : phase === 'ended' ? '대결 종료' : duel.item.meaning}</h2>`}
-    ${['ready', 'hit', 'locked'].includes(phase) ? `<div class="duel-choices" role="group" aria-label="영단어 선택">
-      ${duel.options.map(({ id, word }) => `<button class="button button--secondary ${duel.selected === id ? 'duel-selected' : ''}" data-action="duel-answer:${id}" aria-disabled="${!canAnswer}">${word}</button>`).join('')}
-    </div>` : ''}
-    <p class="game-message duel-status" role="status">${duel.message}</p>
-    ${phase === 'ended' ? gameOverActions('duel-start', duel.score, duel.startingBest) : phase === 'idle' ? button('대결 시작', 'duel-start') : ''}
-  </div>`;
 }
 
 function learnedGamePool() {
   return shuffle(validIds(getLearnedIds(state)).map(byId)).slice(0, 5);
 }
 
-function openDuel(start = false) {
-  window.clearTimeout(duelTimer);
-  const pool = learnedGamePool();
-  if (pool.length < 3) return;
-  duel = { pool, cuts: [], playerCuts: [], losses: 0, score: 0, startingBest: bestScore(state, 'duel'), victories: 0, difficulty: duel?.difficulty || 'normal', critical: false, remainingMs: 20000, activeSince: null, phase: 'idle', message: '승리하면 다음 상대가 옵니다.' };
-  const [item, ...alternatives] = shuffle(pool);
-  duel.item = item;
-  duel.options = shuffle([item, ...alternatives.slice(0, 3)]);
-  screen = 'duel';
-  if (start) return startDuelOpponent();
-  render();
+function appleView() {
+  const game = apples;
+  const active = game.phase === 'playing';
+  const round = game.round;
+  return `<div class="page apple-page" data-phase="${game.phase}">
+    <div class="game-header"><div><p class="eyebrow">최고 ${bestScore(state, 'slice')}점</p><h1>사과 베기</h1></div><button class="game-exit" data-nav="home">나가기</button></div>
+    ${active ? `<div class="apple-hud"><strong data-apple-clock>${Math.ceil(game.remaining / 1000)}초</strong><span data-apple-score>${game.score}점</span><span data-apple-hearts aria-label="남은 기회 ${game.hearts}회">${'♥'.repeat(game.hearts)}${'♡'.repeat(3 - game.hearts)}</span></div>` : ''}
+    <div class="apple-prompt">
+      ${active ? `<div><small>${game.listen ? '듣고 찾기' : '뜻을 보고 찾기'}</small><h2 data-apple-meaning>${game.listen ? '어떤 단어일까요?' : escapeHtml(game.target.meaning)}</h2></div>
+        <div class="apple-hint-actions">${button('발음 힌트', 'apple-speak', 'quiet')}${game.listen ? button('뜻 보기', 'apple-reveal', 'quiet') : ''}</div>`
+      : `<div><h2>${game.phase === 'ended' ? `최종 ${game.score}점` : '단어 과수원'}</h2><p>${game.phase === 'ended' ? `연속 정답 최고 ${game.longest}회` : '뜻이나 발음에 맞는 영어 사과를 손가락으로 그어 베세요. 눌러서 벨 수도 있어요.'}</p></div>`}
+    </div>
+    <div class="apple-field" aria-label="날아오르는 영어 사과">
+      ${active ? `<svg class="apple-trail" aria-hidden="true"><polyline fill="none" /></svg>${game.fruit.map((fruit, index) => `<button class="apple-fruit" data-apple-index="${index}" type="button" style="--apple-x:${fruit.lane}%;--apple-y:110%"><span class="apple-fruit__left"></span><span class="apple-fruit__right"></span><span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`).join('')}`
+      : `<span class="apple-display" aria-hidden="true">${pixelSprite('duel')}</span>`}
+    </div>
+    ${active ? `<p class="apple-feedback" role="status" data-apple-feedback>${game.feedback || `${round}번째 · ${game.combo}연속`}</p>`
+    : game.phase === 'ended' ? gameOverActions('duel-start', game.score, game.startingBest)
+    : `<p class="apple-rules">45초 · 기회 3번 · 세 번 연속 정답이면 골든 슬래시</p>${button('시작하기', 'duel-start')}`}
+  </div>`;
 }
+
+function openAppleGame(start = false) {
+  stopAppleGame();
+  const pool = [...new Map(shuffle(validIds(getLearnedIds(state)).map(byId)).map((item) => [item.word.toLowerCase(), item])).values()].slice(0, 5);
+  if (pool.length < 3) return;
+  apples = { pool, bag: [], phase: 'idle', round: 0, score: 0, remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
+  screen = 'duel';
+  if (start) return launchAppleRound();
+  render({ resetScroll: true });
+}
+
+function stopAppleGame() {
+  cancelAnimationFrame(appleFrame);
+  clearTimeout(appleWait);
+  appleFrame = appleWait = 0;
+  appleGesture = null;
+  suppressAppleClickUntil = 0;
+}
+
+function launchAppleRound() {
+  if (screen !== 'duel') return;
+  const game = apples;
+  if (!game.hearts || game.remaining <= 0) return finishAppleGame();
+  if (!game.bag.length) {
+    game.bag = shuffle(game.pool);
+    if (game.bag[0].id === game.target?.id) game.bag.push(game.bag.shift());
+  }
+  game.target = game.bag.shift();
+  game.listen = ++game.round % 4 === 0;
+  game.phase = 'playing';
+  game.feedback = '';
+  game.resolved = false;
+  game.fruit = shuffle([game.target, ...shuffle(game.pool.filter((item) => item !== game.target)).slice(0, 2)])
+    .map((item, index) => ({ ...item, lane: 18 + index * 32, spent: false }));
+  render();
+  if (game.listen) speakText(game.target.word);
+  const nodes = [...root.querySelectorAll('.apple-fruit')];
+  const clock = root.querySelector('[data-apple-clock]');
+  const duration = sliceFlight(game.round);
+  let elapsed = 0;
+  let previous = performance.now();
+  const tick = (now) => {
+    if (screen !== 'duel' || apples !== game || game.resolved) return;
+    const delta = Math.min(50, Math.max(0, now - previous));
+    previous = now;
+    if (document.hidden) { appleFrame = requestAnimationFrame(tick); return; }
+    game.remaining = Math.max(0, game.remaining - delta);
+    elapsed += delta;
+    const seconds = `${Math.ceil(game.remaining / 1000)}초`;
+    if (clock.textContent !== seconds) clock.textContent = seconds;
+    if (game.remaining <= 0) return finishAppleGame();
+    if (elapsed >= duration) return missAppleRound();
+    const progress = elapsed / duration;
+    nodes.forEach((node, index) => {
+      const offset = index * .038;
+      const flight = Math.max(0, Math.min(1, (progress - offset) / (1 - offset)));
+      node.style.setProperty('--apple-y', `${110 - 93 * 4 * flight * (1 - flight)}%`);
+      node.style.setProperty('--apple-x', `${game.fruit[index].lane + Math.sin(flight * Math.PI * 2) * (index === 1 ? -5 : 4)}%`);
+    });
+    appleFrame = requestAnimationFrame(tick);
+  };
+  appleFrame = requestAnimationFrame(tick);
+}
+
+function finishAppleGame() {
+  stopAppleGame();
+  apples.phase = 'ended';
+  saveBest('slice', apples.score);
+  render();
+  specialEffect(apples.score > apples.startingBest ? 'record' : 'over');
+}
+
+function updateAppleHud(message) {
+  const game = apples;
+  root.querySelector('[data-apple-feedback]').textContent = message;
+  root.querySelector('[data-apple-score]').textContent = `${game.score}점`;
+  root.querySelector('[data-apple-clock]').textContent = `${Math.ceil(game.remaining / 1000)}초`;
+  const hearts = root.querySelector('[data-apple-hearts]');
+  hearts.textContent = '♥'.repeat(game.hearts) + '♡'.repeat(3 - game.hearts);
+  hearts.setAttribute('aria-label', `남은 기회 ${game.hearts}회`);
+}
+
+function resolveAppleRound(delay) {
+  apples.resolved = true;
+  cancelAnimationFrame(appleFrame);
+  appleWait = setTimeout(launchAppleRound, delay);
+}
+
+function missAppleRound() {
+  apples.hearts -= 1;
+  apples.combo = 0;
+  playEffect('retry');
+  speakText(apples.target.word);
+  updateAppleHud(`놓쳤어요 · ${apples.target.word} = ${apples.target.meaning}`);
+  resolveAppleRound(820);
+}
+
+function cutApple(index, angle = -25) {
+  const game = apples;
+  const fruit = game?.fruit?.[index];
+  if (screen !== 'duel' || game.phase !== 'playing' || game.resolved || !fruit || fruit.spent) return;
+  const node = root.querySelector(`[data-apple-index="${index}"]`);
+  if (!node) return;
+  fruit.spent = true;
+  if (fruit.id !== game.target.id && (game.listen || fruit.meaning !== game.target.meaning)) {
+    node.classList.add('apple-fruit--wrong');
+    node.disabled = true;
+    game.combo = 0;
+    game.hearts -= 1;
+    playEffect('retry');
+    updateAppleHud(`${fruit.word}는 ‘${fruit.meaning}’이에요.`);
+    if (!game.hearts) resolveAppleRound(680);
+    return;
+  }
+  const reward = sliceReward(++game.combo);
+  game.score += reward.points;
+  game.remaining += reward.extraMs;
+  game.longest = Math.max(game.longest, game.combo);
+  node.style.setProperty('--blade-angle', `${angle}deg`);
+  node.classList.add('apple-fruit--split');
+  node.disabled = true;
+  if (reward.critical) {
+    node.classList.add('apple-fruit--gold');
+    node.insertAdjacentHTML('beforeend', '<i class="apple-gold-rays" aria-hidden="true"></i>');
+    specialEffect('record');
+  } else playEffect('correct');
+  speakText(fruit.word);
+  updateAppleHud(`${reward.critical ? '골든 슬래시! +3초 · ' : ''}${fruit.word} = ${fruit.meaning} · ${game.combo}연속`);
+  resolveAppleRound(reward.critical ? 950 : 760);
+}
+
+root.addEventListener('pointerdown', (event) => {
+  const field = event.target.closest('.apple-field');
+  if (!field || screen !== 'duel' || apples.phase !== 'playing' || apples.resolved || !event.isPrimary || event.button !== 0) return;
+  const point = { x: event.clientX, y: event.clientY };
+  appleGesture = { id: event.pointerId, field, previous: point, origin: point, trail: [point], cut: false };
+});
+window.addEventListener('pointermove', (event) => {
+  const gesture = appleGesture;
+  if (!gesture || gesture.id !== event.pointerId || !gesture.field.isConnected) return;
+  const point = { x: event.clientX, y: event.clientY };
+  if (!gesture.started && Math.hypot(point.x - gesture.origin.x, point.y - gesture.origin.y) < 10) return;
+  gesture.started = true;
+  suppressAppleClickUntil = performance.now() + 380;
+  gesture.trail.push(point);
+  if (gesture.trail.length > 6) gesture.trail.shift();
+  const bounds = gesture.field.getBoundingClientRect();
+  const line = gesture.field.querySelector('.apple-trail polyline');
+  line.setAttribute('points', gesture.trail.map(({ x, y }) => `${x - bounds.left},${y - bounds.top}`).join(' '));
+  if (!gesture.cut && !apples.resolved) {
+    const hits = [...gesture.field.querySelectorAll('[data-apple-index]:not(:disabled)')]
+      .map((node) => ({ index: Number(node.dataset.appleIndex), at: swipeHit(gesture.previous, point, node.getBoundingClientRect()) }))
+      .filter(({ at }) => at !== null).sort((a, b) => a.at - b.at);
+    if (hits.length) {
+      const angle = Math.atan2(point.y - gesture.previous.y, point.x - gesture.previous.x) * 180 / Math.PI;
+      gesture.cut = true;
+      cutApple(hits[0].index, angle);
+    }
+  }
+  gesture.previous = point;
+});
+function endAppleGesture(event) {
+  if (appleGesture?.id !== event.pointerId) return;
+  appleGesture.field.querySelector('.apple-trail polyline')?.removeAttribute('points');
+  appleGesture = null;
+}
+window.addEventListener('pointerup', endAppleGesture);
+window.addEventListener('pointercancel', endAppleGesture);
 
 function stopTyping() {
   cancelAnimationFrame(typingFrame);
@@ -1238,97 +1378,6 @@ function submitTyping(value) {
   input?.focus({ preventScroll: true });
 }
 
-function duelTimeLeft() {
-  const elapsed = duel.activeSince === null ? 0 : performance.now() - duel.activeSince;
-  return Math.max(0, duel.remainingMs - elapsed);
-}
-
-function pauseDuelClock() {
-  window.clearTimeout(duelClockTimer);
-  window.clearInterval(duelClockDisplay);
-  if (!duel) return;
-  duel.remainingMs = duelTimeLeft();
-  duel.activeSince = null;
-}
-
-function finishDuel() {
-  if (screen !== 'duel' || duel.phase === 'ended' || duel.phase === 'intermission') return;
-  pauseDuelClock();
-  window.clearTimeout(duelTimer);
-  window.clearTimeout(duelOpponentTimer);
-  duel.remainingMs = 0;
-  const difference = duel.cuts.length - duel.losses;
-  if (difference > 0) {
-    duel.score = addDuelPoints(duel.score, duelPoints(duel.difficulty, duel.victories, 0, true));
-    duel.victories += 1;
-    duel.phase = 'intermission';
-    duel.message = `승리! ${duel.victories}명 격파 · 다음 상대 준비 중`;
-    saveBest('duel', duel.score);
-    duelTimer = window.setTimeout(startDuelOpponent, 900);
-  } else {
-    duel.phase = 'ended';
-    specialEffect(duel.score > duel.startingBest ? 'record' : 'over');
-    duel.message = `${difference < 0 ? '패배' : '무승부'} · ${duel.victories}명 격파 · ${duel.score}점`;
-    saveBest('duel', duel.score);
-  }
-  render();
-}
-
-function nextDuelRound() {
-  if (screen !== 'duel' || !['ready', 'hit', 'locked'].includes(duel.phase)) return;
-  const [item, ...alternatives] = shuffle(duel.pool.filter((word) => word !== duel.item));
-  duel.item = item;
-  duel.options = shuffle([item, ...alternatives.slice(0, 3)]);
-  duel.selected = '';
-  duel.critical = false;
-  duel.phase = 'ready';
-  duel.message = '뜻에 맞는 단어를 골라 상대 사과에 상처를 내세요.';
-  render();
-}
-
-function startDuelOpponent() {
-  if (screen !== 'duel') return;
-  duel.cuts = [];
-  duel.playerCuts = [];
-  duel.losses = 0;
-  duel.remainingMs = 20000;
-  duel.activeSince = performance.now();
-  duel.phase = 'ready';
-  nextDuelRound();
-  duelClockTimer = window.setTimeout(finishDuel, 20000);
-  duelClockDisplay = window.setInterval(() => {
-    const timer = root.querySelector('[data-duel-clock]');
-    if (timer) timer.textContent = `${Math.ceil(duelTimeLeft() / 1000)}초`;
-  }, 100);
-  scheduleOpponentAttack();
-}
-
-function scheduleOpponentAttack() {
-  window.clearTimeout(duelOpponentTimer);
-  const delay = opponentAttackMs(duel.difficulty, duel.victories);
-  duelOpponentTimer = window.setTimeout(takeDuelHit, delay);
-}
-
-function takeDuelHit() {
-  if (screen !== 'duel' || !['ready', 'hit', 'locked'].includes(duel.phase)) return;
-  if (!duelTimeLeft()) return finishDuel();
-  duel.losses += 1;
-  playEffect('hit');
-  const scar = { angle: randomInt(180), x: 38 + randomInt(25), y: 34 + randomInt(33) };
-  duel.playerCuts.push(scar);
-  root.querySelector('.duel-player .duel-wounds')?.insertAdjacentHTML('beforeend', `<i class="duel-scar" style="--cut:${scar.angle}deg;--scar-x:${scar.x}%;--scar-y:${scar.y}%"></i>`);
-  const count = root.querySelector('.duel-score span:first-child b');
-  if (count) count.textContent = duel.losses;
-  duel.message = `상대의 공격 · 내 상처 ${duel.losses}`;
-  const status = root.querySelector('.duel-status');
-  if (status) status.textContent = duel.message;
-  root.querySelector('.duel-screen-effect')?.setAttribute('data-critical', String(duel.losses > duel.cuts.length));
-  animateDuelEffect(root, 'damage');
-  scheduleOpponentAttack();
-}
-
-
-
 const specialColors = {
   watch: '#b4c5d4', heal: '#83d9ae', bomb: '#ffd186', loot: '#b7a3ff',
   boss: '#8e93ef', record: '#ffe27f', over: '#a2c5f0',
@@ -1420,59 +1469,6 @@ function playEffect(kind) {
   });
 }
 
-function stopDuelShake() {
-  window.clearTimeout(duelShakeTimer);
-  duelShakeTimer = 0;
-  root.style.removeProperty('--duel-x');
-  root.style.removeProperty('--duel-y');
-}
-
-function startDuelShake(duration, from, to, firstInterval = 50, lastInterval = 50) {
-  stopDuelShake();
-  if (duration <= 0) return;
-  const start = performance.now();
-  const step = () => {
-    const elapsed = performance.now() - start;
-    if (elapsed >= duration) return stopDuelShake();
-    const progress = elapsed / duration;
-    const strength = from + (to - from) * progress;
-    const interval = firstInterval + (lastInterval - firstInterval) * progress;
-    const directions = [-1, 1, 0].filter((direction) => direction !== duel.lastShakeDirection);
-    const direction = directions[randomInt(directions.length)];
-    duel.lastShakeDirection = direction;
-    root.style.setProperty('--duel-x', `${direction * strength}vw`);
-    root.style.setProperty('--duel-y', `${direction === 0 ? strength : 0}dvh`);
-    duelShakeTimer = window.setTimeout(step, Math.min(interval, duration - elapsed));
-  };
-  step();
-}
-
-function answerDuel(id) {
-  if (duel.phase !== 'ready') return;
-  if (!duelTimeLeft()) return finishDuel();
-  duel.selected = id;
-  if (id !== duel.item.id) {
-    duel.phase = 'locked';
-    playEffect('retry');
-    duel.message = '뜻이 달라요. 잠시 뒤 새 단어가 나와요.';
-    duelTimer = window.setTimeout(nextDuelRound, 1200);
-    return render();
-  }
-  duel.phase = 'hit';
-  duel.message = '맞혔어요! 상대 사과에 상처를 냈어요.';
-  duel.critical = randomInt(5) === 0;
-  const scars = duel.critical ? 3 : 1;
-  for (let index = 0; index < scars; index += 1) duel.cuts.push({ angle: randomInt(180), x: 38 + randomInt(25), y: 34 + randomInt(33) });
-  duel.score = addDuelPoints(duel.score, duelPoints(duel.difficulty, duel.victories, scars));
-  saveBest('duel', duel.score);
-  if (duel.critical) duel.message = 'CRITICAL! · 상대 상처 +3';
-  duelChimeTimer = window.setTimeout(() => playEffect('correct'), 140);
-  duelTimer = window.setTimeout(nextDuelRound, strikeDuration);
-  render();
-}
-
-
-
 function review() {
   const words = rankedWords(state).filter(({ id }) => byId(id));
   const pageSize = 4;
@@ -1489,40 +1485,48 @@ function review() {
 
 function stats() {
   const value = getStats(state);
-  return `<div class="page"><div class="page-intro"><p class="eyebrow">PROGRESS</p><h1>학습 기록</h1></div><div class="stats-grid stats-grid--three">${card(`<strong>${value.learned}</strong><span>배운 단어</span>`)}${card(`<strong>${value.learningStreak}</strong><span>연속 학습 일</span>`)}${card(`<strong>${value.perfectStreak}</strong><span>연속 완벽 학습</span>`)}</div><section class="card game-records"><h2>게임 최고 점수</h2><div><span>단어 찾기 <strong>${bestScore(state, 'search')}점</strong></span><span>사과 베기 <strong>${bestScore(state, 'duel')}점</strong></span><span>타자 게임 <strong>${bestScore(state, 'typing')}점</strong></span></div></section></div>`;
+  return `<div class="page"><div class="page-intro"><p class="eyebrow">PROGRESS</p><h1>학습 기록</h1></div><div class="stats-grid stats-grid--three">${card(`<strong>${value.learned}</strong><span>배운 단어</span>`)}${card(`<strong>${value.learningStreak}</strong><span>연속 학습 일</span>`)}${card(`<strong>${value.perfectStreak}</strong><span>연속 완벽 학습</span>`)}</div><section class="card game-records"><h2>게임 최고 점수</h2><div><span>단어 찾기 <strong>${bestScore(state, 'search')}점</strong></span><span>사과 베기 <strong>${bestScore(state, 'slice')}점</strong></span><span>타자 게임 <strong>${bestScore(state, 'typing')}점</strong></span></div></section></div>`;
+}
+
+function resetLocalData() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    notice = '저장 데이터를 지우지 못했어요. 다시 시도해 주세요.';
+    return render();
+  }
+  stopSpeech();
+  window.clearTimeout(xpClaimTimer);
+  window.clearTimeout(celebrationTimer);
+  xpClaimTimer = 0;
+  celebration = null;
+  state = structuredClone(initialState);
+  draftMajor = state.preferences.major;
+  draftDifficulty = state.preferences.difficulty;
+  onboardingStep = 0;
+  reviewPage = 0;
+  resetOpen = false;
+  navigate('onboarding');
 }
 
 function settings() {
-  return `<div class="page page--narrow"><h1>설정</h1>${card(`<label>전공<select data-setting="major">${Object.entries(majorLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.major === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>난이도<select data-setting="difficulty">${Object.entries(difficultyLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.difficulty === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><div class="fixed-goal"><span>하루 목표</span><strong>5단어 · 약 5분</strong></div><label>희망 시간<input data-setting="reminderTime" type="time" value="${state.preferences.reminderTime}"></label>`, 'form-card')}${button('저장', 'settings-done')}</div>`;
+  const reset = resetOpen
+    ? `<p role="alert">현재 접속 주소에 저장된 학습 기록, 점수, 설정이 지워져요. 되돌릴 수 없어요.</p><div class="game-over-actions">${button('취소', 'settings-reset-cancel', 'secondary')}${button('모두 지우기', 'settings-reset-confirm', 'danger')}</div>`
+    : button('데이터 초기화', 'settings-reset', 'quiet');
+  return `<div class="page page--narrow"><h1>설정</h1>${card(`<label>전공<select data-setting="major">${Object.entries(majorLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.major === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>난이도<select data-setting="difficulty">${Object.entries(difficultyLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.difficulty === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><div class="fixed-goal"><span>하루 목표</span><strong>5단어 · 약 5분</strong></div><label>희망 시간<input data-setting="reminderTime" type="time" value="${state.preferences.reminderTime}"></label>`, 'form-card')}${button('저장', 'settings-done')}<section class="card settings-reset"><h2>저장 데이터</h2>${reset}</section></div>`;
 }
 
 function paint() {
-  const views = { onboarding, home, learn, quick: quickCheck, smalltalk: smallTalk, smalltalkquiz: talkQuizView, conversation: conversationView, review, stats, settings, duel: duelView, result: resultView, typing: typingView };
+  const views = { onboarding, home, learn, quick: quickCheck, smalltalk: smallTalk, smalltalkquiz: talkQuizView, conversation: conversationView, review, stats, settings, duel: appleView, result: resultView, typing: typingView };
   const isOnboarding = screen === 'onboarding';
   const isImmersive = ['learn', 'quick', 'duel', 'result', 'typing', 'smalltalkquiz', 'conversation'].includes(screen);
   const activeStage = screen === 'learn' ? learningSession?.stage || '' : screen;
-  const isDuel = screen === 'duel';
-  const duelEffect = isDuel ? `<div class="duel-screen-effect" data-effect="${duel.phase}" data-critical="${duel.losses > duel.cuts.length}" aria-hidden="true"></div>` : '';
-  root.className = [isOnboarding ? 'app--onboarding' : '', isImmersive ? 'app--immersive' : '', isDuel ? 'app--duel' : ''].filter(Boolean).join(' ');
-  root.innerHTML = `${isOnboarding ? '' : header()}${notice ? `<div class="notice" role="status">${escapeHtml(notice)}</div>` : ''}<main id="main" data-screen="${screen}" data-stage="${activeStage}" class="${isOnboarding ? 'main main--onboarding' : 'main'}">${(views[screen] || home)()}</main>${isOnboarding || isImmersive ? '' : nav()}${successBurst()}${duelEffect}`;
+  root.className = [isOnboarding ? 'app--onboarding' : '', isImmersive ? 'app--immersive' : ''].filter(Boolean).join(' ');
+  root.innerHTML = `${isOnboarding ? '' : header()}${notice ? `<div class="notice" role="status">${escapeHtml(notice)}</div>` : ''}<main id="main" data-screen="${screen}" data-stage="${activeStage}" class="${isOnboarding ? 'main main--onboarding' : 'main'}">${(views[screen] || home)()}</main>${isOnboarding || isImmersive ? '' : nav()}${successBurst()}`;
   animateBossHit();
   if (screen === 'home') absorbPendingXp();
   if (screen === 'learn' && learningSession?.stage === 'search') updateTimerUI();
-  if (isDuel) {
-    if (['ready', 'hit', 'locked'].includes(duel.phase)) {
-      const remaining = duelTimeLeft();
-      const critical = duel.losses > duel.cuts.length;
-      const initial = critical ? .07 : .03;
-      const peak = critical ? .28 : .18;
-      const slowInterval = critical ? 24 : 30;
-      const fastInterval = critical ? 12 : 16;
-      const remainingFraction = remaining / 20000;
-      const strength = peak - (peak - initial) * remainingFraction;
-      const interval = fastInterval + (slowInterval - fastInterval) * remainingFraction;
-      startDuelShake(remaining, strength, peak, interval, fastInterval);
-    } else stopDuelShake();
-    animateDuelEffect(root, duel.phase);
-  }
+
 }
 
 const fittedTextRules = [
@@ -1734,6 +1738,11 @@ function speakText(text, spans = []) {
   audio.play().catch(() => {
     if (speechAudio !== audio) return;
     stopSpeech();
+    if (screen === 'duel') {
+      const feedback = root.querySelector('[data-apple-feedback]');
+      if (feedback && !apples.resolved) feedback.textContent = '발음이 들리지 않으면 뜻 보기로 확인하세요.';
+      return;
+    }
     notice = '발음 파일을 재생하지 못했어요. 다시 눌러 주세요.';
     render();
   });
@@ -1913,7 +1922,7 @@ function resolveSearchPath(path) {
 }
 
 function playTouchEffect(event) {
-  const word = event.target.closest('[data-dictionary-word], [data-match-side="word"], .word-token');
+  const word = event.target.closest('[data-dictionary-word], [data-match-side="word"], .word-token, [data-apple-index]');
   if (event.target.closest('.pixel-sprite--slime, .typing-enemy:not(.typing-item)')) return playEffect('place');
   const control = event.target.closest('button, input, select, label, a');
   playEffect(word ? 'word' : control ? 'tap' : 'surface');
@@ -1935,6 +1944,10 @@ root.addEventListener('click', (event) => {
   }
   const target = event.target.closest('button');
   if (!target) return;
+  if (target.dataset.appleIndex !== undefined) {
+    if (event.detail === 0 || performance.now() >= suppressAppleClickUntil) cutApple(Number(target.dataset.appleIndex));
+    return;
+  }
   if (target.dataset.gridIndex !== undefined) return;
   if (target.dataset.dictionaryWord) return showWordMeaning(target);
   if (target.dataset.nav) return navigate(target.dataset.nav);
@@ -2016,10 +2029,13 @@ root.addEventListener('click', (event) => {
     return render();
   }
   if (action === 'result-home') return goHome(`단어 ${resultWordCount}개를 학습했어요!`);
-  if (action === 'arcade-duel') return openDuel();
-  if (action.startsWith('duel-difficulty:') && duel?.phase === 'idle') { duel.difficulty = action.split(':')[1]; return render(); }
-  if (action === 'duel-start') return openDuel(true);
-  if (action.startsWith('duel-answer:')) return answerDuel(action.split(':')[1]);
+  if (action === 'arcade-duel') return openAppleGame();
+  if (action === 'duel-start') return openAppleGame(true);
+  if (action === 'apple-speak') return speakText(apples.target.word);
+  if (action === 'apple-reveal') {
+    root.querySelector('[data-apple-meaning]').textContent = apples.target.meaning;
+    return;
+  }
   if (action === 'onboarding-next') { onboardingStep += 1; return render(); }
   if (action === 'onboarding-back') { onboardingStep = Math.max(0, onboardingStep - 1); return render(); }
   if (action === 'onboarding-finish') {
@@ -2142,6 +2158,9 @@ root.addEventListener('click', (event) => {
     quickSession.options = quickOptions(quickSession.items[quickSession.index], quickSession.items);
     return render();
   }
+  if (action === 'settings-reset') { resetOpen = true; return render(); }
+  if (action === 'settings-reset-cancel') { resetOpen = false; return render(); }
+  if (action === 'settings-reset-confirm' && resetOpen) return resetLocalData();
   if (action === 'settings-done') return goHome('설정을 저장했어요.');
 });
 

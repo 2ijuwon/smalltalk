@@ -7,7 +7,7 @@ export const initialState = {
   version: 1, onboarded: false,
   preferences: { major: 'computer', difficulty: 'basic', dailyGoal: 5, reminderTime: '20:00' },
   events: [], reviews: [], favorites: [], lastBatchIds: [], sessions: [], xp: 0, pendingXp: 0,
-  bestScores: { search: 0, duel: 0, typing: 0 },
+  bestScores: { search: 0, duel: 0, slice: 0, typing: 0 },
 };
 
 export function loadState(storage = localStorage) {
@@ -27,7 +27,7 @@ export function bestScore(state, game) {
 }
 
 export function withBestScore(state, game, score) {
-  if (!['search', 'duel', 'typing'].includes(game) || !Number.isFinite(score) || score <= bestScore(state, game)) return state;
+  if (!['search', 'duel', 'slice', 'typing'].includes(game) || !Number.isFinite(score) || score <= bestScore(state, game)) return state;
   return { ...state, bestScores: { ...initialState.bestScores, ...state.bestScores, [game]: Math.floor(score) } };
 }
 
