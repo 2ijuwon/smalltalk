@@ -8,6 +8,7 @@ node (Join-Path $Source 'scripts\content.mjs') --check-audio
 if ($LASTEXITCODE -ne 0) { throw 'Content validation failed.' }
 $sourceFiles = @(
   'src\app.js',
+  'src\brand-icon.svg',
   'src\apple-slice.js',
   'src\speech-clips.js',
   'src\slime-dialogue.js',

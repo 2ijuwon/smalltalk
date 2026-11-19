@@ -289,7 +289,7 @@ function absorbPendingXp() {
 }
 
 function header() {
-  return `<header class="topbar"><button class="brand" data-nav="home">${brandMark()}<strong>small talk</strong></button><div class="xp"><span>XP</span><strong>${state.xp}</strong></div></header>`;
+  return `<header class="topbar"><button class="brand" data-nav="home" aria-label="smalltalk 홈">${brandMark()}<strong>smalltalk</strong></button><div class="xp"><span>XP</span><strong>${state.xp}</strong></div></header>`;
 }
 
 function nav() {

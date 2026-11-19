@@ -21,7 +21,7 @@ class EnglishApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      title: 'small talk',
+      title: 'smalltalk',
       debugShowCheckedModeBanner: false,
       home: EnglishWebView(),
     );
@@ -43,6 +43,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     '/': 'index.html',
     '/index.html': 'index.html',
     '/src/app.js': 'src/app.js',
+    '/src/brand-icon.svg': 'src/brand-icon.svg',
     '/src/apple-slice.js': 'src/apple-slice.js',
     '/src/speech-clips.js': 'src/speech-clips.js',
     '/src/slime-dialogue.js': 'src/slime-dialogue.js',
@@ -300,6 +301,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
         'html' => 'text/html; charset=utf-8',
         'css' => 'text/css; charset=utf-8',
         'js' => 'text/javascript; charset=utf-8',
+        'svg' => 'image/svg+xml',
         'woff2' => 'font/woff2',
         'wav' => 'audio/wav',
         _ => 'application/octet-stream',

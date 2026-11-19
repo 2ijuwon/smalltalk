@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">smalltalk</string>
+    <color name="smalltalk_icon_background">#DDF2FF</color>
+</resources>
