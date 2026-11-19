@@ -35,7 +35,7 @@ let duelClockTimer = 0;
 let duelClockDisplay = 0;
 let duelChimeTimer = 0;
 let duelShakeTimer = 0;
-let effectAudio;
+const effectPlayers = new Map();
 let draggedToken = '';
 let matchFeedbackTimer = 0;
 let searchTimer = 0;
@@ -1113,38 +1113,15 @@ function takeDuelHit() {
 
 
 
-const effectNotes = {
-  tap: [400],
-  place: [530],
-  correct: [660, 880],
-  retry: [330, 262],
-  hit: [180, 120],
-  finish: [523, 659, 784],
-};
-
-let queuedEffect;
 function playEffect(kind) {
-  if (queuedEffect) {
-    if (kind !== 'tap') queuedEffect = kind;
-    return;
+  let player = effectPlayers.get(kind);
+  if (!player) {
+    player = new Audio(new URL(`./audio/fx-${kind}.wav`, import.meta.url));
+    effectPlayers.set(kind, player);
   }
-  queuedEffect = kind;
-  queueMicrotask(() => {
-    const notes = effectNotes[queuedEffect];
-    queuedEffect = null;
-    if (!effectAudio || effectAudio.state !== 'running') return;
-    notes.forEach((frequency, index) => {
-      const note = effectAudio.createOscillator();
-      const gain = effectAudio.createGain();
-      const start = effectAudio.currentTime + index * .068;
-      note.type = 'triangle';
-      note.frequency.value = frequency;
-      gain.gain.setValueAtTime(notes.length === 1 ? .035 : .065, start);
-      gain.gain.exponentialRampToValueAtTime(.001, start + .1);
-      note.connect(gain).connect(effectAudio.destination);
-      note.start(start);
-      note.stop(start + .1);
-    });
+  player.currentTime = 0;
+  player.play().catch(() => {
+    // A later tap can unlock media if the browser blocks playback.
   });
 }
 
@@ -1435,7 +1412,7 @@ function speakText(text, spans = []) {
   const clip = speechClips[text] || speechClips[text.toLowerCase()];
   if (!clip) return;
   const [file, cues] = clip;
-  const audio = new Audio(new URL(`./audio/${file}`, import.meta.url));
+  const audio = new Audio(new URL(`./audio/${file}?v=2`, import.meta.url));
   speechAudio = audio;
   const highlight = () => {
     if (speechAudio !== audio || audio.paused) return;
@@ -1627,21 +1604,18 @@ function resolveSearchPath(path) {
   render();
 }
 
+function playTouchEffect(event) {
+  const word = event.target.closest('[data-dictionary-word], [data-match-side="word"], .word-token');
+  const control = event.target.closest('button, input, select, label, a');
+  playEffect(word ? 'word' : control ? 'tap' : 'surface');
+}
+
+document.addEventListener('pointerup', (event) => {
+  if (event.isPrimary && event.button === 0) playTouchEffect(event);
+}, { capture: true });
+
 root.addEventListener('click', (event) => {
-  const control = event.target.closest('button:not(:disabled)');
-  if (!control || control.dataset.gridIndex !== undefined) return;
-  const action = control.dataset.action || '';
-  if (control.dataset.dictionaryWord || action.startsWith('speak-') ||
-      action === 'conversation-play' || action === 'conversation-mic') return;
-  const AudioEngine = window.AudioContext || window.webkitAudioContext;
-  if (!AudioEngine) return;
-  try {
-    effectAudio ||= new AudioEngine();
-    if (effectAudio.state === 'running') playEffect('tap');
-    else effectAudio.resume().then(() => playEffect('tap')).catch(() => {});
-  } catch {
-    // Sound is optional when the audio engine is unavailable.
-  }
+  if (event.detail === 0) playTouchEffect(event);
 }, { capture: true });
 
 root.addEventListener('click', (event) => {

@@ -236,7 +236,9 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     final path = request.requestedUri.path;
     final file =
         _assets[path] ??
-        (RegExp(r'^/src/audio/[0-9]+\.wav$').hasMatch(path)
+        (RegExp(
+              r'^/src/audio/(?:[0-9]+|fx-(?:surface|tap|word|place|correct|retry|hit|finish))\.wav$',
+            ).hasMatch(path)
             ? path.substring(1)
             : null);
     if (file == null) return shelf.Response.notFound('Not found');
