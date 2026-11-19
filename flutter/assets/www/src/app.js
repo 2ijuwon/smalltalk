@@ -1430,7 +1430,9 @@ function showLaunch() {
   const overlay = document.createElement('div');
   overlay.className = 'launch-overlay';
   overlay.setAttribute('aria-hidden', 'true');
-  overlay.innerHTML = `<i></i><i></i><div class="launch-lockup">${pixelSprite('mascot')}<strong>smalltalk</strong><span class="launch-sparks"></span></div>`;
+  const letters = [...'smalltalk'].map((letter, index) =>
+    `<span class="launch-letter" style="--letter-index:${index}"><span>${letter}</span></span>`).join('');
+  overlay.innerHTML = `<i></i><i></i><div class="launch-lockup">${pixelSprite('mascot')}<strong>${letters}</strong><span class="launch-sparks"></span></div>`;
   const panel = overlay.firstElementChild;
   let paintFrame;
   overlay.classList.add('launch-overlay--paused');
@@ -1447,7 +1449,8 @@ function showLaunch() {
     }
   };
   document.addEventListener('visibilitychange', updateVisibility);
-  panel.addEventListener('animationstart', () => playEffect('launch'), { once: true });
+  overlay.querySelector('.launch-sparks').addEventListener('animationstart', () => playEffect('launch'), { once: true });
+  panel.addEventListener('animationstart', () => playEffect('place'), { once: true });
   panel.addEventListener('animationend', () => {
     document.removeEventListener('visibilitychange', updateVisibility);
     cancelAnimationFrame(paintFrame);

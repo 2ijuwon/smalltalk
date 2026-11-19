@@ -978,10 +978,14 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 [data-theme="dark"] .typing-item { background: #423924; }
 [data-theme="dark"] .inline-word:focus-visible { outline-color: #99caff; }
 
-/* The two panels overlap by a pixel so the closed intro is seamless. */
+/* A shared timeline keeps the mascot, lettering and doors in order. */
 .launch-overlay {
   --launch-panel: #d8efff;
   --launch-accent: #6ba4d0;
+  --landing-end: 930ms;
+  --letter-step: 57ms;
+  --final-jump: 1670ms;
+  --open-at: 1850ms;
   position: fixed;
   inset: 0;
   z-index: 120;
@@ -996,21 +1000,19 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   inset: 0 calc(50% - 1px) 0 0;
   z-index: -1;
   background: var(--launch-panel);
-  animation: launch-panel-left 360ms 1010ms cubic-bezier(.55, .05, .3, 1) both;
+  animation: launch-panel-left 350ms var(--open-at) cubic-bezier(.55, .05, .3, 1) both;
 }
-.launch-overlay > i + i {
-  inset: 0 0 0 calc(50% - 1px);
-  animation-name: launch-panel-right;
-}
+.launch-overlay > i + i { inset: 0 0 0 calc(50% - 1px); animation-name: launch-panel-right; }
 .launch-lockup {
-  --mark-size: clamp(56px, 18vw, 86px);
+  --mark-size: clamp(54px, 18vw, 86px);
   position: relative;
   display: flex;
   align-items: center;
   min-height: var(--mark-size);
   padding-inline-start: calc(var(--mark-size) + 8px);
-  font-size: clamp(1.45rem, 8vw, 2.8rem);
+  font-size: clamp(1.35rem, 8vw, 2.8rem);
   color: var(--ink);
+  animation: launch-final-hop 410ms var(--final-jump) ease-out both;
 }
 .launch-lockup .pixel-sprite {
   position: absolute;
@@ -1019,14 +1021,23 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   width: var(--mark-size);
   height: var(--mark-size);
   translate: -50% -50%;
-  transform-origin: center 80%;
-  animation: launch-hop .91s cubic-bezier(.42, 0, .3, 1) both;
+  transform-origin: center 83%;
+  animation: launch-hop var(--landing-end) both;
 }
 .launch-lockup .pixel-sprite svg { animation: none; }
+.launch-lockup .slime-frame--0 { animation: launch-squint-open var(--landing-end) steps(1, end) both; }
+.launch-lockup .slime-frame--1 { animation: launch-squint-closed var(--landing-end) steps(1, end) both; }
 .launch-lockup strong {
+  display: flex;
+  align-items: center;
   letter-spacing: -.045em;
   text-shadow: 2px 2px var(--launch-accent);
-  animation: launch-name .36s .48s ease-out both;
+}
+.launch-letter { display: block; overflow: hidden; padding: 4px 0; }
+.launch-letter > span {
+  display: block;
+  animation: launch-letter-rise 225ms calc(var(--landing-end) + 35ms + var(--letter-index) * var(--letter-step))
+    cubic-bezier(.2, .8, .24, 1) both;
 }
 .launch-sparks {
   position: absolute;
@@ -1036,38 +1047,46 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   bottom: 8px;
   background: var(--launch-accent);
   box-shadow: -12px -3px var(--launch-accent), 13px -6px var(--launch-accent);
-  animation: launch-sparks .28s .68s ease-out both;
+  animation: launch-sparks .32s .67s ease-out both;
   pointer-events: none;
 }
 @keyframes launch-panel-left { to { transform: translateX(-101%); } }
 @keyframes launch-panel-right { to { transform: translateX(101%); } }
-.launch-lockup { animation: launch-out 210ms 1010ms ease-out both; }
-@keyframes launch-out { to { opacity: 0; scale: .98; } }
-.launch-overlay--paused * { animation-play-state: paused !important; }
-@media (prefers-reduced-motion: reduce) {
-  .launch-overlay > i, .launch-overlay > i + i { animation: launch-still-out 160ms 460ms linear both; }
-  .launch-lockup { animation: launch-still-out 160ms 460ms linear both; }
-  .launch-lockup .pixel-sprite, .launch-lockup strong { animation: none; }
-  .launch-sparks { display: none; }
-}
-@keyframes launch-still-out { to { opacity: 0; } }
 @keyframes launch-hop {
-  0%, 17% { left: 50%; transform: scale(1.65); }
-  30% { left: 50%; transform: translateY(3px) scale(1.72, 1.45); }
-  54% { left: 30%; transform: translateY(-24px) scale(1.2, 1.25); }
-  74% { transform: scale(1.1, .9); }
-  87% { transform: translateY(-3px) scale(.99, 1.02); }
-  100% { transform: none; }
+  0%, 19% { left: 50%; transform: scale(1.85); }
+  34% { left: 50%; transform: translateY(9px) scale(2.03, 1.29); animation-timing-function: cubic-bezier(.12, .7, .26, 1); }
+  53% { left: 30%; transform: translateY(-48px) scale(1.19, 1.4); animation-timing-function: cubic-bezier(.42, 0, .85, .55); }
+  70% { left: calc(var(--mark-size) / 2); transform: translateY(4px) scale(1.16, .79); }
+  82% { left: calc(var(--mark-size) / 2); transform: translateY(-9px) scale(.94, 1.11); }
+  94% { left: calc(var(--mark-size) / 2); transform: translateY(1px) scale(1.03, .96); }
+  100% { left: calc(var(--mark-size) / 2); transform: none; }
 }
-@keyframes launch-name {
-  from { opacity: 0; transform: translateX(-8px); clip-path: inset(0 100% 0 0); }
-  to { opacity: 1; transform: none; clip-path: inset(0 -4px -4px 0); }
+@keyframes launch-squint-open { 0%, 44%, 100% { opacity: 1; } 23% { opacity: 0; } }
+@keyframes launch-squint-closed { 0%, 44%, 100% { opacity: 0; } 23% { opacity: 1; } }
+@keyframes launch-letter-rise {
+  from { transform: translateY(115%); opacity: 0; }
+  65% { transform: translateY(-7%); opacity: 1; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes launch-final-hop {
+  0% { transform: none; opacity: 1; }
+  24% { transform: translateY(3px) scale(1.02, .96); }
+  53% { transform: translateY(-19px) scale(.99, 1.04); opacity: 1; }
+  to { transform: translateY(-10px); opacity: 0; }
 }
 @keyframes launch-sparks {
   from { opacity: 0; scale: .5; }
   24% { opacity: .75; }
   to { opacity: 0; scale: 1.7; translate: 0 -5px; }
 }
+.launch-overlay--paused * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .launch-overlay > i, .launch-overlay > i + i,
+  .launch-lockup { animation: launch-still-out 160ms 460ms linear both; }
+  .launch-lockup :is(.pixel-sprite, .slime-frame, .launch-letter > span) { animation: none; }
+  .launch-sparks { display: none; }
+}
+@keyframes launch-still-out { to { opacity: 0; } }
 
 .settings-reset { display: grid; gap: 8px; }
 .settings-reset h2 { margin: 0; }
