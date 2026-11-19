@@ -43,6 +43,7 @@ let sentencePointer = null;
 let suppressTokenClick = '';
 let paintedViewKey = '';
 let pressedControl = null;
+let pressedSlime = null;
 let celebration = null;
 let celebrationTimer = 0;
 let celebrationSequence = 0;
@@ -165,7 +166,7 @@ function pixelSprite(name) {
         return row;
       })]
       : slimeFrames(name);
-    const frames = sprites.map((rows, frame) => `<g class="slime-frame slime-frame--${frame}">${rows.flatMap((row, y) => [...row].map((cell, x) => spriteColors[cell] ? `<rect data-pixel="${cell}" ${cell === 'k' && y >= 9 ? 'class="slime-mouth"' : ''} x="${x}" y="${y}" width="1" height="1" fill="${spriteColors[cell]}"/>` : '')).join('')}</g>`).join('');
+    const frames = sprites.map((rows, frame) => `<g class="slime-frame slime-frame--${frame}">${rows.flatMap((row, y) => [...row].map((cell, x) => spriteColors[cell] ? `<rect data-pixel="${cell}" x="${x}" y="${y}" width="1" height="1" fill="${spriteColors[cell]}"/>` : '')).join('')}</g>`).join('');
     return `<span class="pixel-sprite pixel-sprite--slime" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" focusable="false">${frames}</svg></span>`;
   }
   const spriteCells = (rows) => rows.flatMap((row, y) => [...row].flatMap((cell, x) =>
@@ -183,7 +184,12 @@ function slimeFrames(name) {
     if (y === 7) return `o${fill}${light.repeat(3)}kk${light.repeat(2)}kk${light.repeat(3)}${fill}o`;
     return row;
   });
-  return [base, blink];
+  const smile = blink.map((row, y) => {
+    if (y === 9) return `o${fill}${light.repeat(3)}k${light.repeat(4)}k${light.repeat(3)}${fill}o`;
+    if (y === 10) return `.o${fill}${light.repeat(3)}kkkk${light.repeat(3)}${fill}o.`;
+    return row;
+  });
+  return [base, blink, smile];
 }
 
 function brandMark() { return `<span class="brand-mark">${pixelSprite('mascot')}</span>`; }
@@ -1409,17 +1415,20 @@ preferredTheme.addEventListener('change', (event) => {
   document.documentElement.dataset.theme = event.matches ? 'dark' : 'light';
 });
 
+const slimeReactionTimers = new WeakMap();
+
 function reactToSlime(sprite) {
   const now = performance.now();
   slimeTapCount = now - lastSlimeTap < 650 ? slimeTapCount + 1 : 1;
   lastSlimeTap = now;
   sprite.classList.add('slime-delighted');
   sprite.animate([
-    { translate: '0 0', scale: '1' },
-    { translate: '0 -9px', scale: '1.06 .96' },
-    { translate: '0 0', scale: '1' },
+    { translate: '0 0' },
+    { translate: '0 -9px' },
+    { translate: '0 0' },
   ], { duration: 300, easing: 'ease-out' });
-  setTimeout(() => sprite.classList.remove('slime-delighted'), 320);
+  clearTimeout(slimeReactionTimers.get(sprite));
+  slimeReactionTimers.set(sprite, setTimeout(() => sprite.classList.remove('slime-delighted'), 320));
   if (slimeTapCount > 1) {
     sprite.style.setProperty('--slime-tint', `${slimeTapCount * 12}deg`);
   } else {
@@ -2257,6 +2266,14 @@ root.addEventListener('dragend', () => {
 });
 
 root.addEventListener('pointerdown', (event) => {
+  if (event.isPrimary && event.button === 0) {
+    const sprite = event.target.closest('.pixel-sprite--slime, .typing-enemy:not(.typing-item)');
+    if (sprite) {
+      releasePressedSlime();
+      sprite.classList.add('slime-pressed');
+      pressedSlime = { sprite, pointerId: event.pointerId };
+    }
+  }
   const talkToken = event.target.closest('[data-talk-token]');
   if (talkToken && event.pointerType !== 'mouse' && !talkQuiz?.solved) {
     talkPointer = { id: Number(talkToken.dataset.talkToken), pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
@@ -2367,6 +2384,17 @@ root.addEventListener('pointercancel', () => {
   clearDropPreview();
   root.querySelectorAll('.word-token.dragging').forEach((token) => token.classList.remove('dragging'));
 });
+
+function releasePressedSlime(event) {
+  if (!pressedSlime || (event?.pointerId !== undefined && event.pointerId !== pressedSlime.pointerId)) return;
+  pressedSlime.sprite.classList.remove('slime-pressed');
+  pressedSlime = null;
+}
+
+document.addEventListener('contextmenu', (event) => event.preventDefault());
+window.addEventListener('pointerup', releasePressedSlime);
+window.addEventListener('pointercancel', releasePressedSlime);
+window.addEventListener('blur', releasePressedSlime);
 
 function releasePressedControl() {
   const control = pressedControl;
