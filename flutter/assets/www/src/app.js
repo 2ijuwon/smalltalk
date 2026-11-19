@@ -140,6 +140,24 @@ const spriteRows = {
     '...ooowlo.......', '...oyyoo........', '....oyyoo.......', '...obyyo........',
     '..oboooo........', '..ooo...........', '................', '................',
   ],
+  bomb: [
+    '..........y.y...', '...........y....', '..........yoy...', '.........oo.....',
+    '......oooooo....', '....ookkkkkkoo..', '...okwwkkkkkkko.', '...okwkkkkkkkko.',
+    '..okkkkkkkkkkkko', '..okkkkkkkkkkkko', '..okkkkkkkkkkkko', '...okkkkkkkkkko.',
+    '...okkkkkkkkkko.', '....ookkkkkkoo..', '......oooooo....', '................',
+  ],
+  watch: [
+    '.......ooo......', '......oyyyo.....', '.......ooo......', '.....ooooooo....',
+    '....oyyyyyyyo...', '...oywwwwwwwyo..', '..oywwwowwwwwyo.', '..oywwwowwwwwyo.',
+    '..oywwwoowwwwyo.', '..oywwwwwwwwwyo.', '..oywwwwwwwwwyo.', '...oywwwwwwwyo..',
+    '....oyyyyyyyo...', '.....ooooooo....', '................', '................',
+  ],
+  heal: [
+    '................', '......oooo......', '.....oowwoo.....', '.....owwwwo.....',
+    '..oooooooooooo..', '.owwwwwwwwwwwwo.', '.owwwwwppwwwwwo.', '.owwwwwppwwwwwo.',
+    '.owwwppppppwwwo.', '.owwwppppppwwwo.', '.owwwwwppwwwwwo.', '.owwwwwppwwwwwo.',
+    '.ollllllllllllo.', '..oooooooooooo..', '................', '................',
+  ],
 };
 
 const spriteFrames = {
@@ -607,16 +625,17 @@ function wordSearchGame() {
   const fogged = new Set(session.penalty?.type === 'fog' ? session.penalty.cells : []);
   const clues = session.spelling.map(({ item, index, options }, slot) => {
     const done = session.foundIds.includes(item.id);
-    return `<div class="spell-clue"><strong>${item.meaning}</strong><span>${done ? item.word.toUpperCase() : arcade ? '격자에서 찾기' : (item.word.slice(0, index).toUpperCase() || '아직 고른 글자가 없어요')}</span>
-      ${done ? '<small>✓ 찾음</small>' : index === item.word.length ? '<small>빛나는 칸에서 시작하세요</small>' :
-      `<small>철자 힌트 · ${index + 1}번째 글자를 고르세요</small><div class="spell-choices">${options.map((letter) => button(letter, `spell:${slot}:${letter}`, 'secondary', session.searchEnded)).join('')}</div>`}</div>`;
+    const spelling = item.word.slice(0, index).toUpperCase();
+    return `<div class="spell-clue"><strong>${escapeHtml(item.meaning)}</strong>
+      ${done ? `<span class="spell-found">✓ ${escapeHtml(item.word.toUpperCase())}</span>` : arcade ? '' : index === item.word.length ? '<small>첫 칸 표시됨</small>' :
+      `<div class="spell-choices" role="group" aria-label="${escapeHtml(item.meaning)} 철자 힌트"><small>${index + 1}번째</small>${options.map((letter) => button(letter, `spell:${slot}:${letter}`, 'secondary', session.searchEnded)).join('')}${spelling ? `<span class="spell-progress">${escapeHtml(spelling)}</span>` : ''}</div>`}</div>`;
   }).join('');
   const puzzle = `<div class="letter-grid letter-grid--drag" style="--grid-size:${grid.size}" role="grid" aria-label="단어 찾기 퍼즐">
     ${grid.cells.map((letter, index) => `<button type="button" role="gridcell" data-grid-index="${index}" class="${foundCells.has(index) ? 'found' : ''} ${justFoundCells.has(index) ? 'just-found' : ''} ${session.wrongPath.includes(index) ? 'try-again' : ''} ${firstLetters.has(index) ? 'first-letter' : ''} ${fogged.has(index) && !foundCells.has(index) ? 'fogged' : ''}" aria-label="${letter}${firstLetters.has(index) ? ', 시작 글자' : ''}">${fogged.has(index) && !foundCells.has(index) ? '?' : letter}</button>`).join('')}</div>`;
   return `<div class="page game-page search-page${arcade ? ' search-page--arcade' : ''}${session.penalty?.type === 'hint' ? ' search-page--no-hint' : ''}">${arcade ? '<div class="game-header"><h1>단어 찾기</h1><button class="game-exit" data-nav="home">나가기</button></div>' : stageHeader(4, '단어 찾기', '')}
     <div class="search-toolbar"><div><span>남은 시간</span><strong data-search-timer>${formatTime(session.remaining)}</strong></div><div><span>찾은 단어</span><strong>${session.foundIds.length}/${session.targets.length}</strong></div>${arcade ? `<div class="search-score"><span>${session.setsCleared + 1}세트 · ${session.score}점</span><strong>최고 ${bestScore(state, 'search')}점</strong>${session.penalty ? `<em data-search-penalty>${session.penalty.type === 'fog' ? '안개' : '힌트 숨김'} ${session.penalty.until - session.elapsed}초</em>` : ''}</div>` : ''}</div>
     <div class="search-workspace"><div class="spell-list">${clues}</div><div class="puzzle-space">${puzzle}</div></div>
-    <p class="game-message ${session.feedback?.type || ''}" role="status">${session.feedback?.text || '뜻을 보고 격자에서 단어를 찾으세요. 막히면 철자 힌트를 써 보세요.'}</p>
+    <p class="game-message ${session.feedback?.type || ''}" role="status">${session.feedback?.text || '첫 글자부터 끝까지 드래그'}</p>
     ${session.searchEnded ? (arcade ? gameOverActions('arcade-search', session.score, session.startingBest) : button('학습 마치기', 'finish-search')) : ''}</div>`;
 }
 
@@ -1082,24 +1101,51 @@ const typingLevels = {
   extreme: { label: '극한', speed: 1, health: 1 },
 };
 
-function openTyping() {
+function openTyping(difficulty = 'normal') {
   const words = learnedGamePool();
   if (words.length < 3) return;
   stopTyping();
-  typing = { words, difficulty: typing?.difficulty || 'easy', startingBest: bestScore(state, 'typing'), shots: [], round: 1, hp: 100, maxHp: 100, coins: 0, score: 0, phase: 'ready', enemies: [], spawned: 0, spawnClock: 0, stats: { sight: 0, power: 0, vitality: 0 }, augments: [], offers: [], nextId: 0, message: '떨어지는 단어를 입력해 막으세요.' };
+  typing = { words, difficulty, startingBest: bestScore(state, 'typing'), shots: [], round: 1, hp: 100, maxHp: 100, coins: 0, score: 0, phase: 'ready', enemies: [], spawned: 0, spawnClock: 0, stats: { sight: 0, power: 0, vitality: 0 }, augments: [], offers: [], nextId: 0, message: '떨어지는 단어를 입력해 막으세요.' };
   screen = 'typing';
   render({ resetScroll: true });
 }
 
 function typingEnemyMarkup(enemy) {
-  if (enemy.item) return `<div class="typing-enemy typing-item" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%"><b>${enemy.item.icon}</b><strong>${escapeHtml(enemy.word)}</strong></div>`;
+  if (enemy.item) return `<div class="typing-enemy typing-item" aria-label="${enemy.item.label}: ${escapeHtml(enemy.word)}" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%">${pixelSprite(enemy.item.id)}<strong>${escapeHtml(enemy.word)}</strong></div>`;
   return `<div class="typing-enemy ${enemy.shield ? 'typing-enemy--shield' : ''} ${enemy.boss ? 'typing-enemy--boss' : ''}" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%"><i class="typing-eyes" aria-hidden="true"></i><strong>${enemy.word}</strong><div class="typing-enemy-hp" aria-label="체력 ${enemy.hp}/${enemy.maxHp}"><i style="width:${enemy.hp / enemy.maxHp * 100}%"></i></div><small>${enemy.shield ? '▣ 방패 · ' : ''}${enemy.hp}/${enemy.maxHp}</small></div>`;
+}
+
+function typingAugmentPanel(game) {
+  return `<section class="typing-augment-panel" aria-labelledby="typing-augment-title">
+    <div><h2 id="typing-augment-title">증강 선택</h2><p>카드를 누른 뒤 한 번 더 눌러 확정하세요.</p></div>
+    <div class="typing-offers">${game.offers.map((offer, index) => `
+      <button class="button rarity--${offer.rarity}" aria-pressed="${game.selectedOffer === index}" data-action="typing-augment:${index}">
+        <span class="typing-offer-hint">다시 클릭해 선택!</span>
+        <span class="typing-offer-rarity">${offer.rarity}</span>
+        <strong>${offer.name}</strong><small>${offer.text}</small>
+      </button>`).join('')}</div>
+  </section>`;
 }
 
 function typingView() {
   const game = typing;
   const running = game.phase === 'playing';
-  return `<div class="page typing-page" data-phase="${game.phase}"><div class="game-header"><div><p class="eyebrow">ROUND ${game.round} · ${game.score}점 · 최고 ${bestScore(state, 'typing')}점</p><h1>타자 게임</h1></div><button class="game-exit" data-nav="home">나가기</button></div><div class="typing-hud"><span>HP ${game.hp}/${game.maxHp}</span><div class="typing-hp"><i style="width:${game.hp / game.maxHp * 100}%"></i></div><span>● ${game.coins}</span></div><div class="typing-field" aria-label="떨어지는 영어 단어">${game.enemies.map(typingEnemyMarkup).join('')}<div class="typing-ground"></div></div>${running ? `<form class="typing-form"><input data-typing-input autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="떨어지는 영어 단어 입력" placeholder="영어 단어 입력"/><button class="button button--primary" type="submit">입력</button></form>` : `<div class="typing-panel">${game.phase === 'ready' ? `<div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>방패는 첫 타격을 막고, 단어는 적중 뒤 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div><div class="typing-levels">${Object.entries(typingLevels).map(([id, level]) => button(level.label, `typing-level:${id}`, game.difficulty === id ? 'primary' : 'secondary')).join('')}</div>${button('시작하기', 'typing-start')}` : `<p>${game.message}</p>${game.phase === 'over' ? gameOverActions('typing-restart', game.score, game.startingBest) : `<div class="typing-shop"><div class="typing-upgrades">${[['sight','동체시력','낙하 속도↓'],['power','공격력','타격 +1'],['vitality','체력','최대 HP +12']].map(([key,name,desc]) => `<button class="button button--secondary" data-action="typing-upgrade:${key}" ${game.coins < upgradeCost(game.stats[key]) ? 'disabled' : ''}><strong>${name} ${game.stats[key]}</strong><small>${desc} · ●${upgradeCost(game.stats[key])}</small></button>`).join('')}</div>${game.offers.length ? `<p>증강 선택 · 3라운드 보상</p><div class="typing-offers">${game.offers.map((offer,index) => `<button class="button button--secondary rarity--${offer.rarity}" aria-pressed="${game.selectedOffer === index}" data-action="typing-augment:${index}"><strong>${offer.name} · ${offer.rarity}</strong><small>${offer.text}</small></button>`).join('')}</div>` : button('다음 라운드', 'typing-next')}</div>`}`}</div>`}<p class="game-message" role="status">${running ? game.message : ''}</p></div>`;
+  const upgrades = [['sight', '동체시력', '낙하 속도↓'], ['power', '공격력', '타격 +1'], ['vitality', '체력', '최대 HP +12']];
+  return `<div class="page typing-page${game.offers.length ? ' typing-page--offers' : ''}" data-phase="${game.phase}">
+    <div class="game-header"><div><p class="eyebrow">ROUND ${game.round} · ${game.score}점 · 최고 ${bestScore(state, 'typing')}점</p><h1>타자 게임</h1></div><button class="game-exit" data-nav="home">나가기</button></div>
+    <div class="typing-hud"><span>HP ${game.hp}/${game.maxHp}</span><div class="typing-hp"><i style="width:${game.hp / game.maxHp * 100}%"></i></div><span>● ${game.coins}</span></div>
+    ${game.offers.length ? typingAugmentPanel(game) : `<div class="typing-field" aria-label="떨어지는 영어 단어">${game.enemies.map(typingEnemyMarkup).join('')}<div class="typing-ground"></div></div>`}
+    ${running ? `<form class="typing-form"><input data-typing-input autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="떨어지는 영어 단어 입력" placeholder="영어 단어 입력"/><button class="button button--primary" type="submit">입력</button></form>` :
+      `<div class="typing-panel">${game.phase === 'ready' ? `
+        <div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>방패는 첫 타격을 막고, 단어는 적중 뒤 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div>
+        <div class="typing-levels">${Object.entries(typingLevels).map(([id, level]) => `<button class="button button--${game.difficulty === id ? 'primary' : 'secondary'}" aria-pressed="${game.difficulty === id}" data-action="typing-level:${id}">${level.label}</button>`).join('')}</div>
+        ${button('시작하기', 'typing-start')}` : `<p>${game.message}</p>${game.phase === 'over' ? gameOverActions('typing-restart', game.score, game.startingBest) :
+        `<div class="typing-shop"><div class="typing-upgrades">${upgrades.map(([key, name, desc]) => `
+          <button class="button button--secondary" data-action="typing-upgrade:${key}" ${game.coins < upgradeCost(game.stats[key]) ? 'disabled' : ''}>
+            <strong>${name} ${game.stats[key]}</strong><small>${desc} · ●${upgradeCost(game.stats[key])}</small></button>`).join('')}</div>
+          ${game.offers.length ? '' : button('다음 라운드', 'typing-next')}</div>`}`}</div>`}
+    ${running ? `<p class="game-message" role="status">${game.message}</p>` : ''}
+  </div>`;
 }
 
 function startTypingRound() {
@@ -1149,9 +1195,9 @@ function typingImpact(node, defeated = false) {
 }
 
 const typingItems = [
-  { id: 'watch', icon: '◷' },
-  { id: 'heal', icon: '✚' },
-  { id: 'bomb', icon: '✹' },
+  { id: 'watch', label: '회중시계' },
+  { id: 'heal', label: '구급 상자' },
+  { id: 'bomb', label: '폭탄' },
 ];
 
 function spawnTypingTarget({ boss = false, item = null, y = 0 } = {}) {
@@ -2096,7 +2142,7 @@ root.addEventListener('click', (event) => {
     return render();
   }
   if (action === 'typing-start') return startTypingRound();
-  if (action === 'typing-restart') { openTyping(); return startTypingRound(); }
+  if (action === 'typing-restart') { openTyping(typing.difficulty); return startTypingRound(); }
   if (action === 'typing-next') { typing.round += 1; return startTypingRound(); }
   if (action.startsWith('typing-upgrade:')) {
     const key = action.split(':')[1];

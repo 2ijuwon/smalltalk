@@ -285,11 +285,10 @@ strong, b { font-weight: 800; }
 .typing-panel { display: grid; gap: 8px; }
 .typing-shop, .typing-upgrades, .typing-offers { display: grid; gap: 6px; }
 .typing-upgrades { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.typing-upgrades .button, .typing-offers .button { display: grid; gap: 2px; min-height: 55px; }
-.typing-upgrades small, .typing-offers small { font-size: 11px; }
+.typing-upgrades .button { display: grid; gap: 2px; min-height: 55px; }
+.typing-upgrades small { font-size: 11px; }
 .typing-offers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.rarity--rare { border-color: #2776b3; }.rarity--epic { border-color: #755cb1; }.rarity--legendary { border-color: #c38a17; background: #fff1bf; }
-@media (max-width: 440px) { .typing-upgrades, .typing-offers { grid-template-columns: 1fr; }.typing-shop { max-height: 26dvh; overflow: auto; }.typing-page { gap: 6px; }.game-links .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.game-links .dashboard-grid > :last-child { grid-column: 1 / -1; } }
+@media (max-width: 440px) { .typing-page { gap: 6px; }.game-links .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.game-links .dashboard-grid > :last-child { grid-column: 1 / -1; } }
 .game-message { min-height: 18px; font-size: 14px; text-align: center; color: var(--muted); }
 .game-message.correct { color: var(--blue-dark); }
 .game-message.try, .game-message.error { color: #76520c; }
@@ -920,8 +919,41 @@ small, .notice, .progress-label, .stage-track span, .game-message,
 }
 [data-difficulty="normal"] .duel-opponent .duel-apple { --wound-light: #ffdb91; --wound-depth: #775018; }
 [data-difficulty="hard"] .duel-opponent .duel-apple { --wound-light: #c4a3e6; --wound-depth: #422d64; }
-.spell-clue { gap: 5px; }
-.spell-choices .button { min-height: 36px; }
+.spell-list { grid-template-columns: minmax(0, 1fr); }
+.spell-clue {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 9px;
+  padding: 4px 9px;
+  min-height: 34px;
+}
+.spell-clue > strong { word-break: keep-all; overflow-wrap: anywhere; }
+.spell-clue :is(small, .spell-found, .spell-progress) { font-size: .79rem; color: var(--muted); }
+.spell-choices { margin-inline-start: auto; align-items: center; gap: 4px; }
+.spell-choices .button { min-height: 32px; min-width: 32px; }
+.spell-choices .spell-progress { font-variant-numeric: tabular-nums; }
+.search-page--arcade .spell-clue { border-inline-start: 3px solid var(--blue); }
+@media (min-width: 520px) and (max-width: 899px) {
+  .search-page--arcade .spell-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 519px) {
+  .search-page:has(.search-workspace) { gap: 6px; }
+  .search-workspace { gap: 6px; }
+  .search-toolbar > div { padding: 3px 7px; }
+  .search-toolbar span { white-space: nowrap; }
+  .search-page .letter-grid { width: min(100%, 345px, clamp(195px, 43dvh, 345px)); }
+  .search-page--arcade .letter-grid { width: min(100%, 345px, clamp(205px, 51dvh, 345px)); }
+  .search-page .game-message { min-height: 0; }
+}
+@media (max-width: 519px) and (max-height: 780px) {
+  .search-page:has(.search-workspace) > .stage-track { display: none; }
+  .search-page:has(.search-workspace) .boss-status { min-height: 40px; padding: 2px 7px; }
+  .search-page .boss-avatar, .search-page .boss-avatar .pixel-sprite { width: 32px; height: 32px; margin: 0; }
+  .search-page .boss-meter { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+  .search-page:not(.search-page--arcade) .letter-grid { width: min(100%, 345px, clamp(195px, 36dvh, 345px)); }
+}
 .typing-levels, .game-over-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .game-over { display: grid; gap: 8px; width: min(100%, 440px); justify-self: center; }
 .record-banner:not([hidden]) { text-align: center; color: #754800; background: #ffe79c; padding: 5px; animation: record-pop 480ms ease-out both; }
@@ -937,17 +969,70 @@ small, .notice, .progress-label, .stage-track span, .game-message,
   .typing-enemy { left: clamp(23cqi, var(--enemy-x), 77cqi); }
 }
 .typing-enemy strong { line-height: 1.1; }
-.typing-item { border-color: #a37337; background: #fff1b9; text-align: center; z-index: 2; }
+.typing-enemy.typing-item {
+  border-color: #22679f;
+  background: #b9e4ff;
+  color: #122e4c;
+  box-shadow: 0 2px 0 #22679f;
+  text-align: center;
+  z-index: 2;
+}
+.typing-item .pixel-sprite { margin-inline: auto; }
 .typing-enemy--burning { box-shadow: 0 0 0 3px #ec8a51; }
 .typing-enemy--frozen { background: #beeaff; border-color: #589abf; }
 body:has(.typing-time-stop) { filter: grayscale(1); }
 .typing-projectile--queued { opacity: .7; }
-.typing-offers { position: fixed; z-index: 8; top: 50%; left: 50%; translate: -50% -50%; width: min(92vw, 670px); grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-.typing-offers .button { min-height: clamp(110px, 23dvh, 195px); padding: 6px; animation: offer-in .36s ease-out both; }
-.typing-offers .button:first-child { rotate: -5deg; }
-.typing-offers .button:last-child { rotate: 5deg; }
-.typing-offers .button[aria-pressed="true"] { rotate: 0deg; translate: 0 -10px; outline: 3px solid #3183be; background: #d4edff; }
+.typing-page.typing-page--offers { grid-template-rows: auto auto auto auto; align-content: start; }
+.typing-augment-panel { display: grid; gap: 10px; width: min(100%, 690px); justify-self: center; padding: 6px 4px 12px; text-align: center; }
+.typing-augment-panel p { color: var(--muted); font-size: .875rem; margin-top: 3px; }
+.typing-offers { gap: clamp(6px, 1.5vw, 15px); }
+.typing-offers .button {
+  --offer-accent: #256a9a;
+  --offer-tone: #e3f3ff;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  justify-items: center;
+  align-items: start;
+  padding: 7px 4px 9px;
+  background: var(--offer-tone);
+  border-color: var(--offer-accent);
+  color: #172843;
+  box-shadow: inset 0 -3px var(--offer-accent);
+  animation: offer-in .36s ease-out both;
+  transition: rotate .2s ease, translate .2s ease, box-shadow .2s ease;
+}
+.typing-offers .rarity--rare { --offer-accent: #2369aa; --offer-tone: #cfe9ff; }
+.typing-offers .rarity--epic { --offer-accent: #7154ac; --offer-tone: #e9e0ff; }
+.typing-offers .rarity--legendary { --offer-accent: #916113; --offer-tone: #ffedb0; }
+.typing-offers .button:first-child { rotate: -2deg; }
+.typing-offers .button:last-child { rotate: 2deg; }
+.typing-offers .button[aria-pressed="true"] {
+  rotate: 0deg;
+  translate: 0 -3px;
+  outline: 2px solid #fff4bd;
+  box-shadow: 0 0 4px 2px var(--offer-accent), 0 0 12px 4px #83caff, inset 0 -3px var(--offer-accent);
+}
+.typing-offer-hint {
+  visibility: hidden;
+  display: grid;
+  place-items: center;
+  max-inline-size: 100%;
+  min-block-size: 2.5em;
+  background: #173d64;
+  color: #fff7d6;
+  padding: 2px 3px;
+  font-size: clamp(.64rem, 2.65vw, .85rem);
+  line-height: 1.15;
+  white-space: normal;
+  word-break: keep-all;
+}
+.typing-offers [aria-pressed="true"] .typing-offer-hint { visibility: visible; }
+.typing-offer-rarity { color: var(--offer-accent); font-size: .72rem; text-transform: uppercase; }
+.typing-offers .button strong { font-size: clamp(.84rem, 2.8vw, 1.06rem); }
+.typing-offers .button small { font-size: clamp(.75rem, 2.7vw, .93rem); line-height: 1.3; }
 @keyframes offer-in { from { transform: translateY(28px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .typing-offers .button { animation: none; } }
 .special-flash { position: fixed; inset: 0; z-index: 100; pointer-events: none; box-shadow: inset 0 0 48px 8px var(--flash); animation: special-flash .52s ease-out both; }
 @keyframes special-flash { from { opacity: .82; } to { opacity: 0; } }
 .pixel-sprite--slime,
@@ -1036,13 +1121,13 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   .slime-fire i { animation: none; }
 }
 
-.typing-page:not([data-phase="playing"]) {
+.typing-page:not([data-phase="playing"], .typing-page--offers) {
   grid-template-rows: auto auto minmax(44px, 1fr) auto auto;
 }
 .typing-offers .button strong, .typing-offers .button small { white-space: normal; word-break: keep-all; }
 [data-theme="dark"] :is(.topbar, .bottom-nav, .xp, .notice, .typing-form input) { background: var(--panel); color: var(--ink); }
 [data-theme="dark"] .typing-enemy--frozen { background: #243e57; }
-[data-theme="dark"] .typing-item { background: #423924; }
+[data-theme="dark"] .typing-enemy.typing-item { background: #225788; color: #f2f9ff; border-color: #78baff; }
 [data-theme="dark"] .inline-word:focus-visible { outline-color: #99caff; }
 
 /* A shared timeline keeps the mascot, lettering and doors in order. */
