@@ -1413,13 +1413,16 @@ function reactToSlime(sprite) {
     { translate: '0 0', scale: '1' },
   ], { duration: 300, easing: 'ease-out' });
   setTimeout(() => sprite.classList.remove('slime-delighted'), 320);
-  sprite.style.setProperty('--slime-tint', `${slimeTapCount * 12}deg`);
+  if (slimeTapCount > 1) {
+    sprite.style.setProperty('--slime-tint', `${slimeTapCount * 12}deg`);
+  } else {
+    sprite.style.removeProperty('--slime-tint');
+  }
   if (slimeTapCount >= 6) {
     const page = document.documentElement;
     page.dataset.theme = page.dataset.theme === 'dark' ? 'light' : 'dark';
     sprite.style.removeProperty('--slime-tint');
     slimeTapCount = 0;
-    specialEffect('talk');
   }
 }
 
