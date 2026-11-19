@@ -241,8 +241,9 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     final sequence = int.tryParse(message);
     if (sequence == null ||
         sequence < 1 ||
-        !await _isCurrentAppPage(controller))
+        !await _isCurrentAppPage(controller)) {
       return;
+    }
     try {
       final silent = await const MethodChannel(
         'smalltalk/speech',
