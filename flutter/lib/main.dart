@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -41,6 +42,8 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     '/': 'index.html',
     '/index.html': 'index.html',
     '/src/app.js': 'src/app.js',
+    '/src/speech-clips.js': 'src/speech-clips.js',
+    '/src/slime-dialogue.js': 'src/slime-dialogue.js',
     '/src/data.js': 'src/data.js',
     '/src/domain.js': 'src/domain.js',
     '/src/duel-motion.js': 'src/duel-motion.js',
@@ -93,6 +96,13 @@ class _EnglishWebViewState extends State<EnglishWebView> {
             },
           ),
         );
+      if (Platform.isAndroid) {
+        await controller.addJavaScriptChannel(
+          'SmalltalkMic',
+          onMessageReceived: (_) => _recognizeSpeech(controller),
+        );
+      }
+      if (!mounted) return;
       setState(() => _controller = controller);
       if (await _siteAvailable()) {
         if (mounted) {
@@ -192,12 +202,31 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     });
   }
 
+  Future<void> _recognizeSpeech(WebViewController controller) async {
+    String? transcript;
+    try {
+      transcript = await const MethodChannel(
+        'smalltalk/speech',
+      ).invokeMethod<String>('recognize');
+    } on PlatformException {
+      // The recognition activity can be unavailable on some devices.
+    }
+    if (!mounted || _controller != controller) return;
+    await controller.runJavaScript(
+      'window.receiveSmalltalkSpeech?.(${jsonEncode(transcript ?? '')});',
+    );
+  }
+
   Future<shelf.Response> _serveAsset(shelf.Request request) async {
     if (request.method != 'GET' && request.method != 'HEAD') {
       return shelf.Response(405);
     }
     final path = request.requestedUri.path;
-    final file = _assets[path];
+    final file =
+        _assets[path] ??
+        (RegExp(r'^/src/audio/[0-9]+\.wav$').hasMatch(path)
+            ? path.substring(1)
+            : null);
     if (file == null) return shelf.Response.notFound('Not found');
 
     try {
@@ -211,6 +240,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
         'css' => 'text/css; charset=utf-8',
         'js' => 'text/javascript; charset=utf-8',
         'woff2' => 'font/woff2',
+        'wav' => 'audio/wav',
         _ => 'application/octet-stream',
       };
       return shelf.Response.ok(

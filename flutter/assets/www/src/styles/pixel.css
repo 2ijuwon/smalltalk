@@ -832,3 +832,51 @@ small, .notice, .progress-label, .stage-track span, .game-message,
   min-width: 0;
   max-width: 100%;
 }
+
+.boss-intro { min-height: 100%; grid-template-rows: auto 1fr auto; }
+.boss-intro-scene { display: grid; align-content: center; justify-items: center; gap: 16px; text-align: center; }
+.boss-intro-scene .pixel-sprite { width: clamp(104px, 29dvh, 240px); height: clamp(104px, 29dvh, 240px); }
+.boss-intro-scene p { font-weight: 750; }
+.match-board { gap: clamp(26px, 9vi, 88px); }
+.match-column { gap: clamp(8px, 1.55dvh, 15px); }
+.match-tile { min-height: clamp(36px, 5.5dvh, 46px); padding-block: 4px; }
+.match-line { stroke-linejoin: round; }
+.button, .choice, .match-tile, .eyebrow, .listen-button {
+  -webkit-text-stroke: .18px currentColor;
+}
+.small-talk-card, .talk-detail { gap: 12px; }
+.inline-word {
+  display: inline;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: .18em;
+}
+.spoken-active { color: #175ecb; background-color: #d1e9ff; }
+.word-gloss {
+  position: fixed;
+  z-index: 20;
+  translate: -50% -100%;
+  max-width: calc(100vw - 24px);
+  padding: 6px 10px;
+  border: 2px solid var(--blue);
+  border-radius: 9px;
+  color: var(--ink);
+  background: white;
+  font-size: .85rem;
+  pointer-events: none;
+}
+.conversation-page { height: 100%; grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.conversation-log { overflow-y: auto; display: grid; align-content: start; gap: 12px; padding: 4px; }
+.conversation-line { display: flex; align-items: start; gap: 10px; padding: 10px; background: white; border: 2px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
+.conversation-line > div { flex: 1; min-width: 0; }
+.conversation-line > small, .conversation-line small { display: block; font-size: .85rem; margin-top: 6px; }
+.conversation-line--user { margin-inline-start: 14%; background: var(--select); }
+.conversation-line .listen-button { min-height: 36px; }
+.conversation-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 7px; }
+.conversation-form input { min-width: 0; padding: 6px; border: 2px solid var(--line); border-radius: 10px; }
+.conversation-status:empty { display: none; }

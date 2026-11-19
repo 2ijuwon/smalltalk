@@ -1,3 +1,5 @@
+import { speechClips } from './speech-clips.js';
+import { commonMeanings, slimeReply } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, stageWords, vocabulary } from './data.js';
 import { animateDuelEffect, strikeDuration } from './duel-motion.js';
 import { addDuelPoints, duelDifficulties, duelPoints, opponentAttackMs } from './duel-rules.js';
@@ -54,7 +56,10 @@ let talkChoice = { day: '', difficulty: '', index: -1, seen: [] };
 let talkPointer = null;
 let dragGhost = null;
 let suppressTalkClick = -1;
-let speechHighlightTimers = [];
+let speechAudio;
+let speechFrame;
+let conversation = [];
+let conversationEpoch = 0;
 let resultGrade = null;
 let resultReward = 0;
 let resultBossHp = 0;
@@ -233,6 +238,8 @@ function stopSearchTimer() {
 }
 
 function navigate(next) {
+  stopSpeech();
+  if (screen === 'conversation') conversationEpoch += 1;
   if (next !== 'home') { window.clearTimeout(xpClaimTimer); xpClaimTimer = 0; }
   if (screen === 'learn') {
     stopSearchTimer();
@@ -352,7 +359,7 @@ function startLearning(ids, mode = 'new', curriculum = {}) {
   if (!items.length) return goHome('학습할 단어가 없어요.');
   stopSearchTimer();
   learningSession = {
-    mode, items, curriculum, stage: 'preview', previewIndex: 0, itemIndex: 0, matched: [],
+    mode, items, curriculum, stage: 'intro', previewIndex: 0, itemIndex: 0, matched: [],
     selectedWord: '', selectedMeaning: '', feedback: null,
     wordOrder: shuffle(items.map((item) => item.id)), meaningOrder: [],
     sentenceBank: [], sentenceAnswer: [], sentenceTokens: [], sentenceSolved: false,
@@ -368,7 +375,7 @@ function startLearning(ids, mode = 'new', curriculum = {}) {
 function previewGame() {
   const session = learningSession;
   const item = session.items[session.previewIndex];
-  return `<div class="page game-page">${stageHeader(1, '단어 확인', '')}${progress(session.previewIndex + 1, session.items.length, '단어 확인')}<section class="preview-word-card"><div class="preview-word-content"><span>${session.previewIndex + 1} / ${session.items.length}</span><h2>${item.word}</h2><p class="preview-meaning">${item.meaning}</p><button class="listen-button" data-action="speak-word" aria-label="${item.word} 발음 듣기"><b>▶</b> 발음 듣기</button><p class="micro-copy">소리를 듣고 단어와 뜻을 함께 기억해 보세요.</p></div>${button(session.previewIndex === session.items.length - 1 ? '뜻 맞추기' : '다음 단어', 'preview-next')}</section></div>`;
+  return `<div class="page game-page">${stageHeader(1, '단어 확인', '')}${progress(session.previewIndex + 1, session.items.length, '단어 확인')}<section class="preview-word-card"><div class="preview-word-content"><span>${session.previewIndex + 1} / ${session.items.length}</span><h2>${clickableWord(item.word, item.meaning)}</h2><p class="preview-meaning">${item.meaning}</p><button class="listen-button" data-action="speak-word" aria-label="${item.word} 발음 듣기"><b>▶</b> 발음 듣기</button><p class="micro-copy">소리를 듣고 단어와 뜻을 함께 기억해 보세요.</p></div>${button(session.previewIndex === session.items.length - 1 ? '뜻 맞추기' : '다음 단어', 'preview-next')}</section></div>`;
 }
 
 function matchingGame() {
@@ -400,7 +407,8 @@ function drawMatchLines() {
     const x1 = a.right - bounds.left, y1 = a.top + a.height / 2 - bounds.top;
     const x2 = b.left - bounds.left, y2 = b.top + b.height / 2 - bounds.top;
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', `M${x1} ${y1} L${x2} ${y2}`);
+    const stub = Math.min(14, Math.max(0, (x2 - x1) / 4));
+    path.setAttribute('d', `M${x1} ${y1} H${x1 + stub} L${x2 - stub} ${y2} H${x2}`);
     path.setAttribute('class', 'match-line');
     svg.append(path);
   }
@@ -435,7 +443,7 @@ function sentenceGame() {
   const session = learningSession;
   const total = Math.min(sentenceLimit(), session.items.length);
   const item = session.items[session.itemIndex];
-  return `<div class="page game-page">${stageHeader(3, '문장 조립', '')}${progress(session.itemIndex + 1, total, '문장')}<section class="sentence-card"><div class="sentence-prompt"><span>${item.word}</span><h2>${item.translation}</h2></div><div class="sentence-zone ${session.sentenceAnswer.length ? '' : 'empty'}" data-drop-zone="answer">${session.sentenceAnswer.length ? session.sentenceAnswer.map((id, index) => tokenMarkup(id, 'answer', index)).join('') : '<p>단어를 순서대로 놓으세요</p>'}</div><div class="sentence-bank" data-drop-zone="bank">${session.sentenceBank.map((id) => tokenMarkup(id, 'bank')).join('')}</div><p class="game-message ${session.feedback?.type || ''}" role="status">${session.feedback?.text || '탭 또는 드래그로 단어 이동'}</p>${session.sentenceSolved ? button(session.itemIndex === total - 1 ? '단어찾기로 이어가기' : '다음 문장', 'sentence-next') : button('문장 확인', 'check-sentence', 'primary', session.sentenceBank.length > 0)}</section></div>`;
+  return `<div class="page game-page">${stageHeader(3, '문장 조립', '')}${progress(session.itemIndex + 1, total, '문장')}<section class="sentence-card"><div class="sentence-prompt"><span>${clickableWord(item.word, item.meaning)}</span><h2>${item.translation}</h2></div><div class="sentence-zone ${session.sentenceAnswer.length ? '' : 'empty'}" data-drop-zone="answer">${session.sentenceAnswer.length ? session.sentenceAnswer.map((id, index) => tokenMarkup(id, 'answer', index)).join('') : '<p>단어를 순서대로 놓으세요</p>'}</div><div class="sentence-bank" data-drop-zone="bank">${session.sentenceBank.map((id) => tokenMarkup(id, 'bank')).join('')}</div><p class="game-message ${session.feedback?.type || ''}" role="status">${session.feedback?.text || '탭 또는 드래그로 단어 이동'}</p>${session.sentenceSolved ? button(session.itemIndex === total - 1 ? '단어찾기로 이어가기' : '다음 문장', 'sentence-next') : button('문장 확인', 'check-sentence', 'primary', session.sentenceBank.length > 0)}</section></div>`;
 }
 
 function buildWordGrid(items, retry = 0) {
@@ -603,6 +611,9 @@ function wordSearchGame() {
 }
 
 function learn() {
+  if (learningSession.stage === 'intro') {
+    return `<div class="page game-page boss-intro"><div class="game-header"><h1>보스 슬라임</h1><button class="game-exit" data-nav="home">나가기</button></div><div class="boss-intro-scene">${pixelSprite('boss')}<p>학습을 완료해 보스 슬라임을 물리치세요!</p></div>${button('시작하기', 'boss-intro-start')}</div>`;
+  }
   if (!learningSession) return `<div class="page">${card(`<h2>진행 중인 학습이 없어요</h2>${button('홈으로', 'go-home')}`, 'empty')}</div>`;
   if (learningSession.stage === 'preview') return previewGame();
   if (learningSession.stage === 'match') return matchingGame();
@@ -651,7 +662,7 @@ function quickCheck() {
   if (!session) return `<div class="page">${card('<h2>확인할 단어가 없어요.</h2>', 'empty')}</div>`;
   const item = session.items[session.index];
   const correct = session.selection === item.meaning;
-  return `<div class="page page--narrow"><div class="game-header"><div><p class="eyebrow">${session.reviewMode ? `복습 · ${session.combo} 콤보` : '빠른 확인'}</p><h1>${item.word}</h1></div><button class="game-exit" data-nav="home">나가기</button></div>${progress(session.index + 1, session.items.length, '뜻 확인')}<button class="listen-button" data-action="speak-quick">▶ 발음 듣기</button><div class="choices quiz-choices">${session.options.map((option) => `<button class="choice ${session.selection === option ? 'choice--selected' : ''} ${session.submitted && option === item.meaning ? 'choice--correct' : ''} ${session.submitted && session.selection === option && !correct ? 'choice--try' : ''}" data-quick-answer="${escapeHtml(option)}" ${session.submitted ? 'disabled' : ''}>${escapeHtml(option)}${session.submitted && option === item.meaning ? '<span>✓</span>' : ''}</button>`).join('')}</div>${session.submitted ? card(`<h2>${correct ? '정답' : '정답 확인'}</h2><p>${item.word} · ${item.meaning}</p>${button(session.index === session.items.length - 1 ? '홈으로' : '다음', 'quick-next')}`, `feedback ${correct ? 'feedback--correct' : 'feedback--try'}`) : button('확인', 'quick-submit', 'primary', !session.selection)}</div>`;
+  return `<div class="page page--narrow"><div class="game-header"><div><p class="eyebrow">${session.reviewMode ? `복습 · ${session.combo} 콤보` : '빠른 확인'}</p><h1>${clickableWord(item.word, item.meaning)}</h1></div><button class="game-exit" data-nav="home">나가기</button></div>${progress(session.index + 1, session.items.length, '뜻 확인')}<button class="listen-button" data-action="speak-quick">▶ 발음 듣기</button><div class="choices quiz-choices">${session.options.map((option) => `<button class="choice ${session.selection === option ? 'choice--selected' : ''} ${session.submitted && option === item.meaning ? 'choice--correct' : ''} ${session.submitted && session.selection === option && !correct ? 'choice--try' : ''}" data-quick-answer="${escapeHtml(option)}" ${session.submitted ? 'disabled' : ''}>${escapeHtml(option)}${session.submitted && option === item.meaning ? '<span>✓</span>' : ''}</button>`).join('')}</div>${session.submitted ? card(`<h2>${correct ? '정답' : '정답 확인'}</h2><p>${clickableWord(item.word, item.meaning)} · ${item.meaning}</p>${button(session.index === session.items.length - 1 ? '홈으로' : '다음', 'quick-next')}`, `feedback ${correct ? 'feedback--correct' : 'feedback--try'}`) : button('확인', 'quick-submit', 'primary', !session.selection)}</div>`;
 }
 
 function currentTalk() {
@@ -671,7 +682,7 @@ function rotateTalk() {
   const { entries } = currentTalk();
   const remaining = entries.map((_, index) => index).filter((index) => !talkChoice.seen.includes(index));
   if (!remaining.length) return;
-  window.speechSynthesis?.cancel?.();
+  stopSpeech();
   const index = remaining[randomInt(remaining.length)];
   talkChoice = { ...talkChoice, index, seen: [...talkChoice.seen, index] };
   state.talkRotation = talkChoice;
@@ -681,9 +692,8 @@ function rotateTalk() {
 
 function smallTalk() {
   const { entries, selected } = currentTalk();
-  let offset = 0;
-  const spoken = selected[0].split(/\s+/).map((word) => { const start = offset; offset += word.length + 1; return `<span data-spoken-start="${start}">${escapeHtml(word)}</span>`; }).join(' ');
-  return `<div class="page page--narrow"><div class="page-intro"><p class="eyebrow">TODAY'S SMALL TALK</p><h1>스몰토크</h1></div>${card(`<span class="talk-level">${difficultyLabels[state.preferences.difficulty].split(' · ')[0]}</span><div class="talk-sentence-row"><h2 class="talk-sentence">${spoken}</h2><button class="talk-refresh" data-action="talk-refresh" aria-label="다른 스몰토크 보기" title="다른 스몰토크" ${talkChoice.seen.length >= entries.length ? 'disabled' : ''}>${pixelIcon('refresh')}</button></div><button class="listen-button" data-action="speak-smalltalk">▶ 발음 듣기</button><div class="talk-detail"><div><span>뜻</span><p>${selected[1]}</p></div><div><span>언제 쓰나요?</span><p>${selected[2]}</p></div></div>`, 'small-talk-card')}${button('맞춰보기', 'talk-quiz')}</div>`;
+  const spoken = clickableSentence(selected[0]);
+  return `<div class="page page--narrow"><div class="page-intro"><p class="eyebrow">TODAY'S SMALL TALK</p><h1>스몰토크</h1></div>${card(`<span class="talk-level">${difficultyLabels[state.preferences.difficulty].split(' · ')[0]}</span><div class="talk-sentence-row"><h2 class="talk-sentence">${spoken}</h2><button class="talk-refresh" data-action="talk-refresh" aria-label="다른 스몰토크 보기" title="다른 스몰토크" ${talkChoice.seen.length >= entries.length ? 'disabled' : ''}>${pixelIcon('refresh')}</button></div><button class="listen-button" data-action="speak-smalltalk">▶ 발음 듣기</button><div class="talk-detail"><div><span>뜻</span><p>${selected[1]}</p></div><div><span>언제 쓰나요?</span><p>${selected[2]}</p></div></div>`, 'small-talk-card')}${button('맞춰보기', 'talk-quiz')}${button('대화하기', 'talk-conversation', 'secondary')}</div>`;
 }
 
 function openTalkQuiz() {
@@ -711,33 +721,80 @@ function moveTalkToken(id, zone, index = null) {
   render();
 }
 
+function clickableWord(text, meaning = '') {
+  const word = text.toLowerCase().replace(/[^a-z']/g, '');
+  const gloss = meaning || vocabulary.find((item) => item.word.toLowerCase() === word)?.meaning || commonMeanings[word];
+  if (!gloss || !speechClips[word]) return escapeHtml(text);
+  return `<button type="button" class="inline-word" data-dictionary-word="${escapeHtml(word)}" data-meaning="${escapeHtml(gloss)}">${escapeHtml(text)}</button>`;
+}
+
+function clickableSentence(text) {
+  return text.split(/\s+/).map((word) => `<span data-spoken-start>${clickableWord(word)}</span>`).join(' ');
+}
+
+function stopSpeech() {
+  speechAudio?.pause();
+  speechAudio = null;
+  cancelAnimationFrame(speechFrame);
+  root.querySelectorAll('.spoken-active').forEach((part) => part.classList.remove('spoken-active'));
+}
+
 function speakSmallTalk() {
-  const text = currentTalk().selected[0];
-  if (!('speechSynthesis' in window)) return speakText(text);
-  speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US'; utterance.rate = .82;
-  utterance.voice = speechSynthesis.getVoices().find((voice) => voice.lang === 'en-US') || null;
-  const spans = [...root.querySelectorAll('[data-spoken-start]')];
-  speechHighlightTimers.forEach(clearTimeout);
-  speechHighlightTimers = [];
-  let hasBoundary = false;
-  utterance.onstart = () => {
-    let delay = 0;
-    spans.forEach((span, index) => {
-      speechHighlightTimers.push(window.setTimeout(() => {
-        if (!hasBoundary) spans.forEach((part, position) => part.classList.toggle('spoken-active', position === index));
-      }, delay));
-      delay += (95 + span.textContent.length * 65) / utterance.rate;
-    });
+  return speakText(currentTalk().selected[0], [...root.querySelectorAll('[data-spoken-start]')]);
+}
+
+function conversationView() {
+  return `<div class="page conversation-page">
+    <div class="game-header"><h1>슬라임과 대화</h1><button class="game-exit" data-nav="smalltalk">나가기</button></div>
+    <div class="conversation-log" role="log">${conversation.map(({ english, korean, user }, index) => `<article class="conversation-line${user ? ' conversation-line--user' : ''}">${user ? '' : pixelSprite('mascot')}<div><p lang="en">${clickableSentence(english)}</p>${korean ? `<small>${escapeHtml(korean)}</small>` : ''}</div>${user ? '' : `<button type="button" class="listen-button" data-action="conversation-play" data-line="${index}" aria-label="문장 발음 듣기">▶</button>`}</article>`).join('')}</div>
+    <form class="conversation-form"><input aria-label="영어로 대화하기" placeholder="영어로 입력" maxlength="200" required><button type="submit" class="button button--primary">보내기</button><button type="button" class="button button--secondary" data-action="conversation-mic">말하기</button></form>
+    <p class="game-message conversation-status" role="status"></p>
+  </div>`;
+}
+
+function openConversation() {
+  const [english, korean] = currentTalk().selected;
+  conversation = [{ english, korean }];
+  navigate('conversation');
+}
+
+function submitConversation(text) {
+  if (screen !== 'conversation' || !text.trim()) return;
+  const [english, korean] = slimeReply(text);
+  conversation.push({ english: text.trim().slice(0, 200), user: true }, { english, korean });
+  render();
+  const log = root.querySelector('.conversation-log');
+  log.scrollTop = log.scrollHeight;
+  speakText(english);
+}
+
+function recognizeConversation() {
+  const epoch = conversationEpoch;
+  const status = root.querySelector('.conversation-status');
+  const receive = (text) => {
+    if (epoch !== conversationEpoch || screen !== 'conversation') return;
+    if (text) {
+      const input = root.querySelector('.conversation-form input');
+      input.value = text.slice(0, 200);
+      input.focus();
+      status.textContent = '인식한 문장을 확인하고 보내세요.';
+    } else {
+      status.textContent = '음성을 인식하지 못했어요. 영어를 직접 입력할 수 있어요.';
+    }
   };
-  utterance.onboundary = (event) => {
-    hasBoundary = true;
-    const index = spans.findLastIndex((span) => Number(span.dataset.spokenStart) <= event.charIndex);
-    spans.forEach((span, position) => span.classList.toggle('spoken-active', position === index));
-  };
-  utterance.onend = utterance.onerror = () => { speechHighlightTimers.forEach(clearTimeout); speechHighlightTimers = []; spans.forEach((span) => span.classList.remove('spoken-active')); };
-  speechSynthesis.speak(utterance);
+  if (window.SmalltalkMic) {
+    window.receiveSmalltalkSpeech = receive;
+    window.SmalltalkMic.postMessage('start');
+    return;
+  }
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) return receive('');
+  const recognition = new Recognition();
+  recognition.lang = 'en-US';
+  recognition.onresult = (event) => receive(event.results[0][0].transcript);
+  recognition.onerror = () => receive('');
+  status.textContent = '영어로 말하세요.';
+  try { recognition.start(); } catch { receive(''); }
 }
 
 function duelScore(game) { return game.score; }
@@ -1120,7 +1177,7 @@ function review() {
   return `<div class="page review-page"><div class="page-intro"><h1>복습</h1></div>
     ${button('복습하기', 'review-game', 'primary', !words.length)}
     <section class="review-words"><h2>배운 단어 보기</h2>
-    ${list.length ? `<ul>${list.map(({ id, score }) => `<li><strong>${byId(id).word}</strong><span>${byId(id).meaning}</span><small>${score}점</small></li>`).join('')}</ul>` : '<p>학습을 마치면 여기에 단어가 표시돼요.</p>'}</section>
+    ${list.length ? `<ul>${list.map(({ id, score }) => `<li><strong>${clickableWord(byId(id).word, byId(id).meaning)}</strong><span>${byId(id).meaning}</span><small>${score}점</small></li>`).join('')}</ul>` : '<p>학습을 마치면 여기에 단어가 표시돼요.</p>'}</section>
     ${pages > 1 ? `<div class="review-pager">${button('이전', 'review-prev', 'secondary', !reviewPage)}<span>${reviewPage + 1} / ${pages}</span>${button('다음', 'review-next', 'secondary', reviewPage === pages - 1)}</div>` : ''}
   </div>`;
 }
@@ -1135,9 +1192,9 @@ function settings() {
 }
 
 function paint() {
-  const views = { onboarding, home, learn, quick: quickCheck, smalltalk: smallTalk, smalltalkquiz: talkQuizView, review, stats, settings, duel: duelView, result: resultView, typing: typingView };
+  const views = { onboarding, home, learn, quick: quickCheck, smalltalk: smallTalk, smalltalkquiz: talkQuizView, conversation: conversationView, review, stats, settings, duel: duelView, result: resultView, typing: typingView };
   const isOnboarding = screen === 'onboarding';
-  const isImmersive = ['learn', 'quick', 'duel', 'result', 'typing', 'smalltalkquiz'].includes(screen);
+  const isImmersive = ['learn', 'quick', 'duel', 'result', 'typing', 'smalltalkquiz', 'conversation'].includes(screen);
   const activeStage = screen === 'learn' ? learningSession?.stage || '' : screen;
   const isDuel = screen === 'duel';
   const duelEffect = isDuel ? `<div class="duel-screen-effect" data-effect="${duel.phase}" data-critical="${duel.losses > duel.cuts.length}" aria-hidden="true"></div>` : '';
@@ -1340,16 +1397,41 @@ function render({ resetScroll = false } = {}) {
 }
 window.addEventListener('resize', drawMatchLines);
 
-function speakText(text) {
-  if (!('speechSynthesis' in window)) { notice = '이 브라우저에서는 음성 재생을 지원하지 않아요.'; return render(); }
-  speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices();
-  utterance.voice = voices.find((voice) => voice.lang === 'en-US' && /Google|Microsoft|Samantha|Jenny|Aria/i.test(voice.name)) || voices.find((voice) => voice.lang === 'en-US') || null;
-  utterance.lang = 'en-US';
-  utterance.rate = .82;
-  utterance.pitch = 1;
-  speechSynthesis.speak(utterance);
+function speakText(text, spans = []) {
+  stopSpeech();
+  const clip = speechClips[text] || speechClips[text.toLowerCase()];
+  if (!clip) return;
+  const [file, cues] = clip;
+  const audio = new Audio(new URL(`./audio/${file}`, import.meta.url));
+  speechAudio = audio;
+  const highlight = () => {
+    if (speechAudio !== audio || audio.paused) return;
+    const index = cues.findLastIndex((time) => time <= audio.currentTime);
+    spans.forEach((span, position) => span.classList.toggle('spoken-active', position === index));
+    speechFrame = requestAnimationFrame(highlight);
+  };
+  audio.addEventListener('playing', highlight, { once: true });
+  audio.addEventListener('ended', () => { if (speechAudio === audio) stopSpeech(); });
+  audio.play().catch(() => {
+    if (speechAudio !== audio) return;
+    stopSpeech();
+    notice = '발음 파일을 재생하지 못했어요. 다시 눌러 주세요.';
+    render();
+  });
+}
+
+function showWordMeaning(target) {
+  speakText(target.dataset.dictionaryWord);
+  root.querySelector('.word-gloss')?.remove();
+  const gloss = document.createElement('div');
+  gloss.className = 'word-gloss';
+  gloss.setAttribute('role', 'status');
+  gloss.textContent = `${target.dataset.dictionaryWord} · ${target.dataset.meaning}`;
+  const rect = target.getBoundingClientRect();
+  gloss.style.top = `${Math.max(8, rect.top - 8)}px`;
+  gloss.style.left = `${Math.max(105, Math.min(innerWidth - 105, rect.left + rect.width / 2))}px`;
+  root.append(gloss);
+  setTimeout(() => gloss.remove(), 3200);
 }
 
 function recordLearningAnswer(id, result) {
@@ -1510,6 +1592,7 @@ root.addEventListener('click', (event) => {
   const target = event.target.closest('button');
   if (!target) return;
   if (target.dataset.gridIndex !== undefined) return;
+  if (target.dataset.dictionaryWord) return showWordMeaning(target);
   if (target.dataset.nav) return navigate(target.dataset.nav);
   if (target.dataset.talkToken !== undefined) {
     const id = Number(target.dataset.talkToken);
@@ -1531,6 +1614,13 @@ root.addEventListener('click', (event) => {
   if (target.dataset.quickAnswer !== undefined && !quickSession.submitted) { quickSession.selection = target.dataset.quickAnswer; return render(); }
   const action = target.dataset.action;
   if (!action) return;
+  if (action === 'boss-intro-start') {
+    learningSession.stage = 'preview';
+    return render({ resetScroll: true });
+  }
+  if (action === 'talk-conversation') return openConversation();
+  if (action === 'conversation-mic') return recognizeConversation();
+  if (action === 'conversation-play') return speakText(conversation[Number(target.dataset.line)].english);
   if (action === 'talk-refresh') return rotateTalk();
   if (action === 'talk-quiz') return openTalkQuiz();
   if (action === 'talk-done') return navigate('smalltalk');
@@ -1696,6 +1786,10 @@ root.addEventListener('click', (event) => {
 });
 
 root.addEventListener('submit', (event) => {
+  if (event.target.matches('.conversation-form')) {
+    event.preventDefault();
+    return submitConversation(event.target.querySelector('input').value);
+  }
   if (!event.target.matches('.typing-form')) return;
   event.preventDefault();
   submitTyping(event.target.querySelector('input')?.value || '');
@@ -1878,7 +1972,7 @@ window.addEventListener('pointercancel', releasePressedControl);
 window.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter' || event.repeat || event.isComposing) return;
   if (event.target.closest('button, input, select, textarea, [contenteditable="true"]')) return;
-  const nextActions = ['preview-next', 'start-sentence', 'sentence-next', 'check-sentence', 'search-start', 'finish-search', 'quick-submit', 'quick-next', 'talk-check', 'talk-done', 'result-home', 'typing-start', 'typing-next', 'duel-start', 'onboarding-next', 'onboarding-finish', 'settings-done'];
+  const nextActions = ['boss-intro-start', 'preview-next', 'start-sentence', 'sentence-next', 'check-sentence', 'search-start', 'finish-search', 'quick-submit', 'quick-next', 'talk-check', 'talk-done', 'result-home', 'typing-start', 'typing-next', 'duel-start', 'onboarding-next', 'onboarding-finish', 'settings-done'];
   const control = nextActions.map((action) => root.querySelector(`[data-action="${action}"]:not(:disabled)`)).find(Boolean);
   if (control) { event.preventDefault(); control.click(); }
 });

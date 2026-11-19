@@ -6,6 +6,8 @@ $ErrorActionPreference = 'Stop'
 $destination = Join-Path $PSScriptRoot '..\assets\www'
 $sourceFiles = @(
   'src\app.js',
+  'src\speech-clips.js',
+  'src\slime-dialogue.js',
   'src\data.js',
   'src\domain.js',
   'src\duel-motion.js',
@@ -21,6 +23,11 @@ foreach ($relative in $sourceFiles) {
   }
   Copy-Item -LiteralPath $origin -Destination (Join-Path $destination $relative)
 }
+
+$audio = Join-Path $destination 'src\audio'
+New-Item -ItemType Directory -Force -Path $audio | Out-Null
+Get-ChildItem -LiteralPath (Join-Path $Source 'src\audio') -Filter '*.wav' -File |
+  Copy-Item -Destination $audio
 
 $index = Get-Content -LiteralPath (Join-Path $Source 'index.html') -Raw -Encoding UTF8
 $index = $index.Replace(
