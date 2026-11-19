@@ -1,5 +1,5 @@
 import { speechClips } from './speech-clips.js';
-import { commonMeanings, slimeReply } from './slime-dialogue.js';
+import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, stageWords, vocabulary } from './data.js';
 import { animateDuelEffect, strikeDuration } from './duel-motion.js';
 import { addDuelPoints, duelDifficulties, duelPoints, opponentAttackMs } from './duel-rules.js';
@@ -60,6 +60,9 @@ let speechAudio;
 let speechFrame;
 let conversation = [];
 let conversationEpoch = 0;
+let conversationRequest;
+let conversationError = '';
+let conversationDraft = '';
 let resultGrade = null;
 let resultReward = 0;
 let resultBossHp = 0;
@@ -240,7 +243,11 @@ function stopSearchTimer() {
 
 function navigate(next) {
   stopSpeech();
-  if (screen === 'conversation') conversationEpoch += 1;
+  if (screen === 'conversation') {
+    conversationEpoch += 1;
+    conversationRequest?.abort();
+    conversationRequest = null;
+  }
   if (next !== 'home') { window.clearTimeout(xpClaimTimer); xpClaimTimer = 0; }
   if (screen === 'learn') {
     stopSearchTimer();
@@ -740,6 +747,7 @@ function clickableSentence(text) {
 }
 
 function stopSpeech() {
+  window.speechSynthesis?.cancel();
   speechAudio?.pause();
   speechAudio = null;
   cancelAnimationFrame(speechFrame);
@@ -754,25 +762,69 @@ function conversationView() {
   return `<div class="page conversation-page">
     <div class="game-header"><h1>슬라임과 대화</h1><button class="game-exit" data-nav="smalltalk">나가기</button></div>
     <div class="conversation-log" role="log">${conversation.map(({ english, korean, user }, index) => `<article class="conversation-line${user ? ' conversation-line--user' : ''}">${user ? '' : pixelSprite('mascot')}<div><p lang="en">${clickableSentence(english)}</p>${korean ? `<small>${escapeHtml(korean)}</small>` : ''}</div>${user ? '' : `<button type="button" class="listen-button" data-action="conversation-play" data-line="${index}" aria-label="문장 발음 듣기">▶</button>`}</article>`).join('')}</div>
-    <form class="conversation-form"><input aria-label="영어로 대화하기" placeholder="영어로 입력" maxlength="200" required><button type="submit" class="button button--primary">보내기</button><button type="button" class="button button--secondary" data-action="conversation-mic">말하기</button></form>
-    <p class="game-message conversation-status" role="status"></p>
+    <form class="conversation-form"><input aria-label="영어로 대화하기" placeholder="영어로 입력" maxlength="200" value="${escapeHtml(conversationDraft)}" ${conversationRequest || !conversation.length ? 'disabled' : ''} required><button type="submit" class="button button--primary" ${conversationRequest || !conversation.length ? 'disabled' : ''}>보내기</button><button type="button" class="button button--secondary" data-action="conversation-mic" ${conversationRequest || !conversation.length ? 'disabled' : ''}>말하기</button></form>
+    <p class="game-message conversation-status" role="status">${conversationRequest ? '슬라임이 생각 중이에요…' : escapeHtml(conversationError)}</p>
+    ${!conversation.length && conversationError ? button('다시 연결', 'conversation-retry', 'secondary') : ''}
   </div>`;
 }
 
 function openConversation() {
-  const [english, korean] = currentTalk().selected;
-  conversation = [{ english, korean }];
+  conversation = [];
+  conversationError = '';
+  conversationDraft = '';
   navigate('conversation');
+  requestConversation();
+}
+
+async function requestConversation(text = '') {
+  if (screen !== 'conversation' || conversationRequest) return;
+  const epoch = conversationEpoch;
+  const request = new AbortController();
+  conversationRequest = request;
+  conversationError = '';
+  conversationDraft = text;
+  render();
+
+  const turns = conversation.slice(-9).map(({ english, user }) => ({
+    role: user ? 'user' : 'assistant', text: english,
+  }));
+  if (text) turns.push({ role: 'user', text });
+  const timeout = setTimeout(() => request.abort(), 18000);
+  try {
+    const response = await fetch('/api/slime-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: request.signal,
+      body: JSON.stringify({
+        turns,
+        topic: currentTalk().selected[0],
+        learnedIds: getLearnedIds(state).slice(-80),
+      }),
+    });
+    if (!response.ok) throw new Error(String(response.status));
+    const { english, korean } = await response.json();
+    if (epoch !== conversationEpoch) return;
+    if (text) conversation.push({ english: text, user: true });
+    conversation.push({ english, korean });
+    conversationDraft = '';
+  } catch {
+    if (epoch === conversationEpoch) {
+      conversationError = 'AI에 연결하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
+    }
+  } finally {
+    clearTimeout(timeout);
+    if (epoch === conversationEpoch) {
+      conversationRequest = null;
+      render();
+      const log = root.querySelector('.conversation-log');
+      if (log) log.scrollTop = log.scrollHeight;
+    }
+  }
 }
 
 function submitConversation(text) {
-  if (screen !== 'conversation' || !text.trim()) return;
-  const [english, korean] = slimeReply(text);
-  conversation.push({ english: text.trim().slice(0, 200), user: true }, { english, korean });
-  render();
-  const log = root.querySelector('.conversation-log');
-  log.scrollTop = log.scrollHeight;
-  speakText(english);
+  const message = text.trim().slice(0, 200);
+  if (message) requestConversation(message);
 }
 
 function recognizeConversation() {
@@ -1410,7 +1462,21 @@ window.addEventListener('resize', drawMatchLines);
 function speakText(text, spans = []) {
   stopSpeech();
   const clip = speechClips[text] || speechClips[text.toLowerCase()];
-  if (!clip) return;
+  if (!clip) {
+    const synthesis = window.speechSynthesis;
+    const voice = synthesis?.getVoices().find((option) => /^en(?:-|_)/i.test(option.lang));
+    if (!voice) {
+      const status = root.querySelector('.conversation-status');
+      if (status) status.textContent = '이 기기에서 영어 음성을 재생할 수 없어요.';
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+    utterance.rate = .85;
+    synthesis.speak(utterance);
+    return;
+  }
   const [file, cues] = clip;
   const audio = new Audio(new URL(`./audio/${file}?v=2`, import.meta.url));
   speechAudio = audio;
@@ -1649,6 +1715,7 @@ root.addEventListener('click', (event) => {
     return render({ resetScroll: true });
   }
   if (action === 'talk-conversation') return openConversation();
+  if (action === 'conversation-retry') return requestConversation();
   if (action === 'conversation-mic') return recognizeConversation();
   if (action === 'conversation-play') return speakText(conversation[Number(target.dataset.line)].english);
   if (action === 'talk-refresh') return rotateTalk();
