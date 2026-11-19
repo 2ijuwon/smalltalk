@@ -973,7 +973,14 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 [data-theme="dark"] .pixel-sprite--slime [data-pixel="o"],
 [data-theme="dark"] .pixel-sprite--slime [data-pixel="k"] { fill: #73b8ed; }
 [data-theme="dark"] .pixel-sprite--boss [data-pixel="o"] { fill: #bd94fa; }
+[data-theme="dark"] .pixel-sprite--boss [data-pixel="v"] { fill: #3c285a; }
+[data-theme="dark"] .pixel-sprite--boss [data-pixel="m"] { fill: #2c2042; }
+[data-theme="dark"] .pixel-sprite--boss [data-pixel="k"] { fill: #e2bfff; }
 [data-theme="dark"] .typing-enemy--boss { border-color: #bd94fa; }
+[data-theme="dark"] .typing-enemy--boss .typing-eyes { background: #e2bfff; box-shadow: 9px 0 #e2bfff; }
+[data-theme="dark"] .word-token { background: #0c1018; color: #f4f7ff; border-color: #7b91ae; }
+[data-theme="dark"] .word-token.placed-correct { border-color: #75d2f4; color: #c0f0ff; }
+[data-theme="dark"] .word-token.misplaced { border-color: #ebc56b; color: #ffe4a7; }
 @media (prefers-reduced-motion: reduce) {
   .special-flash { display: none; }
 }
@@ -1072,7 +1079,8 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   padding-inline-start: calc(var(--mark-size) + 8px);
   font-size: clamp(1.35rem, 8vw, 2.8rem);
   color: var(--ink);
-  animation: launch-final-hop 470ms var(--final-jump) ease-out both;
+  animation: launch-final-hop 470ms var(--final-jump) ease-out both,
+    launch-reunion 1ms calc(var(--final-jump) + 113ms);
 }
 .launch-lockup .pixel-sprite {
   position: absolute;
@@ -1082,7 +1090,8 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   height: var(--mark-size);
   translate: -50% -50%;
   transform-origin: center 83%;
-  animation: launch-hop var(--landing-end) both;
+  animation: launch-hop var(--landing-end) both,
+    launch-liftoff 1ms calc(var(--landing-end) * .34);
 }
 .launch-lockup .pixel-sprite svg { animation: none; }
 .launch-lockup .slime-frame--0 { animation: launch-squint-open var(--landing-end) steps(1, end) both; }
@@ -1112,6 +1121,9 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 }
 @keyframes launch-panel-left { to { transform: translateX(-101%); } }
 @keyframes launch-panel-right { to { transform: translateX(101%); } }
+/* These timeline markers trigger audio at takeoff without changing the pose. */
+@keyframes launch-liftoff { from, to { --launch-audio-cue: 1; } }
+@keyframes launch-reunion { from, to { --launch-audio-cue: 1; } }
 @keyframes launch-hop {
   0%, 19% { left: 50%; transform: scale(1.85); }
   34% { left: 50%; transform: translateY(9px) scale(2.03, 1.29); animation-timing-function: cubic-bezier(.12, .7, .26, 1); }

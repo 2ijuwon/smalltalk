@@ -96,18 +96,19 @@ effects = {
     "watch": (740, 440, 260), "heal": (520, 740, 980), "bomb": (240, 160, 90),
     "loot": (550, 700, 960), "lesson": (523, 659, 784, 1046),
     "review": (440, 587, 784), "talk": (440, 587), "goodbye": (587, 440),
-    "launch": (220, 880),
+    "launch": (220, 880), "letter": (1046,), "chime": (659, 988, 1319),
 }
 rate = 22050
 for name, notes in effects.items():
     frames = bytearray()
+    duration = 0.04 if name == "letter" else 0.065 if len(notes) == 1 else 0.085
+    length = int(rate * duration)
     for frequency in notes:
-        length = int(rate * (0.065 if len(notes) == 1 else 0.085))
         for sample in range(length):
             phase = sample * frequency / rate
             triangle = 4 * abs(phase - math.floor(phase + .5)) - 1
             envelope = min(1, sample / 125) * (1 - sample / length) ** 2
-            peak = .26 if name == "surface" else .43
+            peak = .26 if name in ("surface", "letter") else .43
             frames.extend(struct.pack("<h", int(32767 * peak * triangle * envelope)))
     with wave.open(str(out / f"fx-{name}.wav"), "wb") as wav:
         wav.setparams((1, 2, rate, 0, "NONE", "not compressed"))

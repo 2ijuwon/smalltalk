@@ -1504,8 +1504,18 @@ function showLaunch() {
     }
   };
   document.addEventListener('visibilitychange', updateVisibility);
-  overlay.querySelector('.launch-sparks').addEventListener('animationstart', () => playEffect('launch'), { once: true });
-  panel.addEventListener('animationstart', () => playEffect('place'), { once: true });
+  const cues = {
+    'launch-liftoff': 'launch',
+    'launch-sparks': 'place',
+    'launch-letter-rise': 'letter',
+    'launch-reunion': 'chime',
+    'launch-panel-left': 'place',
+  };
+  for (const kind of new Set(Object.values(cues))) effectPlayer(kind);
+  overlay.addEventListener('animationstart', ({ animationName }) => {
+    const cue = cues[animationName];
+    if (cue && !document.hidden) playEffect(cue);
+  });
   panel.addEventListener('animationend', () => {
     document.removeEventListener('visibilitychange', updateVisibility);
     cancelAnimationFrame(paintFrame);
@@ -1515,12 +1525,19 @@ function showLaunch() {
   updateVisibility();
 }
 
-function playEffect(kind) {
+function effectPlayer(kind) {
   let player = effectPlayers.get(kind);
   if (!player) {
-    player = new Audio(new URL(`./audio/fx-${kind}.wav`, import.meta.url));
+    player = new Audio();
+    player.preload = 'auto';
+    player.src = new URL(`./audio/fx-${kind}.wav`, import.meta.url);
     effectPlayers.set(kind, player);
   }
+  return player;
+}
+
+function playEffect(kind) {
+  const player = effectPlayer(kind);
   player.currentTime = 0;
   player.play().catch(() => {
     // A later tap can unlock media if the browser blocks playback.
