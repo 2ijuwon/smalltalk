@@ -12,6 +12,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const EnglishApp());
 }
 
@@ -37,6 +38,7 @@ class EnglishWebView extends StatefulWidget {
 
 class _EnglishWebViewState extends State<EnglishWebView> {
   static const _background = Color(0xFFEAF5FF);
+  static const _darkBackground = Color(0xFF151D29);
   // Keep the WebView origin stable so localStorage survives app restarts.
   static const _localPort = 48123;
   static const _assets = <String, String>{
@@ -327,62 +329,76 @@ class _EnglishWebViewState extends State<EnglishWebView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (_usingLocal && !_loading && _error == null)
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 12, bottom: 2),
-                  child: Semantics(
-                    label: '오프라인 모드',
-                    child: const CustomPaint(
-                      size: Size(20, 16),
-                      painter: _OfflineWifiPainter(),
+    final dark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final iconBrightness = dark ? Brightness.light : Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: iconBrightness,
+        statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: iconBrightness,
+        systemNavigationBarContrastEnforced: false,
+      ),
+      child: Scaffold(
+        backgroundColor: dark ? _darkBackground : _background,
+        body: SafeArea(
+          child: Column(
+            children: [
+              if (_usingLocal && !_loading && _error == null)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 12, bottom: 2),
+                    child: Semantics(
+                      label: '오프라인 모드',
+                      child: const CustomPaint(
+                        size: Size(20, 16),
+                        painter: _OfflineWifiPainter(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            Expanded(
-              child: Stack(
-                children: [
-                  if (_controller case final controller?)
-                    WebViewWidget(controller: controller),
-                  if (_loading)
-                    const Center(child: CircularProgressIndicator()),
-                  if (_error case final error?)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('화면을 불러오지 못했습니다.'),
-                            const SizedBox(height: 8),
-                            Text(error, textAlign: TextAlign.center),
-                            const SizedBox(height: 16),
-                            FilledButton(
-                              onPressed: () {
-                                setState(() {
-                                  _error = null;
-                                  _loading = true;
-                                });
-                                _usingLocal = false;
-                                _openSite();
-                              },
-                              child: const Text('다시 시도'),
-                            ),
-                          ],
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (_controller case final controller?)
+                      WebViewWidget(controller: controller),
+                    if (_loading)
+                      const Center(child: CircularProgressIndicator()),
+                    if (_error case final error?)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('화면을 불러오지 못했습니다.'),
+                              const SizedBox(height: 8),
+                              Text(error, textAlign: TextAlign.center),
+                              const SizedBox(height: 16),
+                              FilledButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _error = null;
+                                    _loading = true;
+                                  });
+                                  _usingLocal = false;
+                                  _openSite();
+                                },
+                                child: const Text('다시 시도'),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

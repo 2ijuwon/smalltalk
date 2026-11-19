@@ -17,7 +17,7 @@
   background: var(--sky);
   color: var(--ink);
 }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #eaf5ff; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--sky); }
 
 * { box-sizing: border-box; }
 body { margin: 0; }
@@ -36,7 +36,9 @@ strong, b { font-weight: 800; }
 .skip-link:focus { translate: 0; }
 
 #app {
+  height: 100%;
   height: 100dvh;
+  max-height: 100%;
   display: grid;
   grid-template: auto minmax(0, 1fr) auto / minmax(0, 1fr);
   isolation: isolate;
