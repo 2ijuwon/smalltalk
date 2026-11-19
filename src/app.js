@@ -1388,6 +1388,7 @@ function reactToSlime(sprite) {
 }
 
 function showLaunch() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   try {
     if (sessionStorage.getItem('smalltalk-launched')) return;
     sessionStorage.setItem('smalltalk-launched', '1');
@@ -1403,7 +1404,7 @@ function showLaunch() {
     overlay.classList.add('launch-overlay--open');
     playEffect('launch');
     setTimeout(() => overlay.remove(), 410);
-  }, 1240);
+  }, 1010);
   overlay.addEventListener('click', () => { clearTimeout(timer); playEffect('launch'); overlay.remove(); }, { once: true });
 }
 
