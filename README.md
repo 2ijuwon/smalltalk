@@ -41,3 +41,17 @@ flutter test
 GitHub `2ijuwon/smalltalk`의 `main` 브랜치를 Vercel `smalltalk` 프로젝트에 연결했습니다. Vercel은 `npm run build`를 실행하고 `dist/`를 배포합니다. 이 빌드는 웹 파일과 로컬 폰트만 복사합니다. Flutter 소스는 배포하지 않습니다.
 
 Supabase `smalltalk` 프로젝트는 생성했습니다. 현재 앱의 학습 기록은 기기에 저장되며, Supabase 데이터베이스 동기화는 아직 연결하지 않았습니다.
+
+## Pronunciation audio
+
+English clips are generated at build preparation time with Piper's
+[en_US-ljspeech-medium voice](https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/ljspeech/medium/MODEL_CARD).
+The app plays the generated WAV files directly. Small talk word cues use the
+sample counts of the clips in each sentence. To regenerate the files on Windows:
+
+```powershell
+python -m pip install piper-tts
+python -m piper.download_voices --download-dir "$env:TEMP/smalltalk-voice" en_US-ljspeech-medium
+python scripts/generate-speech.py
+.\flutter\scripts\sync-web.ps1
+```

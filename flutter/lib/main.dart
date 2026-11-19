@@ -203,6 +203,11 @@ class _EnglishWebViewState extends State<EnglishWebView> {
   }
 
   Future<void> _recognizeSpeech(WebViewController controller) async {
+    final address = Uri.tryParse(await controller.currentUrl() ?? '');
+    final trustedOrigin =
+        address?.origin == _onlineUri.origin ||
+        address?.origin == 'http://127.0.0.1:$_localPort';
+    if (!mounted || _controller != controller || !trustedOrigin) return;
     String? transcript;
     try {
       transcript = await const MethodChannel(
@@ -210,6 +215,8 @@ class _EnglishWebViewState extends State<EnglishWebView> {
       ).invokeMethod<String>('recognize');
     } on PlatformException {
       // The recognition activity can be unavailable on some devices.
+    } on MissingPluginException {
+      // Android registers the channel when the app is built.
     }
     if (!mounted || _controller != controller) return;
     await controller.runJavaScript(
