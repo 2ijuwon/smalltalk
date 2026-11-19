@@ -880,3 +880,15 @@ small, .notice, .progress-label, .stage-track span, .game-message,
 .conversation-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 7px; }
 .conversation-form input { min-width: 0; padding: 6px; border: 2px solid var(--line); border-radius: 10px; }
 .conversation-status:empty { display: none; }
+
+.match-line--draw {
+  stroke-dasharray: 1 1;
+  animation: match-line-draw 340ms cubic-bezier(.22, .7, .3, 1) both;
+}
+@keyframes match-line-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .match-line--draw { animation: none; stroke-dasharray: none; }
+}
