@@ -58,6 +58,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
 
   static final _onlineUri = Uri.https('smalltalk-2ijuwon.vercel.app', '/');
   bool _usingLocal = false;
+  bool _hasShownPage = false;
   Timer? _connectionTimer;
   HttpServer? _server;
   WebViewController? _controller;
@@ -82,6 +83,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
               if (mounted &&
                   _error == null &&
                   host == (_usingLocal ? '127.0.0.1' : _onlineUri.host)) {
+                _hasShownPage = true;
                 setState(() => _loading = false);
                 _watchConnection(_controller!);
               }
@@ -158,7 +160,9 @@ class _EnglishWebViewState extends State<EnglishWebView> {
               _loading = true;
             });
             try {
-              await controller.loadRequest(_onlineUri);
+              await controller.loadRequest(
+                _onlineUri.replace(queryParameters: {'resume': '1'}),
+              );
             } catch (_) {
               if (mounted) await _openLocal(controller: controller);
             }
@@ -191,7 +195,13 @@ class _EnglishWebViewState extends State<EnglishWebView> {
         return;
       }
       _server = server;
-      await controller.loadRequest(Uri.http('127.0.0.1:${server.port}', '/'));
+      await controller.loadRequest(
+        Uri.http(
+          '127.0.0.1:${server.port}',
+          '/',
+          _hasShownPage ? {'resume': '1'} : null,
+        ),
+      );
     } catch (error) {
       if (mounted) _showError(error.toString());
     }

@@ -963,7 +963,7 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 [data-theme="dark"] .pixel-sprite--slime [data-pixel="o"],
 [data-theme="dark"] .pixel-sprite--slime [data-pixel="k"] { fill: #73b8ed; }
 @media (prefers-reduced-motion: reduce) {
-  .launch-overlay, .special-flash { display: none; }
+  .special-flash { display: none; }
 }
 
 .typing-enemy.slime-delighted .typing-eyes { border-radius: 0 0 50% 50%; }
@@ -996,9 +996,12 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   inset: 0 calc(50% - 1px) 0 0;
   z-index: -1;
   background: var(--launch-panel);
-  transition: transform 360ms cubic-bezier(.55, .05, .3, 1);
+  animation: launch-panel-left 360ms 1010ms cubic-bezier(.55, .05, .3, 1) both;
 }
-.launch-overlay > i + i { inset: 0 0 0 calc(50% - 1px); }
+.launch-overlay > i + i {
+  inset: 0 0 0 calc(50% - 1px);
+  animation-name: launch-panel-right;
+}
 .launch-lockup {
   --mark-size: clamp(56px, 18vw, 86px);
   position: relative;
@@ -1036,13 +1039,18 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   animation: launch-sparks .28s .68s ease-out both;
   pointer-events: none;
 }
-.launch-overlay--open > i { transform: translateX(-101%); }
-.launch-overlay--open > i + i { transform: translateX(101%); }
-.launch-overlay--open .launch-lockup {
-  opacity: 0;
-  scale: .98;
-  transition: opacity 210ms ease-out, scale 210ms ease-out;
+@keyframes launch-panel-left { to { transform: translateX(-101%); } }
+@keyframes launch-panel-right { to { transform: translateX(101%); } }
+.launch-lockup { animation: launch-out 210ms 1010ms ease-out both; }
+@keyframes launch-out { to { opacity: 0; scale: .98; } }
+.launch-overlay--paused * { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) {
+  .launch-overlay > i, .launch-overlay > i + i { animation: launch-still-out 160ms 460ms linear both; }
+  .launch-lockup { animation: launch-still-out 160ms 460ms linear both; }
+  .launch-lockup .pixel-sprite, .launch-lockup strong { animation: none; }
+  .launch-sparks { display: none; }
 }
+@keyframes launch-still-out { to { opacity: 0; } }
 @keyframes launch-hop {
   0%, 17% { left: 50%; transform: scale(1.65); }
   30% { left: 50%; transform: translateY(3px) scale(1.72, 1.45); }

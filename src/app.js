@@ -1388,24 +1388,37 @@ function reactToSlime(sprite) {
 }
 
 function showLaunch() {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  try {
-    if (sessionStorage.getItem('smalltalk-launched')) return;
-    sessionStorage.setItem('smalltalk-launched', '1');
-  } catch {
-    // Startup still works when the browser blocks storage.
-  }
+  if (new URLSearchParams(location.search).has('resume') ||
+      document.querySelector('.launch-overlay')) return;
+
   const overlay = document.createElement('div');
   overlay.className = 'launch-overlay';
   overlay.setAttribute('aria-hidden', 'true');
   overlay.innerHTML = `<i></i><i></i><div class="launch-lockup">${pixelSprite('mascot')}<strong>smalltalk</strong><span class="launch-sparks"></span></div>`;
+  const panel = overlay.firstElementChild;
+  let paintFrame;
+  overlay.classList.add('launch-overlay--paused');
+  const updateVisibility = () => {
+    cancelAnimationFrame(paintFrame);
+    if (document.hidden) {
+      overlay.classList.add('launch-overlay--paused');
+    } else {
+      paintFrame = requestAnimationFrame(() => {
+        paintFrame = requestAnimationFrame(() => {
+          if (!document.hidden) overlay.classList.remove('launch-overlay--paused');
+        });
+      });
+    }
+  };
+  document.addEventListener('visibilitychange', updateVisibility);
+  panel.addEventListener('animationstart', () => playEffect('launch'), { once: true });
+  panel.addEventListener('animationend', () => {
+    document.removeEventListener('visibilitychange', updateVisibility);
+    cancelAnimationFrame(paintFrame);
+    overlay.remove();
+  }, { once: true });
   document.body.append(overlay);
-  const timer = setTimeout(() => {
-    overlay.classList.add('launch-overlay--open');
-    playEffect('launch');
-    setTimeout(() => overlay.remove(), 410);
-  }, 1010);
-  overlay.addEventListener('click', () => { clearTimeout(timer); playEffect('launch'); overlay.remove(); }, { once: true });
+  updateVisibility();
 }
 
 function playEffect(kind) {
@@ -2339,3 +2352,6 @@ window.addEventListener('keydown', (event) => {
 
 render();
 showLaunch();
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) showLaunch();
+});
