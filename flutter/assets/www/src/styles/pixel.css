@@ -953,7 +953,7 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 .pixel-sprite--slime,
 .brand:has(.pixel-sprite--slime),
 .typing-enemy:not(.typing-item) { -webkit-tap-highlight-color: transparent; }
-.pixel-sprite--slime { cursor: pointer; }
+.pixel-sprite--slime { position: relative; cursor: pointer; }
 .slime-frame--2 { opacity: 0; }
 .pixel-sprite--slime:is(.slime-pressed, .slime-delighted) .slime-frame {
   animation: none;
@@ -972,22 +972,61 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 [data-theme="dark"] .pixel-sprite--slime rect { fill: #202a39; }
 [data-theme="dark"] .pixel-sprite--slime [data-pixel="o"],
 [data-theme="dark"] .pixel-sprite--slime [data-pixel="k"] { fill: #73b8ed; }
+[data-theme="dark"] .pixel-sprite--boss [data-pixel="o"] { fill: #bd94fa; }
+[data-theme="dark"] .typing-enemy--boss { border-color: #bd94fa; }
 @media (prefers-reduced-motion: reduce) {
   .special-flash { display: none; }
 }
 
 .typing-enemy:is(.slime-pressed, .slime-delighted) .typing-eyes { scale: 1 .45; }
-:is(.pixel-sprite--slime, .typing-enemy:not(.typing-item)) {
+.pixel-sprite--slime > svg,
+.typing-enemy:not(.typing-item) {
   filter: hue-rotate(var(--slime-tint, 0deg));
   transition: filter 130ms ease-out;
 }
-:is(.pixel-sprite--slime, .typing-enemy:not(.typing-item)).slime-tint-returning {
+.pixel-sprite--slime.slime-tint-returning > svg,
+.typing-enemy.slime-tint-returning {
   transition-duration: 760ms;
 }
+[data-theme="dark"] :is(.pixel-sprite--boss > svg, .typing-enemy--boss) { filter: none; }
+
+.slime-fire {
+  position: absolute;
+  z-index: 2;
+  inset: auto 5% 67%;
+  height: 57%;
+  min-height: 14px;
+  pointer-events: none;
+  transform-origin: center bottom;
+}
+.slime-fire i {
+  --flame-shape: polygon(0 100%, 0 66%, 16% 66%, 16% 44%, 33% 44%, 33% 22%, 50% 22%, 50% 0, 66% 0, 66% 33%, 83% 33%, 83% 55%, 100% 55%, 100% 100%);
+  position: absolute;
+  bottom: 0;
+  width: 37%;
+  height: 82%;
+  background: #f36b32;
+  clip-path: var(--flame-shape);
+  transform-origin: center bottom;
+  animation: slime-fire-flicker 480ms steps(3, end) infinite alternate;
+}
+.slime-fire i:first-child { left: 0; height: 69%; animation-delay: -180ms; }
+.slime-fire i:nth-child(2) { left: 30%; height: 100%; }
+.slime-fire i:last-child { right: 0; height: 76%; animation-delay: -330ms; }
+.slime-fire i::after {
+  content: "";
+  position: absolute;
+  inset: 36% 23% 0;
+  background: #ffdc74;
+  clip-path: var(--flame-shape);
+}
+@keyframes slime-fire-flicker { from { transform: translateX(-6%) scaleY(.78); } to { transform: translateX(6%) scaleY(1.12); } }
 @media (prefers-reduced-motion: reduce) {
-  :is(.pixel-sprite--slime, .typing-enemy:not(.typing-item)).slime-tint-returning {
+  .pixel-sprite--slime.slime-tint-returning > svg,
+  .typing-enemy.slime-tint-returning {
     transition-duration: 0ms;
   }
+  .slime-fire i { animation: none; }
 }
 
 .typing-page:not([data-phase="playing"]) {
