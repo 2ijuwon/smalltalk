@@ -951,7 +951,7 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 .pixel-sprite--slime,
 .brand:has(.pixel-sprite--slime),
 .typing-enemy:not(.typing-item) { -webkit-tap-highlight-color: transparent; }
-.pixel-sprite--slime { cursor: pointer; filter: hue-rotate(var(--slime-tint, 0deg)); }
+.pixel-sprite--slime { cursor: pointer; }
 .slime-frame--2 { opacity: 0; }
 .pixel-sprite--slime:is(.slime-pressed, .slime-delighted) .slime-frame {
   animation: none;
@@ -975,7 +975,18 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 }
 
 .typing-enemy:is(.slime-pressed, .slime-delighted) .typing-eyes { scale: 1 .45; }
-.typing-enemy.slime-delighted { filter: hue-rotate(var(--slime-tint, 0deg)); }
+:is(.pixel-sprite--slime, .typing-enemy:not(.typing-item)) {
+  filter: hue-rotate(var(--slime-tint, 0deg));
+  transition: filter 130ms ease-out;
+}
+:is(.pixel-sprite--slime, .typing-enemy:not(.typing-item)).slime-tint-returning {
+  transition-duration: 760ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.pixel-sprite--slime, .typing-enemy:not(.typing-item)).slime-tint-returning {
+    transition-duration: 0ms;
+  }
+}
 
 .typing-page:not([data-phase="playing"]) {
   grid-template-rows: auto auto minmax(44px, 1fr) auto auto;

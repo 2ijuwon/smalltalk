@@ -1409,7 +1409,6 @@ function specialEffect(kind) {
 }
 
 const preferredTheme = matchMedia('(prefers-color-scheme: dark)');
-let slimeTapCount = 0, lastSlimeTap = 0;
 document.documentElement.dataset.theme = preferredTheme.matches ? 'dark' : 'light';
 preferredTheme.addEventListener('change', (event) => {
   document.documentElement.dataset.theme = event.matches ? 'dark' : 'light';
@@ -1419,27 +1418,31 @@ const slimeReactionTimers = new WeakMap();
 
 function reactToSlime(sprite) {
   const now = performance.now();
-  slimeTapCount = now - lastSlimeTap < 650 ? slimeTapCount + 1 : 1;
-  lastSlimeTap = now;
+  const reaction = slimeReactionTimers.get(sprite) || { count: 0, lastTap: -Infinity };
+  reaction.count = now - reaction.lastTap < 650 ? reaction.count + 1 : 1;
+  reaction.lastTap = now;
+  clearTimeout(reaction.faceTimer);
+  clearTimeout(reaction.tintTimer);
+  slimeReactionTimers.set(sprite, reaction);
+  sprite.classList.remove('slime-tint-returning');
   sprite.classList.add('slime-delighted');
   sprite.animate([
     { translate: '0 0' },
     { translate: '0 -9px' },
     { translate: '0 0' },
   ], { duration: 300, easing: 'ease-out' });
-  clearTimeout(slimeReactionTimers.get(sprite));
-  slimeReactionTimers.set(sprite, setTimeout(() => sprite.classList.remove('slime-delighted'), 320));
-  if (slimeTapCount > 1) {
-    sprite.style.setProperty('--slime-tint', `${slimeTapCount * 12}deg`);
-  } else {
-    sprite.style.removeProperty('--slime-tint');
-  }
-  if (slimeTapCount >= 6) {
+  reaction.faceTimer = setTimeout(() => sprite.classList.remove('slime-delighted'), 320);
+  if (reaction.count >= 6) {
     const page = document.documentElement;
     page.dataset.theme = page.dataset.theme === 'dark' ? 'light' : 'dark';
-    sprite.style.removeProperty('--slime-tint');
-    slimeTapCount = 0;
+    reaction.count = 0;
   }
+  sprite.style.setProperty('--slime-tint', `${reaction.count > 1 ? reaction.count * 12 : 0}deg`);
+  reaction.tintTimer = setTimeout(() => {
+    sprite.classList.add('slime-tint-returning');
+    sprite.style.setProperty('--slime-tint', '0deg');
+    reaction.count = 0;
+  }, 650);
 }
 
 function showLaunch() {
