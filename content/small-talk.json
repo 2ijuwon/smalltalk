@@ -1,0 +1,44 @@
+[
+  {
+    "difficulty": "basic",
+    "english": "Could you help me?",
+    "korean": "도와주실 수 있나요?",
+    "context": "도움이 필요할 때 정중하게 말해요."
+  },
+  {
+    "difficulty": "basic",
+    "english": "That sounds good.",
+    "korean": "좋은 것 같아요.",
+    "context": "상대방의 제안에 편하게 동의할 때 써요."
+  },
+  {
+    "difficulty": "basic",
+    "english": "See you tomorrow.",
+    "korean": "내일 봐요.",
+    "context": "헤어지면서 다음 만남을 약속할 때 써요."
+  },
+  {
+    "difficulty": "intermediate",
+    "english": "Let me think about it.",
+    "korean": "생각해 볼게요.",
+    "context": "바로 결정하기 어려울 때 시간을 요청해요."
+  },
+  {
+    "difficulty": "intermediate",
+    "english": "Could you explain that again?",
+    "korean": "다시 설명해 주시겠어요?",
+    "context": "설명을 놓쳤을 때 정중하게 부탁해요."
+  },
+  {
+    "difficulty": "advanced",
+    "english": "I appreciate your perspective.",
+    "korean": "당신의 관점을 소중하게 생각해요.",
+    "context": "다른 의견을 존중하며 대화를 이어갈 때 써요."
+  },
+  {
+    "difficulty": "advanced",
+    "english": "Let us revisit this later.",
+    "korean": "이 내용은 나중에 다시 논의해요.",
+    "context": "논의를 잠시 미루고 싶을 때 써요."
+  }
+]

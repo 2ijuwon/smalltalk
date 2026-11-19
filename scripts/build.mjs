@@ -1,5 +1,8 @@
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { generateContent } from './content.mjs';
+
+await generateContent({ checkAudio: true });
 
 const root = process.cwd();
 const out = join(root, 'dist');

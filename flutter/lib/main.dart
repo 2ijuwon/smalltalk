@@ -46,6 +46,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     '/src/speech-clips.js': 'src/speech-clips.js',
     '/src/slime-dialogue.js': 'src/slime-dialogue.js',
     '/src/data.js': 'src/data.js',
+    '/src/content.generated.js': 'src/content.generated.js',
     '/src/domain.js': 'src/domain.js',
     '/src/duel-motion.js': 'src/duel-motion.js',
     '/src/duel-rules.js': 'src/duel-rules.js',

@@ -1,3 +1,5 @@
+import { stageCount, stageWords } from './data.js';
+
 export const STORAGE_KEY = 'small-talk-state-v1';
 export const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
 
@@ -58,15 +60,21 @@ export function applyGradedResult(state, itemId, result, now = new Date(), { rew
 export function applyLearningBatch(state, itemIds, mode = 'new', now = new Date(), summary = {}) {
   const kind = mode === 'review' ? 'review-game' : 'learn-game';
   const events = itemIds.map((itemId, index) => createEvent(itemId, kind, 'completed', new Date(now.getTime() + index)));
-  const session = { id: `session-${now.getTime()}`, completedAt: now.toISOString(), mode, perfect: Boolean(summary.perfect), itemCount: itemIds.length, curriculumMajor: summary.major, stage: summary.stage };
+  const session = { id: `session-${now.getTime()}`, completedAt: now.toISOString(), mode, perfect: Boolean(summary.perfect), itemCount: itemIds.length, itemIds: [...itemIds], curriculumMajor: summary.major, stage: summary.stage };
   const reward = mode === 'review' ? 0 : itemIds.length * 5;
   return { ...state, events: [...state.events, ...events], sessions: [...(state.sessions || []), session], lastBatchIds: [...itemIds], xp: state.xp + (summary.deferReward ? 0 : reward), pendingXp: (state.pendingXp || 0) + (summary.deferReward ? reward : 0) };
 }
 
 export function nextStage(state, major) {
-  const stages = new Set(state.sessions.filter((session) => session.mode === 'new' && session.curriculumMajor === major).map((session) => session.stage));
-  for (let stage = 1; stage <= 10; stage += 1) if (!stages.has(stage)) return stage;
-  return 11;
+  const sessions = state.sessions.filter((session) => session.mode === 'new' && session.curriculumMajor === major);
+  for (let stage = 1; stage <= stageCount; stage += 1) {
+    const ids = stageWords(major, stage);
+    const done = sessions.some((session) => Array.isArray(session.itemIds)
+      ? session.itemIds.length === ids.length && ids.every((id) => session.itemIds.includes(id))
+      : session.stage === stage);
+    if (!done) return stage;
+  }
+  return stageCount + 1;
 }
 
 export function rankedWords(state) {

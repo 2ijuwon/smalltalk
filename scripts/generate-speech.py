@@ -25,16 +25,32 @@ model.graph.output.append(onnx.helper.make_tensor_value_info(
 ))
 onnx.save(model, aligned_model)
 voice = PiperVoice.load(aligned_model, config_path=source_model.with_suffix(".onnx.json"))
-words = re.findall(r"entry\('([^']+)'", (src / "data.js").read_text(encoding="utf-8"))
-examples = re.findall(r"entry\('[^']+', '[^']+', '[^']+', '([^']+)'", (src / "data.js").read_text(encoding="utf-8"))
-app = (src / "app.js").read_text(encoding="utf-8")
-talk = app.split("const smallTalks = {")[1].split("\n};")[0]
+content = root / "content"
+vocabulary = json.loads((content / "vocabulary.json").read_text(encoding="utf-8-sig"))
+small_talk = json.loads((content / "small-talk.json").read_text(encoding="utf-8-sig"))
+words = [item["word"] for item in vocabulary]
+examples = [item["example"] for item in vocabulary]
+talk = {item["english"] for item in small_talk}
 dialogue = (src / "slime-dialogue.js").read_text(encoding="utf-8-sig").split("const intents")[0]
-phrases = re.findall(r"\['([^']+)',", talk + dialogue)
+phrases = list(dict.fromkeys(
+    [item["english"] for item in small_talk] + re.findall(r"\['([^']+)',", dialogue)
+))
+manifest_path = src / "speech-clips.js"
+previous = {}
+if manifest_path.exists():
+    previous = json.loads(manifest_path.read_text(encoding="utf-8").split(" = ", 1)[1].strip().removesuffix(";"))
 manifest = {}
+next_id = max((int(file.stem) for file in out.glob("*.wav") if file.stem.isdecimal()), default=-1) + 1
 
 def save(text, timed=False):
-    name = f"{len(manifest)}.wav"
+    global next_id
+    cached = previous.get(text)
+    expected_cues = len(text.split()) if timed else 1
+    if cached and len(cached[1]) >= expected_cues and (out / cached[0]).is_file():
+        manifest[text] = cached
+        return
+    name = f"{next_id}.wav"
+    next_id += 1
     cues = []
     elapsed = 0
     with wave.open(str(out / name), "wb") as wav:
@@ -62,9 +78,10 @@ for phrase in dict.fromkeys(phrases + examples):
 
 tokens = {word.lower() for phrase in phrases for word in re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", phrase)}
 for word in sorted(set(words) | tokens):
-    save(word)
+    if word not in manifest:
+        save(word)
 
-(src / "speech-clips.js").write_text(
+manifest_path.write_text(
     "export const speechClips = " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n",
     encoding="utf-8",
 )

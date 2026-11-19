@@ -1,6 +1,6 @@
 import { speechClips } from './speech-clips.js';
 import { commonMeanings } from './slime-dialogue.js';
-import { difficultyLabels, itemsForMajor, majorLabels, stageWords, vocabulary } from './data.js';
+import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
 import { animateDuelEffect, strikeDuration } from './duel-motion.js';
 import { addDuelPoints, duelDifficulties, duelPoints, opponentAttackMs } from './duel-rules.js';
 import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments } from './typing-game.js';
@@ -64,6 +64,7 @@ let conversationRequest;
 let conversationError = '';
 let conversationDraft = '';
 let resultGrade = null;
+let resultWordCount = 0;
 let resultReward = 0;
 let resultBossHp = 0;
 let xpClaimTimer = 0;
@@ -75,22 +76,6 @@ let bossHitSeen = 0;
 let searchPuzzleSequence = 0;
 
 const praiseMessages = ['맞혔어요!', '잘했어요!', '좋아요!'];
-
-const smallTalks = {
-  basic: [
-    ['Could you help me?', '도와주실 수 있나요?', '도움이 필요할 때 정중하게 말해요.'],
-    ['That sounds good.', '좋은 것 같아요.', '상대방의 제안에 편하게 동의할 때 써요.'],
-    ['See you tomorrow.', '내일 봐요.', '헤어지면서 다음 만남을 약속할 때 써요.'],
-  ],
-  intermediate: [
-    ['Let me think about it.', '생각해 볼게요.', '바로 결정하기 어려울 때 시간을 요청해요.'],
-    ['Could you explain that again?', '다시 설명해 주시겠어요?', '설명을 놓쳤을 때 정중하게 부탁해요.'],
-  ],
-  advanced: [
-    ['I appreciate your perspective.', '당신의 관점을 소중하게 생각해요.', '다른 의견을 존중하며 대화를 이어갈 때 써요.'],
-    ['Let us revisit this later.', '이 내용은 나중에 다시 논의해요.', '논의를 잠시 미루고 싶을 때 써요.'],
-  ],
-};
 
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
 function shuffle(items) {
@@ -324,14 +309,15 @@ function home() {
   const major = state.preferences.major;
   const stage = nextStage(state, major);
   const count = Math.min(getTodayStats(state).learned, 5);
-  const canPlay = state.sessions.some((session) => session.mode === 'new');
+  const hasLesson = state.sessions.some((session) => session.mode === 'new');
+  const canPlay = hasLesson && validIds(getLearnedIds(state)).length >= 3;
   return `<div class="page home-page">
     <section class="home-hero">${pixelSprite('mascot')}<div><p class="eyebrow">${majorLabels[major]}</p><h1>오늘의 학습</h1></div>
       <div class="daily-count"><strong>${count}<small> / 5</small></strong><div class="pixel-meter" aria-label="오늘 5단어 중 ${count}개">${Array.from({ length: 5 }, (_, i) => `<i class="${i < count ? 'filled' : ''}"></i>`).join('')}</div></div></section>
-    <section class="card quest"><div class="quest-title"><div><p class="eyebrow">다음 목표 · ${Math.min(stage, 10)}/10</p><h2>${stage > 10 ? '학습 완료' : `레슨 ${String(stage).padStart(2, '0')}`}</h2></div>${pixelSprite('book')}</div>
-      ${progress(stage - 1, 10, '레벨 진행')}${button('학습 시작', 'start-new', 'primary', stage > 10)}</section>
+    <section class="card quest"><div class="quest-title"><div><p class="eyebrow">다음 목표 · ${Math.min(stage, stageCount)}/${stageCount}</p><h2>${stage > stageCount ? '학습 완료' : `레슨 ${String(stage).padStart(2, '0')}`}</h2></div>${pixelSprite('book')}</div>
+      ${progress(stage - 1, stageCount, '레벨 진행')}${button('학습 시작', 'start-new', 'primary', stage > stageCount)}</section>
     <section class="card practice-panel"><h2>연습</h2><div class="dashboard-grid">${button('빠른 확인', 'start-quick', 'secondary', stage === 1 && !validIds(state.lastBatchIds).length)}<button class="button button--secondary" data-nav="review">복습</button></div></section>
-    <section class="card game-links"><h2>게임</h2><div class="dashboard-grid">${button(`${pixelSprite('search')}단어 찾기<small>최고 ${bestScore(state, 'search')}점</small>`, 'arcade-search', 'secondary', !canPlay)}${button(`${pixelSprite('duel')}사과 베기<small>최고 ${bestScore(state, 'duel')}점</small>`, 'arcade-duel', 'secondary', !canPlay)}${button(`<span class="game-emoji" aria-hidden="true">⌨</span>타자 게임<small>최고 ${bestScore(state, 'typing')}점</small>`, 'arcade-typing', 'secondary', !canPlay)}</div>${canPlay ? '' : '<p>첫 학습을 마치면 게임을 할 수 있어요.</p>'}</section>
+    <section class="card game-links"><h2>게임</h2><div class="dashboard-grid">${button(`${pixelSprite('search')}단어 찾기<small>최고 ${bestScore(state, 'search')}점</small>`, 'arcade-search', 'secondary', !canPlay)}${button(`${pixelSprite('duel')}사과 베기<small>최고 ${bestScore(state, 'duel')}점</small>`, 'arcade-duel', 'secondary', !canPlay)}${button(`<span class="game-emoji" aria-hidden="true">⌨</span>타자 게임<small>최고 ${bestScore(state, 'typing')}점</small>`, 'arcade-typing', 'secondary', !canPlay)}</div>${canPlay ? '' : hasLesson ? '<p>단어를 3개 이상 배우면 게임을 할 수 있어요.</p>' : '<p>첫 학습을 마치면 게임을 할 수 있어요.</p>'}</section>
   </div>`;
 }
 
@@ -643,6 +629,7 @@ function finishLearning() {
   const ids = learningSession.items.map((item) => item.id);
   if (learningSession.mode === 'arcade') return goHome('단어 찾기를 마쳤어요.');
   const mistakes = learningSession.mistakes;
+  resultWordCount = ids.length;
   resultGrade = mistakes === 0 ? 'perfect' : mistakes <= 3 ? 'excellent' : 'good';
   resultReward = learningSession.mode === 'review' ? 0 : ids.length * 5;
   resultBossHp = 4 - learningSession.bossHits;
@@ -657,7 +644,7 @@ function finishLearning() {
 function resultView() {
   const label = { perfect: 'PERFECT!', excellent: 'EXCELLENT!', good: 'GOOD!' }[resultGrade] || 'GOOD!';
   const sparks = resultGrade === 'perfect' ? 16 : resultGrade === 'excellent' ? 6 : 0;
-  return `<div class="page page--narrow result-page result-page--${resultGrade}"><div class="result-mascot">${pixelSprite('mascot')}${Array.from({ length: sparks }, (_, index) => `<i style="--angle:${index * 360 / sparks}deg;--delay:${index % 4 * 80}ms"></i>`).join('')}</div><p class="eyebrow">LESSON CLEAR</p><h1>${label}</h1><p>보스 슬라임 ${resultBossHp}/4 · 5단어 완료</p><div class="result-reward">획득 XP <strong>+${resultReward}</strong></div>${button('홈으로', 'result-home')}</div>`;
+  return `<div class="page page--narrow result-page result-page--${resultGrade}"><div class="result-mascot">${pixelSprite('mascot')}${Array.from({ length: sparks }, (_, index) => `<i style="--angle:${index * 360 / sparks}deg;--delay:${index % 4 * 80}ms"></i>`).join('')}</div><p class="eyebrow">LESSON CLEAR</p><h1>${label}</h1><p>보스 슬라임 ${resultBossHp}/4 · ${resultWordCount}단어 완료</p><div class="result-reward">획득 XP <strong>+${resultReward}</strong></div>${button('홈으로', 'result-home')}</div>`;
 }
 
 function quickOptions(item, items) {
@@ -1784,7 +1771,7 @@ function evaluateMatch() {
     playEffect('correct');
     recordLearningAnswer(word, 'correct');
     session.feedback = { type: 'correct', text: `좋아요! ${byId(word).word}의 뜻을 찾았어요.`, word };
-    if (session.matched.length === session.items.length) { hitLessonBoss('match'); triggerCelebration('5개 단어를 모두 연결했어요'); }
+    if (session.matched.length === session.items.length) { hitLessonBoss('match'); triggerCelebration('단어를 모두 연결했어요'); }
   } else {
     session.mistakes += 1;
     recordLearningAnswer(word, 'incorrect');
@@ -2028,7 +2015,7 @@ root.addEventListener('click', (event) => {
     typing.offers = [];
     return render();
   }
-  if (action === 'result-home') return goHome('오늘의 단어 5개를 학습했어요!');
+  if (action === 'result-home') return goHome(`단어 ${resultWordCount}개를 학습했어요!`);
   if (action === 'arcade-duel') return openDuel();
   if (action.startsWith('duel-difficulty:') && duel?.phase === 'idle') { duel.difficulty = action.split(':')[1]; return render(); }
   if (action === 'duel-start') return openDuel(true);
@@ -2043,7 +2030,7 @@ root.addEventListener('click', (event) => {
   if (action === 'start-new') {
     const major = state.preferences.major;
     const stage = nextStage(state, major);
-    if (stage <= 10) return startLearning(stageWords(major, stage), 'new', { major, stage });
+    if (stage <= stageCount) return startLearning(stageWords(major, stage), 'new', { major, stage });
     return;
   }
   if (action === 'start-quick') {

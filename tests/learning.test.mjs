@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { majorLabels, stageWords } from '../src/data.js';
+import { lessonSize, majorLabels, stageCount, stageWords, vocabulary } from '../src/data.js';
 import { nextStage, rankedWords, pickReviewWords } from '../src/domain.js';
 import { addReview, applyGradedResult, applyLearningBatch, applySelfCheck, bestScore, withBestScore, loadState, getLearnedIds, getStats, getTodayStats, initialState } from '../src/domain.js';
 
@@ -84,19 +84,19 @@ test('완벽 학습 스택은 오답 없는 연속 세션만 센다', () => {
   assert.equal(getStats(broken).perfectStreak, 0);
 });
 
-test('전공별 Level 1은 중복 없이 5단어씩 10개 스테이지를 순차 해금한다', () => {
+test('목록 크기에 맞춰 중복 없이 전공별 레슨을 순차 해금한다', () => {
   for (const major of Object.keys(majorLabels)) {
     let state = structuredClone(initialState);
     const words = [];
-    for (let stage = 1; stage <= 10; stage += 1) {
+    for (let stage = 1; stage <= stageCount; stage += 1) {
       assert.equal(nextStage(state, major), stage);
       const batch = stageWords(major, stage);
-      assert.equal(batch.length, 5);
+      assert.equal(batch.length, Math.min(lessonSize, vocabulary.length - (stage - 1) * lessonSize));
       words.push(...batch);
       state = applyLearningBatch(state, batch, 'new', new Date(), { major, stage });
     }
-    assert.equal(new Set(words).size, 50);
-    assert.equal(nextStage(state, major), 11);
+    assert.equal(new Set(words).size, vocabulary.length);
+    assert.equal(nextStage(state, major), stageCount + 1);
   }
 });
 

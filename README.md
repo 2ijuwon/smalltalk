@@ -55,3 +55,8 @@ python -m piper.download_voices --download-dir "$env:TEMP/smalltalk-voice" en_US
 python scripts/generate-speech.py
 .\flutter\scripts\sync-web.ps1
 ```
+
+## 학습 자료와 프로젝트 요약
+
+- [단어·스몰토크 데이터 교체 방법](docs/06-content-workflow.md)
+- [현재 기능, 비판점과 개선 우선순위](docs/07-product-review.md)

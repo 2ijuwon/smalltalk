@@ -4,11 +4,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $destination = Join-Path $PSScriptRoot '..\assets\www'
+node (Join-Path $Source 'scripts\content.mjs') --check-audio
+if ($LASTEXITCODE -ne 0) { throw 'Content validation failed.' }
 $sourceFiles = @(
   'src\app.js',
   'src\speech-clips.js',
   'src\slime-dialogue.js',
   'src\data.js',
+  'src\content.generated.js',
   'src\domain.js',
   'src\duel-motion.js',
   'src\duel-rules.js',

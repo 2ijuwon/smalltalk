@@ -1,0 +1,496 @@
+// Generated from content/*.json. Run npm run content to update.
+export const vocabulary = [
+  {
+    "id": "computer-algorithm",
+    "word": "algorithm",
+    "meaning": "알고리즘",
+    "example": "The algorithm solves the problem quickly.",
+    "translation": "그 알고리즘은 문제를 빠르게 해결합니다.",
+    "major": "computer",
+    "difficulty": "basic"
+  },
+  {
+    "id": "computer-database",
+    "word": "database",
+    "meaning": "데이터베이스",
+    "example": "The database stores customer information.",
+    "translation": "그 데이터베이스는 고객 정보를 저장합니다.",
+    "major": "computer",
+    "difficulty": "basic"
+  },
+  {
+    "id": "computer-network",
+    "word": "network",
+    "meaning": "네트워크",
+    "example": "Our network connects every office computer.",
+    "translation": "우리 네트워크는 모든 사무실 컴퓨터를 연결합니다.",
+    "major": "computer",
+    "difficulty": "basic"
+  },
+  {
+    "id": "computer-variable",
+    "word": "variable",
+    "meaning": "변수",
+    "example": "This variable keeps the final score.",
+    "translation": "이 변수는 최종 점수를 보관합니다.",
+    "major": "computer",
+    "difficulty": "basic"
+  },
+  {
+    "id": "computer-function",
+    "word": "function",
+    "meaning": "함수",
+    "example": "The function checks the user input.",
+    "translation": "그 함수는 사용자 입력을 확인합니다.",
+    "major": "computer",
+    "difficulty": "basic"
+  },
+  {
+    "id": "computer-server",
+    "word": "server",
+    "meaning": "서버",
+    "example": "The server sends data to clients.",
+    "translation": "서버는 클라이언트에 데이터를 보냅니다.",
+    "major": "computer",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "computer-browser",
+    "word": "browser",
+    "meaning": "브라우저",
+    "example": "The browser displays the new website.",
+    "translation": "브라우저가 새 웹사이트를 표시합니다.",
+    "major": "computer",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "computer-encryption",
+    "word": "encryption",
+    "meaning": "암호화",
+    "example": "Encryption protects private user data.",
+    "translation": "암호화는 개인 사용자 데이터를 보호합니다.",
+    "major": "computer",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "computer-interface",
+    "word": "interface",
+    "meaning": "인터페이스",
+    "example": "The interface feels simple and clear.",
+    "translation": "그 인터페이스는 단순하고 명확하게 느껴집니다.",
+    "major": "computer",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "computer-compiler",
+    "word": "compiler",
+    "meaning": "컴파일러",
+    "example": "The compiler finds an error in the code.",
+    "translation": "컴파일러가 코드에서 오류를 찾습니다.",
+    "major": "computer",
+    "difficulty": "advanced"
+  },
+  {
+    "id": "business-revenue",
+    "word": "revenue",
+    "meaning": "매출",
+    "example": "The company increased its annual revenue.",
+    "translation": "회사는 연간 매출을 늘렸습니다.",
+    "major": "business",
+    "difficulty": "basic"
+  },
+  {
+    "id": "business-profit",
+    "word": "profit",
+    "meaning": "이익",
+    "example": "The store made a small profit.",
+    "translation": "그 가게는 작은 이익을 냈습니다.",
+    "major": "business",
+    "difficulty": "basic"
+  },
+  {
+    "id": "business-budget",
+    "word": "budget",
+    "meaning": "예산",
+    "example": "We prepared a budget for marketing.",
+    "translation": "우리는 마케팅 예산을 준비했습니다.",
+    "major": "business",
+    "difficulty": "basic"
+  },
+  {
+    "id": "business-demand",
+    "word": "demand",
+    "meaning": "수요",
+    "example": "Demand for the product is rising.",
+    "translation": "그 제품에 대한 수요가 증가하고 있습니다.",
+    "major": "business",
+    "difficulty": "basic"
+  },
+  {
+    "id": "business-supply",
+    "word": "supply",
+    "meaning": "공급",
+    "example": "The factory increased the product supply.",
+    "translation": "공장은 제품 공급량을 늘렸습니다.",
+    "major": "business",
+    "difficulty": "basic"
+  },
+  {
+    "id": "business-market",
+    "word": "market",
+    "meaning": "시장",
+    "example": "The market changes very quickly.",
+    "translation": "시장은 매우 빠르게 변합니다.",
+    "major": "business",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "business-asset",
+    "word": "asset",
+    "meaning": "자산",
+    "example": "The building is a valuable asset.",
+    "translation": "그 건물은 가치 있는 자산입니다.",
+    "major": "business",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "business-invoice",
+    "word": "invoice",
+    "meaning": "청구서",
+    "example": "Please send the invoice today.",
+    "translation": "오늘 청구서를 보내 주세요.",
+    "major": "business",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "business-strategy",
+    "word": "strategy",
+    "meaning": "전략",
+    "example": "Our strategy focuses on loyal customers.",
+    "translation": "우리 전략은 충성 고객에 집중합니다.",
+    "major": "business",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "business-customer",
+    "word": "customer",
+    "meaning": "고객",
+    "example": "Every customer received a quick reply.",
+    "translation": "모든 고객이 빠른 답변을 받았습니다.",
+    "major": "business",
+    "difficulty": "basic"
+  },
+  {
+    "id": "health-diagnosis",
+    "word": "diagnosis",
+    "meaning": "진단",
+    "example": "The doctor confirmed the diagnosis.",
+    "translation": "의사는 진단을 확인했습니다.",
+    "major": "health",
+    "difficulty": "basic"
+  },
+  {
+    "id": "health-patient",
+    "word": "patient",
+    "meaning": "환자",
+    "example": "The patient needs enough rest.",
+    "translation": "그 환자는 충분한 휴식이 필요합니다.",
+    "major": "health",
+    "difficulty": "basic"
+  },
+  {
+    "id": "health-symptom",
+    "word": "symptom",
+    "meaning": "증상",
+    "example": "A fever can be a symptom.",
+    "translation": "열은 하나의 증상일 수 있습니다.",
+    "major": "health",
+    "difficulty": "basic"
+  },
+  {
+    "id": "health-treatment",
+    "word": "treatment",
+    "meaning": "치료",
+    "example": "The treatment reduced her pain.",
+    "translation": "그 치료는 그녀의 통증을 줄였습니다.",
+    "major": "health",
+    "difficulty": "basic"
+  },
+  {
+    "id": "health-dosage",
+    "word": "dosage",
+    "meaning": "복용량",
+    "example": "Check the correct dosage before use.",
+    "translation": "사용 전에 정확한 복용량을 확인하세요.",
+    "major": "health",
+    "difficulty": "basic"
+  },
+  {
+    "id": "health-surgery",
+    "word": "surgery",
+    "meaning": "수술",
+    "example": "The surgery lasted two hours.",
+    "translation": "그 수술은 두 시간 동안 진행됐습니다.",
+    "major": "health",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "health-recovery",
+    "word": "recovery",
+    "meaning": "회복",
+    "example": "Her recovery was faster than expected.",
+    "translation": "그녀의 회복은 예상보다 빨랐습니다.",
+    "major": "health",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "health-clinic",
+    "word": "clinic",
+    "meaning": "진료소",
+    "example": "The clinic opens at nine.",
+    "translation": "그 진료소는 아홉 시에 문을 엽니다.",
+    "major": "health",
+    "difficulty": "basic"
+  },
+  {
+    "id": "health-vaccine",
+    "word": "vaccine",
+    "meaning": "백신",
+    "example": "The vaccine prevents serious illness.",
+    "translation": "그 백신은 심각한 질병을 예방합니다.",
+    "major": "health",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "health-pulse",
+    "word": "pulse",
+    "meaning": "맥박",
+    "example": "The nurse checked his pulse.",
+    "translation": "간호사는 그의 맥박을 확인했습니다.",
+    "major": "health",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-voltage",
+    "word": "voltage",
+    "meaning": "전압",
+    "example": "Measure the voltage before testing.",
+    "translation": "시험 전에 전압을 측정하세요.",
+    "major": "engineering",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-current",
+    "word": "current",
+    "meaning": "전류",
+    "example": "The current flows through the wire.",
+    "translation": "전류가 전선을 통해 흐릅니다.",
+    "major": "engineering",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-circuit",
+    "word": "circuit",
+    "meaning": "회로",
+    "example": "This circuit controls the motor.",
+    "translation": "이 회로는 모터를 제어합니다.",
+    "major": "engineering",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-sensor",
+    "word": "sensor",
+    "meaning": "센서",
+    "example": "The sensor detects sudden movement.",
+    "translation": "그 센서는 갑작스러운 움직임을 감지합니다.",
+    "major": "engineering",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-torque",
+    "word": "torque",
+    "meaning": "회전력",
+    "example": "The motor produces enough torque.",
+    "translation": "그 모터는 충분한 회전력을 만듭니다.",
+    "major": "engineering",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-motor",
+    "word": "motor",
+    "meaning": "모터",
+    "example": "The motor drives the small wheel.",
+    "translation": "그 모터는 작은 바퀴를 움직입니다.",
+    "major": "engineering",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-signal",
+    "word": "signal",
+    "meaning": "신호",
+    "example": "The signal travels through the cable.",
+    "translation": "신호가 케이블을 통해 전달됩니다.",
+    "major": "engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "engineering-battery",
+    "word": "battery",
+    "meaning": "배터리",
+    "example": "The battery powers the sensor.",
+    "translation": "배터리가 센서에 전력을 공급합니다.",
+    "major": "engineering",
+    "difficulty": "basic"
+  },
+  {
+    "id": "engineering-pressure",
+    "word": "pressure",
+    "meaning": "압력",
+    "example": "The gauge shows high pressure.",
+    "translation": "계기판이 높은 압력을 표시합니다.",
+    "major": "engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "engineering-prototype",
+    "word": "prototype",
+    "meaning": "시제품",
+    "example": "The team tested a new prototype.",
+    "translation": "그 팀은 새 시제품을 시험했습니다.",
+    "major": "engineering",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "humanities-context",
+    "word": "context",
+    "meaning": "맥락",
+    "example": "Read the sentence in context.",
+    "translation": "그 문장을 맥락 속에서 읽으세요.",
+    "major": "humanities",
+    "difficulty": "basic"
+  },
+  {
+    "id": "humanities-society",
+    "word": "society",
+    "meaning": "사회",
+    "example": "Technology changes our society.",
+    "translation": "기술은 우리 사회를 변화시킵니다.",
+    "major": "humanities",
+    "difficulty": "basic"
+  },
+  {
+    "id": "humanities-culture",
+    "word": "culture",
+    "meaning": "문화",
+    "example": "Language reflects local culture.",
+    "translation": "언어는 지역 문화를 반영합니다.",
+    "major": "humanities",
+    "difficulty": "basic"
+  },
+  {
+    "id": "humanities-evidence",
+    "word": "evidence",
+    "meaning": "증거",
+    "example": "The writer provided clear evidence.",
+    "translation": "그 작가는 명확한 증거를 제시했습니다.",
+    "major": "humanities",
+    "difficulty": "basic"
+  },
+  {
+    "id": "humanities-theory",
+    "word": "theory",
+    "meaning": "이론",
+    "example": "The theory explains social change.",
+    "translation": "그 이론은 사회 변화를 설명합니다.",
+    "major": "humanities",
+    "difficulty": "basic"
+  },
+  {
+    "id": "humanities-debate",
+    "word": "debate",
+    "meaning": "토론",
+    "example": "The debate continued for an hour.",
+    "translation": "그 토론은 한 시간 동안 계속됐습니다.",
+    "major": "humanities",
+    "difficulty": "basic"
+  },
+  {
+    "id": "humanities-ethics",
+    "word": "ethics",
+    "meaning": "윤리",
+    "example": "Ethics guides responsible research.",
+    "translation": "윤리는 책임 있는 연구를 이끕니다.",
+    "major": "humanities",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "humanities-archive",
+    "word": "archive",
+    "meaning": "기록보관소",
+    "example": "The archive preserves old documents.",
+    "translation": "그 자료 보관소는 오래된 문서를 보존합니다.",
+    "major": "humanities",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "humanities-policy",
+    "word": "policy",
+    "meaning": "정책",
+    "example": "The policy protects student rights.",
+    "translation": "그 정책은 학생의 권리를 보호합니다.",
+    "major": "humanities",
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "humanities-identity",
+    "word": "identity",
+    "meaning": "정체성",
+    "example": "Language shapes personal identity.",
+    "translation": "언어는 개인의 정체성을 형성합니다.",
+    "major": "humanities",
+    "difficulty": "intermediate"
+  }
+];
+export const smallTalks = {
+  "basic": [
+    [
+      "Could you help me?",
+      "도와주실 수 있나요?",
+      "도움이 필요할 때 정중하게 말해요."
+    ],
+    [
+      "That sounds good.",
+      "좋은 것 같아요.",
+      "상대방의 제안에 편하게 동의할 때 써요."
+    ],
+    [
+      "See you tomorrow.",
+      "내일 봐요.",
+      "헤어지면서 다음 만남을 약속할 때 써요."
+    ]
+  ],
+  "intermediate": [
+    [
+      "Let me think about it.",
+      "생각해 볼게요.",
+      "바로 결정하기 어려울 때 시간을 요청해요."
+    ],
+    [
+      "Could you explain that again?",
+      "다시 설명해 주시겠어요?",
+      "설명을 놓쳤을 때 정중하게 부탁해요."
+    ]
+  ],
+  "advanced": [
+    [
+      "I appreciate your perspective.",
+      "당신의 관점을 소중하게 생각해요.",
+      "다른 의견을 존중하며 대화를 이어갈 때 써요."
+    ],
+    [
+      "Let us revisit this later.",
+      "이 내용은 나중에 다시 논의해요.",
+      "논의를 잠시 미루고 싶을 때 써요."
+    ]
+  ]
+};
