@@ -60,3 +60,11 @@ python scripts/generate-speech.py
 
 - [단어·스몰토크 데이터 교체 방법](docs/06-content-workflow.md)
 - [현재 기능, 비판점과 개선 우선순위](docs/07-product-review.md)
+
+## 카드 없이 AI 대화 연결
+
+1. [Google AI Studio API 키](https://aistudio.google.com/apikey)에서 무료 사용이 가능한 프로젝트의 키를 만듭니다.
+2. Vercel의 `smalltalk` 프로젝트에서 **Settings → Environment Variables**를 열고 `GEMINI_API_KEY`를 **Production**에 추가합니다.
+3. **Deployments → 최신 운영 배포 → Redeploy** 후 **스몰토크 → 대화하기**를 엽니다.
+
+키는 Vercel 서버에서만 사용합니다. `GEMINI_API_KEY`가 설정되면 Gemini 3.1 Flash-Lite로 요청을 보냅니다. [무료 요금제](https://ai.google.dev/gemini-api/docs/pricing#gemini-3.1-flash-lite)에는 사용량 한도가 있고, Google은 요청 내용을 서비스 개선에 사용할 수 있습니다.

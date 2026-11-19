@@ -18,8 +18,10 @@ function takeTurn(key) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
+  const geminiKey = process.env.GEMINI_API_KEY;
   const directKey = process.env.OPENAI_API_KEY;
-  const token = directKey || process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'];
+  const token = geminiKey || directKey || process.env.AI_GATEWAY_API_KEY ||
+    process.env.VERCEL_OIDC_TOKEN || req.headers['x-vercel-oidc-token'];
   if (!token) return res.status(503).json({ error: 'provider_setup' });
 
   const { turns, learnedIds, topic } = req.body ?? {};
@@ -49,25 +51,42 @@ export default async function handler(req, res) {
   ].join(' ');
 
   try {
-    const endpoint = directKey
-      ? 'https://api.openai.com/v1/chat/completions'
-      : 'https://ai-gateway.vercel.sh/v1/chat/completions';
+    const endpoint = geminiKey
+      ? 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+      : directKey
+        ? 'https://api.openai.com/v1/chat/completions'
+        : 'https://ai-gateway.vercel.sh/v1/chat/completions';
+    const model = geminiKey ? 'gemini-3.1-flash-lite' : directKey ? 'gpt-4.1-mini' : 'openai/gpt-4.1-mini';
+    const format = geminiKey ? {
+      type: 'json_schema',
+      json_schema: {
+        name: 'slime_reply',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: { english: { type: 'string' }, korean: { type: 'string' } },
+          required: ['english', 'korean'],
+          additionalProperties: false,
+        },
+      },
+    } : { type: 'json_object' };
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: directKey ? 'gpt-4.1-mini' : 'openai/gpt-4.1-mini',
+        model,
         messages: [
           { role: 'system', content: instruction },
           { role: 'user', content: JSON.stringify({ topic, learned, turns }) },
         ],
-        max_tokens: 160,
-        response_format: { type: 'json_object' },
+        max_tokens: geminiKey ? 384 : 160,
+        response_format: format,
       }),
       signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) {
       console.warn('slime provider status', response.status);
+      if (response.status === 429) return res.status(429).json({ error: 'rate' });
       const setup = [401, 402, 403].includes(response.status);
       return res.status(503).json({ error: setup ? 'provider_setup' : 'unavailable' });
     }
