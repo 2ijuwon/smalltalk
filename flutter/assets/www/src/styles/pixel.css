@@ -1236,3 +1236,35 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 }
 .apple-fruit--split .apple-fruit__right::after { inset: 18% auto 0 50%; }
 .apple-fruit--gold :is(.apple-fruit__left, .apple-fruit__right)::after { background: #fff2b9; }
+
+.volume-hint {
+  position: fixed;
+  z-index: 115;
+  inset-inline: 0;
+  top: max(12px, env(safe-area-inset-top));
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px 5px 8px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 4px var(--line);
+  pointer-events: none;
+  animation: volume-hint-slide 2300ms ease-out both;
+}
+.volume-hint .pixel-sprite { width: 40px; height: 40px; flex: none; }
+.volume-hint .pixel-sprite svg, .volume-hint .slime-frame { animation: none; }
+@keyframes volume-hint-slide {
+  0% { transform: translateY(-120%); opacity: 0; }
+  9%, 87% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-120%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .volume-hint { animation-name: volume-hint-fade; }
+}
+@keyframes volume-hint-fade { 0%, 100% { opacity: 0; } 9%, 87% { opacity: 1; } }

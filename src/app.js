@@ -157,8 +157,15 @@ const spriteFrames = {
 };
 
 function pixelSprite(name) {
-  if (name === 'mascot' || name === 'boss') {
-    const frames = slimeFrames(name).map((rows, frame) => `<g class="slime-frame slime-frame--${frame}">${rows.flatMap((row, y) => [...row].map((cell, x) => spriteColors[cell] ? `<rect data-pixel="${cell}" ${cell === 'k' && y >= 9 ? 'class="slime-mouth"' : ''} x="${x}" y="${y}" width="1" height="1" fill="${spriteColors[cell]}"/>` : '')).join('')}</g>`).join('');
+  if (['mascot', 'boss', 'surprised'].includes(name)) {
+    const sprites = name === 'surprised'
+      ? [spriteFrames.mascot.map((row, y) => {
+        if (y === 9) return 'osllllkkkkllllso';
+        if (y === 11) return '.oslllllkklllso.';
+        return row;
+      })]
+      : slimeFrames(name);
+    const frames = sprites.map((rows, frame) => `<g class="slime-frame slime-frame--${frame}">${rows.flatMap((row, y) => [...row].map((cell, x) => spriteColors[cell] ? `<rect data-pixel="${cell}" ${cell === 'k' && y >= 9 ? 'class="slime-mouth"' : ''} x="${x}" y="${y}" width="1" height="1" fill="${spriteColors[cell]}"/>` : '')).join('')}</g>`).join('');
     return `<span class="pixel-sprite pixel-sprite--slime" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" focusable="false">${frames}</svg></span>`;
   }
   const spriteCells = (rows) => rows.flatMap((row, y) => [...row].flatMap((cell, x) =>
@@ -742,8 +749,8 @@ function stopSpeech() {
   root.querySelectorAll('.spoken-active').forEach((part) => part.classList.remove('spoken-active'));
 }
 
-function speakSmallTalk() {
-  return speakText(currentTalk().selected[0], [...root.querySelectorAll('[data-spoken-start]')]);
+function speakSmallTalk(manual = false) {
+  return speakText(currentTalk().selected[0], [...root.querySelectorAll('[data-spoken-start]')], { manual });
 }
 
 function conversationView() {
@@ -1712,7 +1719,27 @@ function render({ resetScroll = false } = {}) {
 }
 window.addEventListener('resize', drawMatchLines);
 
-function speakText(text, spans = []) {
+let volumeCheckSequence = 0;
+let volumeCheckScreen = '';
+let volumeNoticeTimer = 0;
+
+window.receiveSmalltalkVolume = (sequence, silent) => {
+  if (sequence !== volumeCheckSequence || screen !== volumeCheckScreen || !silent) return;
+  clearTimeout(volumeNoticeTimer);
+  document.querySelector('.volume-hint')?.remove();
+  const hint = document.createElement('div');
+  hint.className = 'volume-hint';
+  hint.setAttribute('role', 'status');
+  hint.innerHTML = `${pixelSprite('surprised')}<strong>소리를 키워주세요!</strong>`;
+  document.body.append(hint);
+  volumeNoticeTimer = setTimeout(() => hint.remove(), 2300);
+};
+
+function speakText(text, spans = [], { manual = false } = {}) {
+  if (manual && window.SmalltalkVolume) {
+    volumeCheckScreen = screen;
+    window.SmalltalkVolume.postMessage(String(++volumeCheckSequence));
+  }
   stopSpeech();
   const clip = speechClips[text] || speechClips[text.toLowerCase()];
   if (!clip) {
@@ -1755,7 +1782,7 @@ function speakText(text, spans = []) {
 }
 
 function showWordMeaning(target) {
-  speakText(target.dataset.dictionaryWord);
+  speakText(target.dataset.dictionaryWord, [], { manual: true });
   root.querySelector('.word-gloss')?.remove();
   const gloss = document.createElement('div');
   gloss.className = 'word-gloss';
@@ -1985,7 +2012,7 @@ root.addEventListener('click', (event) => {
   if (action === 'talk-conversation') return openConversation();
   if (action === 'conversation-retry') return requestConversation();
   if (action === 'conversation-mic') return recognizeConversation();
-  if (action === 'conversation-play') return speakText(conversation[Number(target.dataset.line)].english);
+  if (action === 'conversation-play') return speakText(conversation[Number(target.dataset.line)].english, [], { manual: true });
   if (action === 'talk-refresh') return rotateTalk();
   if (action === 'talk-quiz') return openTalkQuiz();
   if (action === 'talk-done') return navigate('smalltalk');
@@ -2037,7 +2064,7 @@ root.addEventListener('click', (event) => {
   if (action === 'result-home') return goHome(`단어 ${resultWordCount}개를 학습했어요!`);
   if (action === 'arcade-duel') return openAppleGame();
   if (action === 'duel-start') return openAppleGame(true);
-  if (action === 'apple-speak') return speakText(apples.target.word);
+  if (action === 'apple-speak') return speakText(apples.target.word, [], { manual: true });
   if (action === 'apple-reveal') {
     root.querySelector('[data-apple-meaning]').textContent = apples.target.meaning;
     return;
@@ -2138,9 +2165,9 @@ root.addEventListener('click', (event) => {
     return render();
   }
   if (action === 'finish-search') return finishLearning();
-  if (action === 'speak-word') return speakText(learningSession.items[learningSession.previewIndex].word);
-  if (action === 'speak-quick') return speakText(quickSession.items[quickSession.index].word);
-  if (action === 'speak-smalltalk') return speakSmallTalk();
+  if (action === 'speak-word') return speakText(learningSession.items[learningSession.previewIndex].word, [], { manual: true });
+  if (action === 'speak-quick') return speakText(quickSession.items[quickSession.index].word, [], { manual: true });
+  if (action === 'speak-smalltalk') return speakSmallTalk(true);
   if (action === 'quick-submit' && quickSession.selection && !quickSession.submitted) {
     const item = quickSession.items[quickSession.index];
     const correct = quickSession.selection === item.meaning;

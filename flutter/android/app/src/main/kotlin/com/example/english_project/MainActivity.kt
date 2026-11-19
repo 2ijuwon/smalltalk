@@ -3,6 +3,7 @@ package com.example.english_project
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.media.AudioManager
 import android.speech.RecognizerIntent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -16,6 +17,12 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "smalltalk/speech")
             .setMethodCallHandler { call, result ->
                 when {
+                    call.method == "isMediaSilent" -> {
+                        val audio = getSystemService(AudioManager::class.java)
+                        val stream = AudioManager.STREAM_MUSIC
+                        result.success(audio != null &&
+                            (audio.getStreamVolume(stream) == 0 || audio.isStreamMute(stream)))
+                    }
                     call.method != "recognize" -> result.notImplemented()
                     speechResult != null -> result.success(null)
                     else -> {

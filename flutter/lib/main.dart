@@ -107,6 +107,11 @@ class _EnglishWebViewState extends State<EnglishWebView> {
           'SmalltalkMic',
           onMessageReceived: (_) => _recognizeSpeech(controller),
         );
+        await controller.addJavaScriptChannel(
+          'SmalltalkVolume',
+          onMessageReceived: (message) =>
+              _checkMediaVolume(controller, message.message),
+        );
       }
       if (!mounted) return;
       setState(() => _controller = controller);
@@ -216,7 +221,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     });
   }
 
-  Future<void> _recognizeSpeech(WebViewController controller) async {
+  Future<bool> _isCurrentAppPage(WebViewController controller) async {
     final address = Uri.tryParse(await controller.currentUrl() ?? '');
     final trustedOrigin =
         address != null &&
@@ -226,7 +231,36 @@ class _EnglishWebViewState extends State<EnglishWebView> {
             (address.scheme == 'http' &&
                 address.host == '127.0.0.1' &&
                 address.port == _localPort));
-    if (!mounted || _controller != controller || !trustedOrigin) return;
+    return mounted && _controller == controller && trustedOrigin;
+  }
+
+  Future<void> _checkMediaVolume(
+    WebViewController controller,
+    String message,
+  ) async {
+    final sequence = int.tryParse(message);
+    if (sequence == null ||
+        sequence < 1 ||
+        !await _isCurrentAppPage(controller))
+      return;
+    try {
+      final silent = await const MethodChannel(
+        'smalltalk/speech',
+      ).invokeMethod<bool>('isMediaSilent');
+      if (silent == true && await _isCurrentAppPage(controller)) {
+        await controller.runJavaScript(
+          'window.receiveSmalltalkVolume?.($sequence, true);',
+        );
+      }
+    } on PlatformException {
+      // The hint is optional if the native audio service is unavailable.
+    } on MissingPluginException {
+      // A running build can lack the native volume method.
+    }
+  }
+
+  Future<void> _recognizeSpeech(WebViewController controller) async {
+    if (!await _isCurrentAppPage(controller)) return;
     String? transcript;
     try {
       transcript = await const MethodChannel(
