@@ -205,8 +205,13 @@ class _EnglishWebViewState extends State<EnglishWebView> {
   Future<void> _recognizeSpeech(WebViewController controller) async {
     final address = Uri.tryParse(await controller.currentUrl() ?? '');
     final trustedOrigin =
-        address?.origin == _onlineUri.origin ||
-        address?.origin == 'http://127.0.0.1:$_localPort';
+        address != null &&
+        ((address.scheme == 'https' &&
+                address.host == _onlineUri.host &&
+                address.port == 443) ||
+            (address.scheme == 'http' &&
+                address.host == '127.0.0.1' &&
+                address.port == _localPort));
     if (!mounted || _controller != controller || !trustedOrigin) return;
     String? transcript;
     try {
