@@ -1,3 +1,15 @@
+export const typingLevels = {
+  easy: { label: '쉬움', speed: .62, health: .55, multiplier: .8 },
+  normal: { label: '보통', speed: .8, health: .78, multiplier: 1 },
+  hard: { label: '어려움', speed: 1, health: 1, multiplier: 1.3 },
+  extreme: { label: '극한', speed: 1, health: 1, multiplier: 1.6 },
+};
+
+export function typingPoints(difficulty, boss) {
+  const level = typingLevels[difficulty] || typingLevels.normal;
+  return Math.round((boss ? 100 : 10) * level.multiplier);
+}
+
 export const upgradeCost = (level) => 6 + level * 5;
 export const waveSize = (round) => round % 10 === 0 ? 1 : Math.min(24, 4 + Math.ceil(round * 1.1));
 export const fallSeconds = (round, sight) => Math.max(5.5, 13 - round * .38 + Math.min(sight, 4) * 1.2);

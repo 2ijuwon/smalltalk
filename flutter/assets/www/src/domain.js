@@ -3,6 +3,16 @@ import { stageCount, stageWords } from './data.js';
 export const STORAGE_KEY = 'small-talk-state-v1';
 export const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
 
+export const wordSearchRules = {
+  basic: { gridSize: 10, multiplier: 1 },
+  intermediate: { gridSize: 11, multiplier: 1.15 },
+  advanced: { gridSize: 12, multiplier: 1.3 },
+};
+
+export function wordSearchPoints(rules, points) {
+  return Math.round(points * rules.multiplier);
+}
+
 export const initialState = {
   version: 1, onboarded: false,
   preferences: { major: 'computer', difficulty: 'basic', dailyGoal: 5, reminderTime: '20:00' },

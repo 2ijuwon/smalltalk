@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { lessonSize, majorLabels, stageCount, stageWords, vocabulary } from '../src/data.js';
 import { nextStage, rankedWords, pickReviewWords } from '../src/domain.js';
-import { addReview, applyGradedResult, applyLearningBatch, applySelfCheck, bestScore, withBestScore, loadState, getLearnedIds, getStats, getTodayStats, initialState } from '../src/domain.js';
+import { addReview, applyGradedResult, applyLearningBatch, applySelfCheck, bestScore, withBestScore, loadState, getLearnedIds, getStats, getTodayStats, initialState, wordSearchRules, wordSearchPoints } from '../src/domain.js';
+
+test('단어 찾기의 격자 크기에 따른 배율을 단어 점수와 세트 보너스에 적용한다', () => {
+  const rules = Object.values(wordSearchRules);
+  assert.deepEqual(rules.map(({ gridSize }) => gridSize), [10, 11, 12]);
+  assert.deepEqual(rules.map((level) => wordSearchPoints(level, 100)), [100, 115, 130]);
+  assert.deepEqual(rules.map((level) => wordSearchPoints(level, 150)), [150, 173, 195]);
+});
 
 test('게임별 최고 점수는 서로 독립적이고 낮은 기록으로 덮이지 않는다', () => {
   const search = withBestScore(initialState, 'search', 450);

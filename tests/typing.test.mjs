@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyLearningBatch, initialState } from '../src/domain.js';
-import { enemyHealth, fallSeconds, hitEnemy, missDamage, rollAugments, waveSize } from '../src/typing-game.js';
+import { enemyHealth, fallSeconds, hitEnemy, missDamage, rollAugments, typingPoints, waveSize } from '../src/typing-game.js';
 
 test('학습 XP는 홈에서 흡수할 때까지 보류된다', () => {
   const next = applyLearningBatch(initialState, ['one', 'two', 'three', 'four', 'five'], 'new', new Date('2026-11-17T00:00:00Z'), { deferReward: true });
@@ -26,6 +26,12 @@ test('방패는 한 번 막고 직접 대상의 방어 무시는 체력에만 �
   assert.deepEqual(hitEnemy(bypassed, 3, true), { shieldBroken: false, damage: 3, defeated: false });
   assert.equal(bypassed.hp, 5);
   assert.equal(bypassed.shield, true);
+});
+
+test('타자 게임 난이도 배율은 일반 적과 보스 점수에 동일하게 적용된다', () => {
+  const levels = ['easy', 'normal', 'hard', 'extreme'];
+  assert.deepEqual(levels.map((level) => typingPoints(level, false)), [8, 10, 13, 16]);
+  assert.deepEqual(levels.map((level) => typingPoints(level, true)), [80, 100, 130, 160]);
 });
 
 test('증강 뽑기 경계가 60/25/10/5를 따른다', () => {

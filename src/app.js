@@ -2,10 +2,11 @@ import { speechClips } from './speech-clips.js';
 import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
 import { sliceDuration, sliceFlight, sliceReward, swipeHit } from './apple-slice.js';
-import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments } from './typing-game.js';
+import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
 import {
   applyGradedResult, applyLearningBatch, getStats, getTodayStats, loadState, saveState,
   STORAGE_KEY, initialState, nextStage, rankedWords, pickReviewWords, getLearnedIds, bestScore, withBestScore,
+  wordSearchRules, wordSearchPoints,
 } from './domain.js';
 
 const root = document.querySelector('#app');
@@ -473,9 +474,9 @@ function sentenceGame() {
   return `<div class="page game-page">${stageHeader(3, '문장 조립', '')}${progress(session.itemIndex + 1, total, '문장')}<section class="sentence-card"><div class="sentence-prompt"><span>${clickableWord(item.word, item.meaning)}</span><h2>${item.translation}</h2></div><div class="sentence-zone ${session.sentenceAnswer.length ? '' : 'empty'}" data-drop-zone="answer">${session.sentenceAnswer.length ? session.sentenceAnswer.map((id, index) => tokenMarkup(id, 'answer', index)).join('') : '<p>단어를 순서대로 놓으세요</p>'}</div><div class="sentence-bank" data-drop-zone="bank">${session.sentenceBank.map((id) => tokenMarkup(id, 'bank')).join('')}</div><p class="game-message ${session.feedback?.type || ''}" role="status">${session.feedback?.text || '단어를 누르거나 끌어 옮기세요.'}</p>${session.sentenceSolved ? button(session.itemIndex === total - 1 ? '단어찾기로 이어가기' : '다음 문장', 'sentence-next') : button('문장 확인', 'check-sentence', 'primary', session.sentenceBank.length > 0)}</section></div>`;
 }
 
-function buildWordGrid(items, retry = 0) {
+function buildWordGrid(items, rules, retry = 0) {
   const words = items.map((item) => item.word.toUpperCase().replace(/[^A-Z]/g, ''));
-  const size = Math.max(state.preferences.difficulty === 'advanced' ? 12 : state.preferences.difficulty === 'intermediate' ? 11 : 10, ...words.map((word) => word.length));
+  const size = Math.max(rules.gridSize, ...words.map((word) => word.length));
   const cells = Array(size * size).fill('');
   const directions = [[0,1],[1,0],[1,1],[-1,1],[0,-1],[-1,0],[-1,-1],[1,-1]];
   const placements = [];
@@ -502,7 +503,7 @@ function buildWordGrid(items, retry = 0) {
     if (!placed) failed = true;
   });
   if (failed) {
-    if (retry < 8) return buildWordGrid(items, retry + 1);
+    if (retry < 8) return buildWordGrid(items, rules, retry + 1);
     throw new Error('단어 퍼즐을 배치하지 못했어요.');
   }
   cells.forEach((letter, index) => { if (!letter) cells[index] = String.fromCharCode(65 + randomInt(26)); });
@@ -514,7 +515,8 @@ function prepareWordSearch() {
   const targets = learningSession.items.slice(0, 3);
   learningSession.spelling = targets.map((item) => ({ item, index: learningSession.mode === 'arcade' ? item.word.length : 0, options: letterOptions(item.word[0]) }));
   learningSession.stage = 'search';
-  learningSession.grid = buildWordGrid(targets);
+  learningSession.searchRules = wordSearchRules[state.preferences.difficulty] || wordSearchRules.basic;
+  learningSession.grid = buildWordGrid(targets, learningSession.searchRules);
   learningSession.targets = targets;
   learningSession.foundIds = [];
   learningSession.dragPath = [];
@@ -549,7 +551,7 @@ function nextArcadeBoard() {
   session.items = targets;
   session.targets = targets;
   session.spelling = targets.map((item) => ({ item, index: item.word.length, options: [] }));
-  session.grid = buildWordGrid(targets);
+  session.grid = buildWordGrid(targets, session.searchRules);
   session.foundIds = [];
   session.dragPath = [];
   session.wrongPath = [];
@@ -615,13 +617,14 @@ function startSearchTimer() {
 
 function wordSearchGame() {
   const session = learningSession;
-  if (!session.searchStarted) return `<div class="page game-page search-page">${session.mode === 'arcade' ? '<div class="game-header"><h1>단어 찾기</h1><button class="game-exit" data-nav="home">나가기</button></div>' : stageHeader(4, '단어 찾기', '')}<section class="card search-ready">${pixelSprite('search')}<h2>단어 찾기</h2><p>뜻에 맞는 영어 단어를 격자에서 찾으세요. 첫 글자부터 마지막 글자까지 가로, 세로 또는 대각선으로 끌면 돼요.</p><small>철자 고르기는 힌트예요. 바로 격자를 끌어도 돼요.</small><small>60초 · 단어마다 +10초${session.mode === 'arcade' ? ' · 세트마다 +20초' : ''}</small>${session.mode === 'arcade' ? '<small>시작 1분 뒤부터 1분마다 10초 방해</small>' : ''}${button('시작하기', 'search-start')}</section></div>`;
+  const arcade = session.mode === 'arcade';
+  const header = arcade ? '<div class="game-header"><h1>단어 찾기</h1><button class="game-exit" data-nav="home">나가기</button></div>' : stageHeader(4, '단어 찾기', '');
+  if (!session.searchStarted) return `<div class="page game-page search-page">${header}<section class="card search-ready">${pixelSprite('search')}<h2>단어 찾기</h2><p>뜻에 맞는 영어 단어를 격자에서 찾으세요. 첫 글자부터 마지막 글자까지 가로, 세로 또는 대각선으로 끌면 돼요.</p><small>철자 고르기는 힌트예요. 바로 격자를 끌어도 돼요.</small><small>60초 · 단어마다 +10초${arcade ? ' · 세트마다 +20초' : ''}</small>${arcade ? `<small>1분마다 10초 방해 · 점수 ×${session.searchRules.multiplier}</small>` : ''}${button('시작하기', 'search-start')}</section></div>`;
   const grid = session.grid;
   const foundCells = new Set(grid.placements.filter((placement) => session.foundIds.includes(placement.id)).flatMap((placement) => placement.indices));
   const justFoundCells = new Set(grid.placements.find((placement) => placement.id === session.feedback?.targetId)?.indices || []);
   const firstLetters = new Set(grid.placements.filter(({ id }) => !session.searchEnded && !session.foundIds.includes(id)
     && session.spelling.some(({ item, index }) => item.id === id && index === item.word.length)).map(({ indices }) => indices[0]));
-  const arcade = session.mode === 'arcade';
   const fogged = new Set(session.penalty?.type === 'fog' ? session.penalty.cells : []);
   const clues = session.spelling.map(({ item, index, options }, slot) => {
     const done = session.foundIds.includes(item.id);
@@ -632,7 +635,7 @@ function wordSearchGame() {
   }).join('');
   const puzzle = `<div class="letter-grid letter-grid--drag" style="--grid-size:${grid.size}" role="grid" aria-label="단어 찾기 퍼즐">
     ${grid.cells.map((letter, index) => `<button type="button" role="gridcell" data-grid-index="${index}" class="${foundCells.has(index) ? 'found' : ''} ${justFoundCells.has(index) ? 'just-found' : ''} ${session.wrongPath.includes(index) ? 'try-again' : ''} ${firstLetters.has(index) ? 'first-letter' : ''} ${fogged.has(index) && !foundCells.has(index) ? 'fogged' : ''}" aria-label="${letter}${firstLetters.has(index) ? ', 시작 글자' : ''}">${fogged.has(index) && !foundCells.has(index) ? '?' : letter}</button>`).join('')}</div>`;
-  return `<div class="page game-page search-page${arcade ? ' search-page--arcade' : ''}${session.penalty?.type === 'hint' ? ' search-page--no-hint' : ''}">${arcade ? '<div class="game-header"><h1>단어 찾기</h1><button class="game-exit" data-nav="home">나가기</button></div>' : stageHeader(4, '단어 찾기', '')}
+  return `<div class="page game-page search-page${arcade ? ' search-page--arcade' : ''}${session.penalty?.type === 'hint' ? ' search-page--no-hint' : ''}">${header}
     <div class="search-toolbar"><div><span>남은 시간</span><strong data-search-timer>${formatTime(session.remaining)}</strong></div><div><span>찾은 단어</span><strong>${session.foundIds.length}/${session.targets.length}</strong></div>${arcade ? `<div class="search-score"><span>${session.setsCleared + 1}세트 · ${session.score}점</span><strong>최고 ${bestScore(state, 'search')}점</strong>${session.penalty ? `<em data-search-penalty>${session.penalty.type === 'fog' ? '안개' : '힌트 숨김'} ${session.penalty.until - session.elapsed}초</em>` : ''}</div>` : ''}</div>
     <div class="search-workspace"><div class="spell-list">${clues}</div><div class="puzzle-space">${puzzle}</div></div>
     <p class="game-message ${session.feedback?.type || ''}" role="status">${session.feedback?.text || '첫 글자부터 끝까지 드래그'}</p>
@@ -1094,13 +1097,6 @@ function stopTyping() {
   }
 }
 
-const typingLevels = {
-  easy: { label: '쉬움', speed: .62, health: .55 },
-  normal: { label: '보통', speed: .8, health: .78 },
-  hard: { label: '어려움', speed: 1, health: 1 },
-  extreme: { label: '극한', speed: 1, health: 1 },
-};
-
 function openTyping(difficulty = 'normal') {
   const words = learnedGamePool();
   if (words.length < 3) return;
@@ -1138,7 +1134,7 @@ function typingView() {
     ${running ? `<form class="typing-form"><input data-typing-input autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="떨어지는 영어 단어 입력" placeholder="영어 단어 입력"/><button class="button button--primary" type="submit">입력</button></form>` :
       `<div class="typing-panel">${game.phase === 'ready' ? `
         <div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>방패는 첫 타격을 막고, 단어는 입력 즉시 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div>
-        <div class="typing-levels">${Object.entries(typingLevels).map(([id, level]) => `<button class="button button--${game.difficulty === id ? 'primary' : 'secondary'}" aria-pressed="${game.difficulty === id}" data-action="typing-level:${id}">${level.label}</button>`).join('')}</div>
+        <div class="typing-levels">${Object.entries(typingLevels).map(([id, level]) => `<button class="button button--${game.difficulty === id ? 'primary' : 'secondary'}" aria-pressed="${game.difficulty === id}" data-action="typing-level:${id}">${level.label} <small>×${level.multiplier}</small></button>`).join('')}</div>
         ${button('시작하기', 'typing-start')}` : `<p>${game.message}</p>${game.phase === 'over' ? gameOverActions('typing-restart', game.score, game.startingBest) :
         `<div class="typing-shop"><div class="typing-upgrades">${upgrades.map(([key, name, desc]) => `
           <button class="button button--secondary" data-action="typing-upgrade:${key}" ${game.coins < upgradeCost(game.stats[key]) ? 'disabled' : ''}>
@@ -1365,7 +1361,7 @@ function applyTypingDamage(enemy, damage, bypassShield, source, chain = false, e
   if (!chain) playEffect(result.defeated ? 'correct' : 'hit');
   if (result.defeated) {
     typing.enemies = typing.enemies.filter((entry) => entry !== enemy);
-    typing.score += enemy.boss ? 100 : 10;
+    typing.score += typingPoints(typing.difficulty, enemy.boss);
     saveBest('typing', typing.score);
     const scoreLabel = root.querySelector('.typing-page .game-header .eyebrow');
     if (scoreLabel) scoreLabel.textContent = `ROUND ${typing.round} · ${typing.score}점 · 최고 ${bestScore(state, 'typing')}점`;
@@ -2029,7 +2025,7 @@ function resolveSearchPath(path) {
     session.foundIds.push(target.id);
     session.remaining += 10;
     if (session.mode === 'arcade') {
-      session.score += 100;
+      session.score += wordSearchPoints(session.searchRules, 100);
       saveBest('search', session.score);
     } else recordLearningAnswer(target.id, 'correct');
     session.feedback = { type: 'correct', text: `${byId(target.id).word} · +10초`, targetId: target.id };
@@ -2038,10 +2034,11 @@ function resolveSearchPath(path) {
       stopSearchTimer();
       if (session.mode === 'arcade') {
         session.remaining += 20;
-        session.score += 150;
+        const bonus = wordSearchPoints(session.searchRules, 150);
+        session.score += bonus;
         session.setsCleared += 1;
         session.searchTransitioning = true;
-        session.feedback = { type: 'correct', text: `3개 완료! +20초 · 세트 보너스 +150점` };
+        session.feedback = { type: 'correct', text: `3개 완료! +20초 · 세트 보너스 +${bonus}점` };
         saveBest('search', session.score);
         searchTransitionTimer = window.setTimeout(nextArcadeBoard, 400);
       } else {
