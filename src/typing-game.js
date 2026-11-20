@@ -1,8 +1,8 @@
 export const typingLevels = {
-  easy: { label: '쉬움', speed: .62, health: .55, multiplier: 1.2 },
-  normal: { label: '보통', speed: .8, health: .78, multiplier: 1.5 },
+  easy: { label: '쉬움', speed: .62, health: .55, multiplier: .6 },
+  normal: { label: '보통', speed: .8, health: .78, multiplier: 1 },
   hard: { label: '어려움', speed: 1, health: 1, multiplier: 2 },
-  extreme: { label: '극한', speed: 1, health: 1, multiplier: 2.5 },
+  extreme: { label: '극한', speed: 1, health: 1, multiplier: 3 },
 };
 
 export function typingPoints(difficulty, boss) {
