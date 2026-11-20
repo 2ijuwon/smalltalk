@@ -1137,7 +1137,7 @@ function typingView() {
     ${game.offers.length ? typingAugmentPanel(game) : `<div class="typing-field" aria-label="떨어지는 영어 단어">${game.enemies.map(typingEnemyMarkup).join('')}<div class="typing-ground"></div></div>`}
     ${running ? `<form class="typing-form"><input data-typing-input autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="떨어지는 영어 단어 입력" placeholder="영어 단어 입력"/><button class="button button--primary" type="submit">입력</button></form>` :
       `<div class="typing-panel">${game.phase === 'ready' ? `
-        <div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>방패는 첫 타격을 막고, 단어는 적중 뒤 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div>
+        <div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>방패는 첫 타격을 막고, 단어는 입력 즉시 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div>
         <div class="typing-levels">${Object.entries(typingLevels).map(([id, level]) => `<button class="button button--${game.difficulty === id ? 'primary' : 'secondary'}" aria-pressed="${game.difficulty === id}" data-action="typing-level:${id}">${level.label}</button>`).join('')}</div>
         ${button('시작하기', 'typing-start')}` : `<p>${game.message}</p>${game.phase === 'over' ? gameOverActions('typing-restart', game.score, game.startingBest) :
         `<div class="typing-shop"><div class="typing-upgrades">${upgrades.map(([key, name, desc]) => `
@@ -1206,7 +1206,7 @@ function spawnTypingTarget({ boss = false, item = null, y = 0 } = {}) {
   const hp = item ? 1 : Math.max(1, Math.round(enemyHealth(healthRound) * (boss ? 1 : level.health)));
   const enemy = {
     id: ++typing.nextId, word: nextTypingWord(''), x: boss ? 50 : 10 + randomInt(81),
-    y, hp, maxHp: hp, boss, item, pending: false,
+    y, hp, maxHp: hp, boss, item, pendingShots: 0,
     shield: !item && (typing.difficulty === 'extreme' ||
       (!boss && typing.round >= 3 && Math.random() < Math.min(.32, .08 + typing.round * .018))),
   };
@@ -1285,7 +1285,7 @@ function tickTyping(now) {
       node.classList.toggle('typing-enemy--frozen', enemy.freezeLeft > 0);
       node.classList.toggle('typing-enemy--burning', enemy.fireLeft > 0);
     }
-    if (enemy.y >= 93 && !enemy.pending) {
+    if (enemy.y >= 93 && !enemy.pendingShots) {
       typing.enemies = typing.enemies.filter((entry) => entry !== enemy);
       node?.remove();
       if (enemy.item || now < typing.immuneUntil) continue;
@@ -1316,7 +1316,6 @@ function updateTypingEnemy(enemy) {
   const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
   if (!node) return;
   node.classList.toggle('typing-enemy--shield', enemy.shield);
-  node.querySelector('strong').textContent = enemy.word;
   node.querySelector('small').textContent = `${enemy.shield ? '▣ 방패 · ' : ''}${enemy.hp}/${enemy.maxHp}`;
   node.querySelector('.typing-enemy-hp i').style.width = `${enemy.hp / enemy.maxHp * 100}%`;
 }
@@ -1374,19 +1373,18 @@ function applyTypingDamage(enemy, damage, bypassShield, source, chain = false, e
     typing.hp = Math.min(typing.maxHp, typing.hp + 2 * Number(typing.augments.includes('renew')));
     typingImpact(node, true);
   } else {
-    if (!chain) enemy.word = nextTypingWord(enemy.word);
     updateTypingEnemy(enemy);
     typingImpact(node);
   }
-  if (elemental) enemy.pending = false;
+  if (elemental) enemy.pendingShots -= 1;
   if (!chain && typing.augments.includes('splash')) {
     const count = typing.augments.filter((id) => id === 'splash').length;
     const field = root.querySelector('.typing-field');
     const radius = (field?.clientWidth || 0) * (typing.augments.includes('wide') ? .44 : .27);
-    const nearby = typing.enemies.filter((other) => other !== enemy && !other.item && !other.pending && typingDistance(other, enemy) <= radius)
+    const nearby = typing.enemies.filter((other) => other !== enemy && !other.item && !other.pendingShots && typingDistance(other, enemy) <= radius)
       .sort((a, b) => typingDistance(a, enemy) - typingDistance(b, enemy)).slice(0, count);
     nearby.forEach((other) => {
-      other.pending = true;
+      other.pendingShots += 1;
       typingProjectile(source || node, root.querySelector(`[data-enemy-id="${other.id}"]`), true).then(() => applyTypingDamage(other, Math.max(1, Math.floor(damage / 2)), false, null, true));
     });
   }
@@ -1419,14 +1417,16 @@ function collectTypingItem(target) {
 function submitTyping(value) {
   if (typing?.phase !== 'playing') return;
   const word = value.trim().toLowerCase();
-  const enemy = [...typing.enemies].filter((entry) => !entry.pending && entry.word === word).sort((a, b) => b.y - a.y)[0];
+  const enemy = typing.enemies.filter((entry) => entry.word === word).sort((a, b) => b.y - a.y)[0];
   const input = root.querySelector('[data-typing-input]');
   if (input) input.value = '';
   if (!enemy) { playEffect('retry'); typing.message = '화면에 있는 단어를 입력하세요.'; root.querySelector('.typing-page > .game-message').textContent = typing.message; return; }
   if (enemy.item) { collectTypingItem(enemy); return; }
-  enemy.pending = true;
-  playEffect('place');
   const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
+  enemy.word = nextTypingWord(enemy.word);
+  node?.querySelector('strong')?.replaceChildren(enemy.word);
+  enemy.pendingShots += 1;
+  playEffect('place');
   const game = typing;
   typingProjectile(input, node).then(() => {
     if (typing !== game || screen !== 'typing') return;
