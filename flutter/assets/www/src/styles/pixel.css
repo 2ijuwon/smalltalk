@@ -1263,6 +1263,7 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 }
 .apple-hint-actions { display: flex; flex-wrap: wrap; gap: 5px; }
 .apple-hint-actions .button { min-height: 36px; padding-block: 3px; font-size: .85rem; }
+.apple-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .apple-field {
   flex: 1 0 160px;
   position: relative;
@@ -1338,6 +1339,39 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   overflow-wrap: anywhere;
   max-width: 100%;
 }
+.apple-fruit--bomb { grid-template-rows: auto auto; align-content: center; gap: 2px; }
+.apple-fruit--bomb::before, .apple-fruit--bomb::after { content: none; }
+.apple-fruit--bomb .pixel-sprite {
+  --sprite-scale: 3;
+  width: 48px;
+  height: 48px;
+  filter: drop-shadow(2px 2px #497da6);
+}
+.apple-fruit--bomb .apple-fruit__word {
+  background: #121e2d;
+  border: 1px solid #ffd47a;
+  padding: 2px 3px;
+}
+.apple-fruit--exploded { opacity: 1; z-index: 5; pointer-events: none; }
+.apple-fruit--exploded > :is(.pixel-sprite, .apple-fruit__word) { visibility: hidden; }
+.apple-bomb-burst {
+  position: absolute;
+  inset: -22%;
+  background: #ff9f3d;
+  clip-path: polygon(50% 0, 60% 28%, 83% 11%, 78% 36%, 100% 41%, 80% 54%, 95% 77%, 68% 72%, 62% 100%, 46% 78%, 22% 93%, 25% 66%, 0 59%, 22% 46%, 9% 21%, 37% 31%);
+  animation: apple-ring .52s steps(6, end) both;
+}
+.apple-bomb-burst::after {
+  content: '';
+  position: absolute;
+  inset: 24%;
+  background: #fff4b9;
+  clip-path: inherit;
+}
+@media (max-height: 650px) {
+  .apple-page[data-phase="idle"] .apple-field { flex-basis: 112px; }
+  .apple-fruit--bomb .pixel-sprite { --sprite-scale: 2; width: 32px; height: 32px; }
+}
 .apple-fruit--wrong { opacity: .48; animation: apple-reject .24s ease-out both; pointer-events: none; }
 .apple-fruit--split { opacity: 1; z-index: 5; pointer-events: none; }
 .apple-fruit--split :is(.apple-fruit__word), .apple-fruit--split::before { opacity: 0; }
@@ -1378,7 +1412,7 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 @keyframes apple-blade { from { scale: .1 1; } 25% { scale: 1.08 1; } to { opacity: 0; scale: 1.12 .3; } }
 @keyframes apple-ring { from { scale: .45; opacity: 1; } to { scale: 1.4; opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .apple-fruit--split :is(.apple-fruit__left, .apple-fruit__right), .apple-gold-rays { animation-duration: .18s; }
+  .apple-fruit--split :is(.apple-fruit__left, .apple-fruit__right), .apple-gold-rays, .apple-bomb-burst { animation-duration: .18s; }
 }
 
 .apple-fruit--split :is(.apple-fruit__left, .apple-fruit__right)::after {

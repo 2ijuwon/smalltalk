@@ -1,6 +1,11 @@
 export const sliceDuration = 45_000;
 export const sliceFlight = (round) => Math.max(2100, 4250 - (round - 1) * 135);
 
+export function sliceOutcome(fruit, target) {
+  if (fruit.bomb) return 'bomb';
+  return fruit.id === target.id ? 'correct' : 'wrong';
+}
+
 export function sliceReward(combo) {
   const critical = combo > 0 && combo % 3 === 0;
   return { critical, points: 100 + Math.min(combo - 1, 8) * 25 + (critical ? 150 : 0), extraMs: critical ? 3000 : 0 };

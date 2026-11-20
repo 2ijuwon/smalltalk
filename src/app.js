@@ -1,7 +1,7 @@
 import { speechClips } from './speech-clips.js';
 import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
-import { sliceDuration, sliceFlight, sliceReward, swipeHit } from './apple-slice.js';
+import { sliceDuration, sliceFlight, sliceOutcome, sliceReward, swipeHit } from './apple-slice.js';
 import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
 import {
   applyGradedResult, applyLearningBatch, getStats, getTodayStats, loadState, saveState,
@@ -897,6 +897,11 @@ function learnedGamePool() {
   return shuffle(validIds(getLearnedIds(state)).map(byId)).slice(0, 5);
 }
 
+function appleTargetMarkup(fruit, index) {
+  const shape = fruit.bomb ? pixelSprite('bomb') : '<span class="apple-fruit__left"></span><span class="apple-fruit__right"></span>';
+  return `<button class="apple-fruit${fruit.bomb ? ' apple-fruit--bomb' : ''}" data-apple-index="${index}" type="button" aria-label="${fruit.bomb ? '폭탄' : '사과'} · ${escapeHtml(fruit.word)}" style="--apple-x:${fruit.lane}%;--apple-y:110%">${shape}<span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`;
+}
+
 function appleView() {
   const game = apples;
   const active = game.phase === 'playing';
@@ -907,25 +912,26 @@ function appleView() {
     <div class="apple-prompt">
       ${active ? `<div><small>${game.listen ? '듣고 찾기' : '뜻을 보고 찾기'}</small><h2 data-apple-meaning>${game.listen ? '어떤 단어일까요?' : escapeHtml(game.target.meaning)}</h2></div>
         <div class="apple-hint-actions">${button('발음 힌트', 'apple-speak', 'quiet')}${game.listen ? button('뜻 보기', 'apple-reveal', 'quiet') : ''}</div>`
-      : `<div><h2>${game.phase === 'ended' ? `최종 ${game.score}점` : '단어 과수원'}</h2><p>${game.phase === 'ended' ? `연속 정답 최고 ${game.longest}회` : '뜻이나 발음에 맞는 영어 사과를 손가락으로 그어 베세요. 눌러서 벨 수도 있어요.'}</p></div>`}
+      : `<div><h2>${game.phase === 'ended' ? `최종 ${game.score}점` : '단어 과수원'}</h2><p>${game.phase === 'ended' ? `연속 정답 최고 ${game.longest}회` : '정답 단어가 적힌 사과만 베세요. 같은 단어라도 폭탄을 베면 터져요.'}</p></div>`}
     </div>
-    <div class="apple-field" aria-label="날아오르는 영어 사과">
-      ${active ? `<svg class="apple-trail" aria-hidden="true"><polyline fill="none" /></svg>${game.fruit.map((fruit, index) => `<button class="apple-fruit" data-apple-index="${index}" type="button" style="--apple-x:${fruit.lane}%;--apple-y:110%"><span class="apple-fruit__left"></span><span class="apple-fruit__right"></span><span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`).join('')}`
+    <div class="apple-field" aria-label="날아오르는 사과와 폭탄">
+      ${active ? `<svg class="apple-trail" aria-hidden="true"><polyline fill="none" /></svg>${game.fruit.map(appleTargetMarkup).join('')}`
       : `<span class="apple-display" aria-hidden="true">${pixelSprite('duel')}</span>`}
     </div>
     ${active ? `<p class="apple-feedback" role="status" data-apple-feedback>${game.feedback || `${round}번째 · ${game.combo}연속`}</p>`
-    : game.phase === 'ended' ? gameOverActions('duel-start', game.score, game.startingBest)
-    : `<p class="apple-rules">45초 · 기회 3번 · 세 번 연속 정답이면 골든 슬래시</p>${button('시작하기', 'duel-start')}`}
+    : game.phase === 'ended' ? gameOverActions('duel-restart', game.score, game.startingBest)
+    : `<p class="apple-rules">45초 · 기회 3번 · 3연속 정답 시 골든 슬래시</p>
+      <div class="apple-modes" role="group" aria-label="문제 유형">${[[false, '뜻만'], [true, '듣기 포함']].map(([listen, label]) => `<button type="button" class="button button--${game.includeListening === listen ? 'primary' : 'secondary'}" aria-pressed="${game.includeListening === listen}" data-action="apple-mode:${listen}">${label}</button>`).join('')}</div>
+      ${button('시작하기', 'duel-start')}`}
   </div>`;
 }
 
-function openAppleGame(start = false) {
+function openAppleGame(includeListening = false) {
   stopAppleGame();
   const pool = [...new Map(shuffle(validIds(getLearnedIds(state)).map(byId)).map((item) => [item.word.toLowerCase(), item])).values()].slice(0, 5);
   if (pool.length < 3) return;
-  apples = { pool, bag: [], phase: 'idle', round: 0, score: 0, remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
+  apples = { pool, bag: [], phase: 'idle', includeListening, round: 0, score: 0, remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
   screen = 'duel';
-  if (start) return launchAppleRound();
   render({ resetScroll: true });
 }
 
@@ -946,12 +952,16 @@ function launchAppleRound() {
     if (game.bag[0].id === game.target?.id) game.bag.push(game.bag.shift());
   }
   game.target = game.bag.shift();
-  game.listen = ++game.round % 4 === 0;
+  game.round += 1;
+  game.listen = game.includeListening && game.round % 4 === 0;
   game.phase = 'playing';
   game.feedback = '';
   game.resolved = false;
-  game.fruit = shuffle([game.target, ...shuffle(game.pool.filter((item) => item !== game.target)).slice(0, 2)])
-    .map((item, index) => ({ ...item, lane: 18 + index * 32, spent: false }));
+  const distractors = shuffle(game.pool.filter((item) => item !== game.target && (game.listen || item.meaning !== game.target.meaning)));
+  const addBomb = game.round % 3 === 0 || distractors.length < 2;
+  const targets = [game.target, ...distractors.slice(0, addBomb ? 1 : 2)];
+  if (addBomb) targets.push({ ...game.target, bomb: true });
+  game.fruit = shuffle(targets).map((item, index) => ({ ...item, lane: 50 + (index - (targets.length - 1) / 2) * 32, spent: false }));
   render();
   if (game.listen) speakText(game.target.word);
   const nodes = [...root.querySelectorAll('.apple-fruit')];
@@ -1010,7 +1020,7 @@ function missAppleRound() {
   apples.hearts -= 1;
   apples.combo = 0;
   playEffect('retry');
-  speakText(apples.target.word);
+  if (apples.includeListening) speakText(apples.target.word);
   updateAppleHud(`놓쳤어요 · ${apples.target.word} = ${apples.target.meaning}`);
   resolveAppleRound(820);
 }
@@ -1022,13 +1032,21 @@ function cutApple(index, angle = -25) {
   const node = root.querySelector(`[data-apple-index="${index}"]`);
   if (!node) return;
   fruit.spent = true;
-  if (fruit.id !== game.target.id && (game.listen || fruit.meaning !== game.target.meaning)) {
-    node.classList.add('apple-fruit--wrong');
+  const outcome = sliceOutcome(fruit, game.target);
+  if (outcome !== 'correct') {
     node.disabled = true;
     game.combo = 0;
     game.hearts -= 1;
-    playEffect('retry');
-    updateAppleHud(`${fruit.word}는 ‘${fruit.meaning}’이에요.`);
+    if (outcome === 'bomb') {
+      node.classList.add('apple-fruit--exploded');
+      node.insertAdjacentHTML('beforeend', '<i class="apple-bomb-burst" aria-hidden="true"></i>');
+      specialEffect('bomb');
+      updateAppleHud('폭탄 폭발! · 기회 −1');
+    } else {
+      node.classList.add('apple-fruit--wrong');
+      playEffect('retry');
+      updateAppleHud(`${fruit.word}는 ‘${fruit.meaning}’이에요.`);
+    }
     if (!game.hearts) resolveAppleRound(680);
     return;
   }
@@ -1044,7 +1062,7 @@ function cutApple(index, angle = -25) {
     node.insertAdjacentHTML('beforeend', '<i class="apple-gold-rays" aria-hidden="true"></i>');
     specialEffect('record');
   } else playEffect('correct');
-  speakText(fruit.word);
+  if (game.includeListening) speakText(fruit.word);
   updateAppleHud(`${reward.critical ? '골든 슬래시! +3초 · ' : ''}${fruit.word} = ${fruit.meaning} · ${game.combo}연속`);
   resolveAppleRound(reward.critical ? 950 : 760);
 }
@@ -2168,7 +2186,12 @@ root.addEventListener('click', (event) => {
   }
   if (action === 'result-home') return goHome(`단어 ${resultWordCount}개를 학습했어요!`);
   if (action === 'arcade-duel') return openAppleGame();
-  if (action === 'duel-start') return openAppleGame(true);
+  if (action.startsWith('apple-mode:') && apples?.phase === 'idle') {
+    apples.includeListening = action === 'apple-mode:true';
+    return render();
+  }
+  if (action === 'duel-start' && apples?.phase === 'idle') return launchAppleRound();
+  if (action === 'duel-restart') return openAppleGame(apples.includeListening);
   if (action === 'apple-speak') return speakText(apples.target.word, [], { manual: true });
   if (action === 'apple-reveal') {
     root.querySelector('[data-apple-meaning]').textContent = apples.target.meaning;
@@ -2508,7 +2531,7 @@ window.addEventListener('pointercancel', releasePressedControl);
 window.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter' || event.repeat || event.isComposing) return;
   if (event.target.closest('button, input, select, textarea, [contenteditable="true"]')) return;
-  const nextActions = ['boss-intro-start', 'preview-next', 'start-sentence', 'sentence-next', 'check-sentence', 'search-start', 'finish-search', 'quick-submit', 'quick-next', 'talk-check', 'talk-done', 'result-home', 'typing-start', 'typing-next', 'duel-start', 'onboarding-next', 'onboarding-finish', 'settings-done'];
+  const nextActions = ['boss-intro-start', 'preview-next', 'start-sentence', 'sentence-next', 'check-sentence', 'search-start', 'finish-search', 'quick-submit', 'quick-next', 'talk-check', 'talk-done', 'result-home', 'typing-start', 'typing-next', 'duel-start', 'duel-restart', 'onboarding-next', 'onboarding-finish', 'settings-done'];
   const control = nextActions.map((action) => root.querySelector(`[data-action="${action}"]:not(:disabled)`)).find(Boolean);
   if (control) { event.preventDefault(); control.click(); }
 });

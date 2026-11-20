@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceReward, sliceFlight, swipeHit } from '../src/apple-slice.js';
+import { sliceReward, sliceFlight, sliceOutcome, swipeHit } from '../src/apple-slice.js';
+
+test('정답 단어가 적힌 폭탄은 폭발하고 같은 단어가 적힌 사과만 정답이다', () => {
+  const target = { id: 'apple', word: 'apple', meaning: '사과' };
+  assert.equal(sliceOutcome(target, target), 'correct');
+  assert.equal(sliceOutcome({ ...target, bomb: true }, target), 'bomb');
+  assert.equal(sliceOutcome({ id: 'apples', word: 'apples', meaning: target.meaning }, target), 'wrong');
+});
 
 test('세 번째 연속 정답은 금빛 베기 점수와 시간을 준다', () => {
   assert.deepEqual(sliceReward(2), { critical: false, points: 125, extraMs: 0 });
