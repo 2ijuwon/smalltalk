@@ -871,7 +871,16 @@ small, .notice, .progress-label, .stage-track span, .game-message,
   font-size: .85rem;
   pointer-events: none;
 }
-.conversation-page { height: 100%; grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.conversation-page { height: 100%; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.conversation-topic-card { grid-row: 2 / -1; place-self: center; display: grid; justify-items: center; gap: 10px; width: min(100%, 380px); text-align: center; }
+.conversation-topic-card h2 { animation: conversation-topic-in 230ms ease-out both; }
+@keyframes conversation-topic-in { from { opacity: 0; transform: translateY(6px) scale(.96); } }
+.conversation-topic-line { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 10px; background: var(--tile); border: 1px solid var(--line); }
+.conversation-topic-line span { white-space: nowrap; color: var(--blue-dark); font-weight: 800; }
+.conversation-controls { display: grid; gap: 6px; }
+.conversation-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.conversation-actions .button { min-height: 36px; }
+@media (prefers-reduced-motion: reduce) { .conversation-topic-card h2 { animation: none; } }
 .conversation-log { overflow-y: auto; display: grid; align-content: start; gap: 12px; padding: 4px; }
 .conversation-line { display: flex; align-items: start; gap: 10px; padding: 10px; background: white; border: 2px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
 .conversation-line > div { flex: 1; min-width: 0; }

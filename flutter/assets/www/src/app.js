@@ -58,11 +58,20 @@ let dragGhost = null;
 let suppressTalkClick = -1;
 let speechAudio;
 let speechFrame;
-let conversation = [];
+const conversationTopics = [
+  ['카페에서 음료 고르기', 'Choosing a drink at a cafe'],
+  ['주말에 하고 싶은 일', 'Weekend plans'],
+  ['좋아하는 간식', 'Favorite snacks'],
+  ['길을 잃었을 때', 'Getting lost and asking for directions'],
+  ['친구에게 취미 소개하기', 'Sharing hobbies with a friend'],
+  ['비 오는 날', 'Things to do on a rainy day'],
+  ['가고 싶은 여행지', 'Places we want to visit'],
+  ['도서관에서 책 찾기', 'Finding a book at the library'],
+];
+const conversationGoal = 5;
 let conversationEpoch = 0;
 let conversationRequest;
 let conversationError = '';
-let conversationDraft = '';
 let resultGrade = null;
 let resultWordCount = 0;
 let resultReward = 0;
@@ -259,7 +268,11 @@ function stopSearchTimer() {
 function navigate(next) {
   stopSpeech();
   if (screen === 'conversation') {
-    specialEffect('goodbye');
+    const input = root.querySelector('.conversation-form input');
+    if (input && !conversationRequest && state.conversationGame) {
+      state.conversationGame.draft = input.value;
+      persist();
+    }
     conversationEpoch += 1;
     conversationRequest?.abort();
     conversationRequest = null;
@@ -786,56 +799,92 @@ function speakSmallTalk(manual = false) {
 }
 
 function conversationView() {
-  return `<div class="page conversation-page">
-    <div class="game-header"><h1>슬라임과 대화</h1><button class="game-exit" data-nav="smalltalk">나가기</button></div>
-    <div class="conversation-log" role="log">${conversation.map(({ english, korean, user }, index) => `<article class="conversation-line${user ? ' conversation-line--user' : ''}">${user ? '' : pixelSprite('mascot')}<div><p lang="en">${clickableSentence(english)}</p>${korean ? `<small>${escapeHtml(korean)}</small>` : ''}</div>${user ? '' : `<button type="button" class="listen-button" data-action="conversation-play" data-line="${index}" aria-label="문장 발음 듣기">▶</button>`}</article>`).join('')}</div>
-    <form class="conversation-form"><input aria-label="영어로 대화하기" placeholder="영어로 입력" maxlength="200" value="${escapeHtml(conversationDraft)}" ${conversationRequest || !conversation.length ? 'disabled' : ''} required><button type="submit" class="button button--primary" ${conversationRequest || !conversation.length ? 'disabled' : ''}>보내기</button><button type="button" class="button button--secondary" data-action="conversation-mic" ${conversationRequest || !conversation.length ? 'disabled' : ''}>말하기</button></form>
-    <p class="game-message conversation-status" role="status">${conversationRequest ? '슬라임이 생각 중이에요…' : escapeHtml(conversationError)}</p>
-    ${conversationError ? button(conversation.length ? '다시 보내기' : '다시 연결', 'conversation-retry', 'secondary') : ''}
+  const game = state.conversationGame;
+  const topic = conversationTopics[game?.topic];
+  const header = `<div class="game-header"><h1>슬라임과 대화</h1><button class="game-exit" data-nav="smalltalk">나가기</button></div>`;
+  if (!topic || game.phase === 'picked') return `<div class="page conversation-page">${header}
+    <section class="card conversation-topic-card">${pixelSprite('mascot')}<h2>${topic ? topic[0] : '어떤 이야기를 할까요?'}</h2>
+    <p>${topic ? '먼저 영어로 말을 걸어 보세요.' : '주제를 뽑고 영어로 다섯 번 대화하세요.'}</p>
+    ${topic ? button('대화 시작', 'conversation-start') : button('랜덤 주제 뽑기', 'conversation-draw')}</section></div>`;
+  const writing = ['active', 'free'].includes(game.phase);
+  const status = game.phase === 'cleared' ? '대화 클리어!' : game.phase === 'failed' ? game.reason : '';
+  return `<div class="page conversation-page">${header}
+    <div class="conversation-topic-line"><strong>${topic[0]}</strong><span>${game.phase === 'free' ? '자유 대화' : `${game.completed}/${conversationGoal}`}</span></div>
+    <div class="conversation-log" role="log">${game.turns.map(({ english, korean, user }, index) => `<article class="conversation-line${user ? ' conversation-line--user' : ''}">${user ? '' : pixelSprite('mascot')}<div><p lang="en">${clickableSentence(english)}</p>${korean ? `<small>${escapeHtml(korean)}</small>` : ''}</div>${user ? '' : `<button type="button" class="listen-button" data-action="conversation-play" data-line="${index}" aria-label="문장 발음 듣기">▶</button>`}</article>`).join('')}</div>
+    <div class="conversation-controls">
+      ${writing ? `<form class="conversation-form"><input aria-label="영어로 대화하기" placeholder="영어로 입력" maxlength="200" value="${escapeHtml(game.draft)}" ${conversationRequest ? 'disabled' : ''} required><button type="submit" class="button button--primary" ${conversationRequest ? 'disabled' : ''}>보내기</button><button type="button" class="button button--secondary" data-action="conversation-mic" ${conversationRequest ? 'disabled' : ''}>말하기</button></form>` : ''}
+      <p class="game-message conversation-status" role="status">${game.phase === 'failed' ? '대화 실패 · ' : ''}${escapeHtml(conversationRequest ? '슬라임이 생각 중이에요…' : conversationError || status)}</p>
+      <div class="conversation-actions">${conversationError && writing ? button('다시 보내기', 'conversation-retry', 'secondary') : ''}
+      ${game.phase === 'cleared' ? button('이어서 대화', 'conversation-continue') : ''}
+      ${!writing ? button('새로운 대화', 'conversation-draw', 'secondary') : ''}${button('대화 종료', 'conversation-end', 'quiet')}</div>
+    </div>
   </div>`;
 }
 
 function openConversation() {
-  conversation = [];
   conversationError = '';
-  conversationDraft = '';
   navigate('conversation');
+  const log = root.querySelector('.conversation-log');
+  if (log) log.scrollTop = log.scrollHeight;
   specialEffect('talk');
-  requestConversation();
+}
+
+function drawConversationTopic() {
+  const choices = conversationTopics.map((_, index) => index).filter((index) => index !== state.lastConversationTopic);
+  const topic = choices[randomInt(choices.length)];
+  state.lastConversationTopic = topic;
+  state.conversationGame = { topic, phase: 'picked', completed: 0, turns: [], draft: '', reason: '' };
+  conversationError = '';
+  playEffect('loot');
+  persist();
+  render();
 }
 
 async function requestConversation(text = '') {
-  if (screen !== 'conversation' || conversationRequest) return;
+  const game = state.conversationGame;
+  if (screen !== 'conversation' || conversationRequest || !text || !['active', 'free'].includes(game?.phase)) return;
   const epoch = conversationEpoch;
   const request = new AbortController();
   conversationRequest = request;
   conversationError = '';
-  conversationDraft = text;
+  game.draft = text;
+  persist();
   render();
 
-  const turns = conversation.slice(-9).map(({ english, user }) => ({
+  const turns = game.turns.slice(-8).map(({ english, user }) => ({
     role: user ? 'user' : 'assistant', text: english,
   }));
   if (text) turns.push({ role: 'user', text });
   const timeout = setTimeout(() => request.abort(), 18000);
   try {
-    const response = await fetch('/api/slime-chat', {
+    const endpoint = location.hostname === 'ljw.yeonw.com' ? 'https://smalltalk-2ijuwon.vercel.app/api/slime-chat' : '/api/slime-chat';
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: request.signal,
       body: JSON.stringify({
         turns,
-        topic: currentTalk().selected[0],
+        topic: conversationTopics[game.topic][1],
         learnedIds: getLearnedIds(state).slice(-80),
       }),
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload) throw new Error(payload?.error || 'unavailable');
-    const { english, korean } = payload;
     if (epoch !== conversationEpoch) return;
-    if (text) conversation.push({ english: text, user: true });
-    conversation.push({ english, korean });
-    conversationDraft = '';
+    if (payload.valid === true && typeof payload.english === 'string' && typeof payload.korean === 'string') {
+      game.turns.push({ english: text, user: true }, { english: payload.english, korean: payload.korean });
+      if (game.phase === 'active' && ++game.completed === conversationGoal) {
+        game.phase = 'cleared';
+        specialEffect('lesson');
+      }
+    } else if (payload.valid === false && typeof payload.reason === 'string') {
+      game.turns.push({ english: text, user: true });
+      game.phase = 'failed';
+      game.reason = payload.reason;
+      playEffect('retry');
+    } else throw new Error('reply');
+    game.draft = '';
+    persist();
   } catch (error) {
     if (epoch === conversationEpoch) {
       if (error.message === 'provider_setup') {
@@ -2169,15 +2218,37 @@ root.addEventListener('click', (event) => {
     return render({ resetScroll: true });
   }
   if (action === 'talk-conversation') return openConversation();
+  if (action === 'conversation-draw') return drawConversationTopic();
+  if (action === 'conversation-start' || action === 'conversation-continue') {
+    const game = state.conversationGame;
+    if (action === 'conversation-start' && game?.phase === 'picked') game.phase = 'active';
+    if (action === 'conversation-continue' && game?.phase === 'cleared') game.phase = 'free';
+    persist();
+    render();
+    const log = root.querySelector('.conversation-log');
+    if (log) log.scrollTop = log.scrollHeight;
+    return;
+  }
+  if (action === 'conversation-end') {
+    delete state.conversationGame;
+    conversationError = '';
+    persist();
+    navigate('smalltalk');
+    return specialEffect('goodbye');
+  }
   if (action === 'conversation-retry') {
     const input = root.querySelector('.conversation-form input');
     const draft = input?.value.trim() || '';
-    if (!conversation.length || draft) return requestConversation(draft);
+    if (draft) return requestConversation(draft);
     input?.focus();
     return;
   }
   if (action === 'conversation-mic') return recognizeConversation();
-  if (action === 'conversation-play') return speakText(conversation[Number(target.dataset.line)].english, [], { manual: true });
+  if (action === 'conversation-play') {
+    const line = state.conversationGame?.turns[Number(target.dataset.line)];
+    if (line) return speakText(line.english, [], { manual: true });
+    return;
+  }
   if (action === 'talk-refresh') return rotateTalk();
   if (action === 'talk-quiz') return openTalkQuiz();
   if (action === 'talk-done') return navigate('smalltalk');
