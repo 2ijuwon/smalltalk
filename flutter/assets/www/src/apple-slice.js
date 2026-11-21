@@ -1,9 +1,9 @@
 export const sliceDuration = 45_000;
 export const sliceBonusLimit = 15_000;
-export const sliceFlight = (round) => Math.max(2100, 4250 - (round - 1) * 135);
+export const sliceFlight = (round) => Math.max(2100, 3600 - (round - 1) * 105);
 
 const sliceLanes = [50, 18, 82, 50, 18];
-const sliceDelays = [0, .18, .22, .48, .51];
+const sliceDelays = [0, .095, .12, .25, .285];
 export const sliceFlightEnd = (index) => 1 + sliceDelays[index];
 
 export function slicePosition(round, index, progress) {

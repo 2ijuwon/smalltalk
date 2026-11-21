@@ -1349,16 +1349,27 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   background: #428458;
   clip-path: polygon(0 100%, 30% 0, 100% 0, 75% 85%);
 }
-.apple-fruit__left, .apple-fruit__right {
+.apple-body, .apple-fruit__left, .apple-fruit__right {
   position: absolute;
   inset: 12% 6% 0;
   border-radius: 50%;
   background: var(--apple-skin);
-  box-shadow: inset 0 -8px var(--apple-rim);
+  box-shadow: inset 0 0 0 2px var(--apple-rim), inset 0 -4px var(--apple-rim);
   pointer-events: none;
 }
+.apple-body::after {
+  content: '';
+  position: absolute;
+  width: 13%;
+  height: 7%;
+  inset: 23% auto auto 22%;
+  background: #ffd0bf;
+}
+.apple-fruit__left, .apple-fruit__right { visibility: hidden; }
 .apple-fruit__left { clip-path: inset(0 50% 0 0); }
 .apple-fruit__right { clip-path: inset(0 0 0 50%); }
+.apple-fruit--retiring { opacity: .35; pointer-events: none; }
+.apple-fruit--retiring .apple-fruit__word { visibility: hidden; }
 .apple-fruit__word {
   z-index: 1;
   color: #fff;
@@ -1402,13 +1413,16 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 .apple-fruit--wrong { opacity: .48; animation: apple-reject .24s ease-out both; pointer-events: none; }
 .apple-fruit--split { opacity: 1; z-index: 5; pointer-events: none; }
 .apple-fruit--split .apple-fruit__word,
+.apple-fruit--split .apple-body,
 .apple-fruit--split .apple-shape::before,
 .apple-fruit--split .apple-shape::after { opacity: 0; }
 .apple-fruit--split .apple-fruit__left {
+  visibility: visible;
   animation: apple-half .41s ease-out both;
   --half-x: -34px; --half-rotate: -21deg;
 }
 .apple-fruit--split .apple-fruit__right {
+  visibility: visible;
   animation: apple-half .41s ease-out both;
   --half-x: 34px; --half-rotate: 21deg;
 }

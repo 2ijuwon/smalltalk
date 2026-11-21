@@ -950,7 +950,7 @@ function learnedGamePool() {
   return shuffle(validIds(getLearnedIds(state)).map(byId)).slice(0, 5);
 }
 
-const appleShape = '<span class="apple-shape" aria-hidden="true"><span class="apple-fruit__left"></span><span class="apple-fruit__right"></span></span>';
+const appleShape = '<span class="apple-shape" aria-hidden="true"><span class="apple-body"></span><span class="apple-fruit__left"></span><span class="apple-fruit__right"></span></span>';
 
 function appleTargetMarkup(fruit, index) {
   const shape = fruit.bomb ? pixelSprite('bomb') : appleShape;
@@ -962,6 +962,11 @@ function appleComboMarkup(combo) {
   return `<span aria-hidden="true">${'◆'.repeat(progress)}${'◇'.repeat(3 - progress)}</span><small>${progress === 2 ? '다음 정답 골든' : `${combo}연속`}</small>`;
 }
 
+function applePrompt(game) {
+  return `<div><small>${game.listen ? '듣고 찾기' : '뜻을 보고 찾기'}</small><h2 data-apple-meaning>${game.listen ? '어떤 단어일까요?' : escapeHtml(game.target.meaning)}</h2></div>
+    <div class="apple-hint-actions">${button('발음 힌트', 'apple-speak', 'quiet')}${game.listen ? button('뜻 보기', 'apple-reveal', 'quiet') : ''}</div>`;
+}
+
 function appleView() {
   const game = apples;
   const active = game.phase === 'playing';
@@ -970,8 +975,7 @@ function appleView() {
     <div class="game-header"><div><p class="eyebrow">최고 ${bestScore(state, 'slice')}점</p><h1>사과 베기</h1></div><button class="game-exit" data-nav="home">나가기</button></div>
     ${active ? `<div class="apple-hud"><strong data-apple-clock>${Math.ceil(game.remaining / 1000)}초</strong><span data-apple-score>${game.score}점</span><span data-apple-hearts aria-label="남은 기회 ${game.hearts}회">${'♥'.repeat(game.hearts)}${'♡'.repeat(3 - game.hearts)}</span></div>` : ''}
     <div class="apple-prompt">
-      ${active ? `<div><small>${game.listen ? '듣고 찾기' : '뜻을 보고 찾기'}</small><h2 data-apple-meaning>${game.listen ? '어떤 단어일까요?' : escapeHtml(game.target.meaning)}</h2></div>
-        <div class="apple-hint-actions">${button('발음 힌트', 'apple-speak', 'quiet')}${game.listen ? button('뜻 보기', 'apple-reveal', 'quiet') : ''}</div>`
+      ${active ? applePrompt(game)
       : `<div><h2>${game.phase === 'ended' ? `최종 ${game.score}점` : '단어 과수원'}</h2><p>${game.phase === 'ended' ? `연속 정답 최고 ${game.longest}회` : '정답 단어가 적힌 사과만 베세요. 같은 단어라도 폭탄을 베면 터져요.'}</p></div>`}
     </div>
     <div class="apple-field" aria-label="날아오르는 사과와 폭탄">
@@ -990,7 +994,7 @@ function openAppleGame(includeListening = false) {
   stopAppleGame();
   const pool = [...new Map(shuffle(validIds(getLearnedIds(state)).map(byId)).map((item) => [item.word.toLowerCase(), item])).values()].slice(0, 5);
   if (pool.length < 3) return;
-  apples = { pool, bag: [], phase: 'idle', includeListening, round: 0, score: 0, correct: 0, golden: 0, bonusMs: 0, reviewIds: new Set(), remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
+  apples = { pool, bag: [], flights: [], flightTime: 0, phase: 'idle', includeListening, round: 0, score: 0, correct: 0, golden: 0, bonusMs: 0, reviewIds: new Set(), remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
   screen = 'duel';
   render({ resetScroll: true });
 }
@@ -1011,6 +1015,7 @@ function launchAppleRound() {
     game.bag = shuffle(game.pool);
     if (game.bag[0].id === game.target?.id) game.bag.push(game.bag.shift());
   }
+  const firstRound = game.phase === 'idle';
   game.target = game.bag.shift();
   game.round += 1;
   game.listen = game.includeListening && game.round % 4 === 0;
@@ -1021,47 +1026,55 @@ function launchAppleRound() {
   const distractors = shuffle(game.pool.filter((item) => item !== game.target && (game.listen || item.meaning !== game.target.meaning)));
   const addBomb = game.round % 3 === 0 || (game.round >= 6 && game.round % 2 === 0) || distractors.length < 2;
   const targets = addBomb ? [{ ...game.target, bomb: true }] : [];
-  const count = game.round === 1 ? 3 : 5;
+  const count = 5;
   for (let index = 0; distractors.length && targets.length < count - 1; index += 1) {
     targets.push(distractors[index % distractors.length]);
   }
   const ordered = shuffle(targets);
-  const answerIndex = game.round === 1 ? 0 : Math.min(ordered.length, 1 + randomInt(count - 1));
+  const answerIndex = Math.min(ordered.length, game.round === 1 ? 3 : 2 + randomInt(3));
   ordered.splice(answerIndex, 0, game.target);
   game.fruit = ordered.map((item) => ({ ...item, spent: false }));
-  render();
-  if (game.listen) speakText(game.target.word);
-  const nodes = [...root.querySelectorAll('.apple-fruit')];
-  const clock = root.querySelector('[data-apple-clock]');
+  const start = game.flightTime + (game.listen ? 420 : 0);
   const duration = sliceFlight(game.round);
-  let lead = game.listen ? 480 : 80;
-  let elapsed = 0;
+  game.answerDeadline = start + duration * sliceFlightEnd(answerIndex);
+  if (firstRound) render();
+  else {
+    root.querySelector('.apple-prompt').innerHTML = applePrompt(game);
+    root.querySelector('.apple-field').insertAdjacentHTML('beforeend', game.fruit.map(appleTargetMarkup).join(''));
+  }
+  const nodes = [...root.querySelectorAll('.apple-fruit[data-apple-index]')];
+  game.fruit.forEach((fruit, index) => game.flights.push({ fruit, node: nodes[index], round: game.round, index, start, duration }));
+  if (game.listen) speakText(game.target.word);
+  if (!firstRound) return;
+  const clock = root.querySelector('[data-apple-clock]');
   let previous = performance.now();
   const tick = (now) => {
-    if (screen !== 'duel' || apples !== game || game.resolved) return;
+    if (screen !== 'duel' || apples !== game) return;
     const delta = Math.min(50, Math.max(0, now - previous));
     previous = now;
     if (document.hidden) { appleFrame = requestAnimationFrame(tick); return; }
-    if (lead > 0) {
-      lead -= delta;
-      appleFrame = requestAnimationFrame(tick);
-      return;
-    }
+    game.flightTime += delta;
     game.remaining = Math.max(0, game.remaining - delta);
-    elapsed += delta;
     const seconds = `${Math.ceil(game.remaining / 1000)}초`;
     if (clock.textContent !== seconds) clock.textContent = seconds;
     if (game.remaining <= 0) return finishAppleGame();
-    const progress = elapsed / duration;
-    if (progress >= sliceFlightEnd(answerIndex)) return missAppleRound();
-    nodes.forEach((node, index) => {
-      if (game.fruit[index].spent) return;
-      const position = slicePosition(game.round, index, progress);
-      if (node.hidden !== !position) node.hidden = !position;
-      if (!position) return;
-      node.style.setProperty('--apple-y', `${position.y}%`);
-      node.style.setProperty('--apple-x', `${position.x}%`);
+    game.flights = game.flights.filter(({ fruit, node, start, duration, index, round }) => {
+      const progress = (game.flightTime - start) / duration;
+      if (fruit.spent ? game.flightTime >= fruit.removeAt : progress >= sliceFlightEnd(index)) {
+        node.remove();
+        return false;
+      }
+      if (fruit.spent) return true;
+      const position = slicePosition(round, index, progress);
+      const show = Boolean(position && position.y <= 94);
+      if (node.hidden === show) node.hidden = !show;
+      if (show) {
+        node.style.setProperty('--apple-y', `${position.y}%`);
+        node.style.setProperty('--apple-x', `${position.x}%`);
+      }
+      return true;
     });
+    if (!game.resolved && game.flightTime >= game.answerDeadline) missAppleRound();
     appleFrame = requestAnimationFrame(tick);
   };
   appleFrame = requestAnimationFrame(tick);
@@ -1088,7 +1101,14 @@ function updateAppleHud(message) {
 
 function resolveAppleRound(delay) {
   apples.resolved = true;
-  cancelAnimationFrame(appleFrame);
+  for (const flight of apples.flights) {
+    if (flight.round !== apples.round) continue;
+    const { node } = flight;
+    node.disabled = true;
+    node.removeAttribute('data-apple-index');
+    node.setAttribute('aria-hidden', 'true');
+    if (!flight.fruit.spent) node.classList.add('apple-fruit--retiring');
+  }
   appleWait = setTimeout(launchAppleRound, delay);
 }
 
@@ -1098,7 +1118,7 @@ function missAppleRound() {
   playEffect('retry');
   if (apples.includeListening) speakText(apples.target.word);
   updateAppleHud(`놓쳤어요 · ${apples.target.word} = ${apples.target.meaning}`);
-  resolveAppleRound(520);
+  resolveAppleRound(220);
 }
 
 function cutApple(index, angle = -25) {
@@ -1108,6 +1128,7 @@ function cutApple(index, angle = -25) {
   const node = root.querySelector(`[data-apple-index="${index}"]`);
   if (!node || node.hidden) return;
   fruit.spent = true;
+  fruit.removeAt = game.flightTime + 700;
   const outcome = sliceOutcome(fruit, game.target);
   if (outcome !== 'correct') {
     node.disabled = true;
@@ -1150,7 +1171,7 @@ function cutApple(index, angle = -25) {
   } else playEffect('correct');
   if (game.includeListening) speakText(fruit.word);
   updateAppleHud(`${reward.critical ? '골든! · ' : ''}+${reward.points}점${gainedMs ? ' · +3초' : ''} · ${fruit.word}`);
-  resolveAppleRound(reward.critical ? 620 : 430);
+  resolveAppleRound(130);
 }
 
 root.addEventListener('pointerdown', (event) => {

@@ -4,9 +4,9 @@ import { sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, 
 
 test('첫 표적이 공중에 있는 동안 새 표적들이 시차를 두고 올라온다', () => {
   const visibleAt = (progress) => [0, 1, 2, 3, 4].filter(index => slicePosition(1, index, progress)?.y < 95);
-  assert.deepEqual(visibleAt(.14), [0]);
-  assert.deepEqual(visibleAt(.32), [0, 1, 2]);
-  assert.deepEqual(visibleAt(.65), [0, 1, 2, 3, 4]);
+  assert.deepEqual(visibleAt(.1), [0]);
+  assert.deepEqual(visibleAt(.22), [0, 1, 2]);
+  assert.deepEqual(visibleAt(.44), [0, 1, 2, 3, 4]);
   assert.equal(slicePosition(1, 0, sliceFlightEnd(0)), null);
   assert.ok(slicePosition(1, 4, 1.2));
   assert.ok(slicePosition(1, 1, .4).x < 50 && slicePosition(2, 1, .4).x > 50);
