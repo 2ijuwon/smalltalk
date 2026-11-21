@@ -4,6 +4,7 @@ import math
 import struct
 import os
 import re
+import random
 import wave
 from pathlib import Path
 
@@ -113,3 +114,46 @@ for name, notes in effects.items():
     with wave.open(str(out / f"fx-{name}.wav"), "wb") as wav:
         wav.setparams((1, 2, rate, 0, "NONE", "not compressed"))
         wav.writeframes(frames)
+
+# Orchard sound effects. Seed the noise so regenerated files are identical.
+def orchard_effect(name, seconds, sample_at):
+    noise = random.Random(73)
+    frames = bytearray()
+    for sample in range(int(rate * seconds)):
+        time = sample / rate
+        value = sample_at(time, noise.uniform(-1, 1))
+        frames.extend(struct.pack("<h", int(32767 * max(-1, min(1, value)))))
+    with wave.open(str(out / f"fx-{name}.wav"), "wb") as wav:
+        wav.setparams((1, 2, rate, 0, "NONE", "not compressed"))
+        wav.writeframes(frames)
+
+
+def fuse(time, noise):
+    sparse = noise if abs(noise) > .71 else noise * .12
+    flicker = .44 + .24 * math.sin(math.tau * 13 * time) + .22 * math.sin(math.tau * 31 * time)
+    edge = min(1, time / .009, (1.1 - time) / .009)
+    return .21 * sparse * flicker * edge
+
+
+def clang(time, noise):
+    strike = .32 * noise * math.exp(-130 * time)
+    ring = sum(
+        gain * math.sin(math.tau * frequency * time) * math.exp(-decay * time)
+        for frequency, gain, decay in [(390, .3, 13), (887, .21, 17), (1517, .15, 25), (2471, .1, 37)]
+    )
+    return (strike + ring) * min(1, time / .001)
+
+
+def fruit_slice(time, noise):
+    scrape = .43 * noise * min(1, time / .008) * math.exp(-31 * time)
+    wet = 0
+    for offset, frequency in [(.036, 470), (.065, 295), (.091, 650)]:
+        age = time - offset
+        if age >= 0:
+            wet += .17 * math.sin(math.tau * (frequency * age - 520 * age * age)) * math.exp(-48 * age)
+    return scrape + wet
+
+
+orchard_effect("fuse", 1.1, fuse)
+orchard_effect("clang", .46, clang)
+orchard_effect("slice", .21, fruit_slice)

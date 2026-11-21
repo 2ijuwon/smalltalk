@@ -1,7 +1,7 @@
 import { speechClips } from './speech-clips.js';
 import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
-import { sliceBonusLimit, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
+import { sliceBodyHit, sliceBonusLimit, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward } from './apple-slice.js';
 import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
 import {
   applyGradedResult, applyLearningBatch, getStats, getTodayStats, loadState, saveState,
@@ -1000,11 +1000,31 @@ function openAppleGame(includeListening = false) {
 }
 
 function stopAppleGame() {
+  setAppleFuse(false);
   cancelAnimationFrame(appleFrame);
   clearTimeout(appleWait);
   appleFrame = appleWait = 0;
   appleGesture = null;
   suppressAppleClickUntil = 0;
+}
+
+function setAppleFuse(audible) {
+  if (!apples || Boolean(apples.fuseAudible) === audible) return;
+  apples.fuseAudible = audible;
+  const player = effectPlayer('fuse');
+  if (audible) {
+    player.loop = true;
+    playEffect('fuse');
+  } else {
+    player.pause();
+  }
+}
+
+function appleHitbox(node) {
+  const body = node.querySelector('.apple-body');
+  if (body) return body.getBoundingClientRect();
+  const { left, top, width, height } = node.querySelector('.pixel-sprite').getBoundingClientRect();
+  return { left: left + width * 2 / 16, right: left + width, top: top + height * 4 / 16, bottom: top + height * 15 / 16 };
 }
 
 function launchAppleRound() {
@@ -1025,7 +1045,7 @@ function launchAppleRound() {
   game.penalized = false;
   const distractors = shuffle(game.pool.filter((item) => item !== game.target && (game.listen || item.meaning !== game.target.meaning)));
   const addBomb = game.round % 3 === 0 || (game.round >= 6 && game.round % 2 === 0) || distractors.length < 2;
-  const targets = addBomb ? [{ ...game.target, bomb: true }] : [];
+  const targets = addBomb ? [{ ...game.pool[randomInt(game.pool.length)], bomb: true }] : [];
   const count = 5;
   for (let index = 0; distractors.length && targets.length < count - 1; index += 1) {
     targets.push(distractors[index % distractors.length]);
@@ -1052,7 +1072,7 @@ function launchAppleRound() {
     if (screen !== 'duel' || apples !== game) return;
     const delta = Math.min(50, Math.max(0, now - previous));
     previous = now;
-    if (document.hidden) { appleFrame = requestAnimationFrame(tick); return; }
+    if (document.hidden) { setAppleFuse(false); appleFrame = requestAnimationFrame(tick); return; }
     game.flightTime += delta;
     game.remaining = Math.max(0, game.remaining - delta);
     const seconds = `${Math.ceil(game.remaining / 1000)}초`;
@@ -1074,6 +1094,8 @@ function launchAppleRound() {
       }
       return true;
     });
+    setAppleFuse(!game.resolved && game.flights.some(({ fruit, node, round }) =>
+      round === game.round && fruit.bomb && !fruit.spent && !node.hidden));
     if (!game.resolved && game.flightTime >= game.answerDeadline) missAppleRound();
     appleFrame = requestAnimationFrame(tick);
   };
@@ -1101,6 +1123,7 @@ function updateAppleHud(message) {
 
 function resolveAppleRound(delay) {
   apples.resolved = true;
+  setAppleFuse(false);
   for (const flight of apples.flights) {
     if (flight.round !== apples.round) continue;
     const { node } = flight;
@@ -1138,7 +1161,8 @@ function cutApple(index, angle = -25) {
     if (outcome === 'bomb') {
       node.classList.add('apple-fruit--exploded');
       node.insertAdjacentHTML('beforeend', '<i class="apple-bomb-burst" aria-hidden="true"></i>');
-      specialEffect('bomb');
+      setAppleFuse(false);
+      specialEffect('bomb', 'clang');
       updateAppleHud('폭탄 폭발! · 기회 −1');
     } else {
       if (!game.reviewIds.has(game.target.id)) {
@@ -1164,11 +1188,12 @@ function cutApple(index, angle = -25) {
   node.style.setProperty('--blade-angle', `${angle}deg`);
   node.classList.add('apple-fruit--split');
   node.disabled = true;
+  playEffect('slice');
   if (reward.critical) {
     node.classList.add('apple-fruit--gold');
     node.insertAdjacentHTML('beforeend', '<i class="apple-gold-rays" aria-hidden="true"></i>');
     specialEffect('record');
-  } else playEffect('correct');
+  }
   if (game.includeListening) speakText(fruit.word);
   updateAppleHud(`${reward.critical ? '골든! · ' : ''}+${reward.points}점${gainedMs ? ' · +3초' : ''} · ${fruit.word}`);
   resolveAppleRound(130);
@@ -1195,15 +1220,7 @@ window.addEventListener('pointermove', (event) => {
   line.setAttribute('points', gesture.trail.map(({ x, y }) => `${x - bounds.left},${y - bounds.top}`).join(' '));
   if (!gesture.cut && !apples.resolved) {
     const hits = [...gesture.field.querySelectorAll('[data-apple-index]:not(:disabled, [hidden])')]
-      .map((node) => {
-        const rect = node.getBoundingClientRect();
-        const clip = {
-          left: Math.max(rect.left, bounds.left), top: Math.max(rect.top, bounds.top),
-          right: Math.min(rect.right, bounds.right), bottom: Math.min(rect.bottom, bounds.bottom),
-        };
-        const visible = clip.bottom - clip.top >= Math.min(22, rect.height / 2) && clip.right > clip.left;
-        return { index: Number(node.dataset.appleIndex), at: visible ? swipeHit(gesture.previous, point, clip) : null };
-      })
+      .map((node) => ({ index: Number(node.dataset.appleIndex), at: sliceBodyHit(gesture.previous, point, appleHitbox(node), bounds) }))
       .filter(({ at }) => at !== null).sort((a, b) => a.at - b.at);
     if (hits.length) {
       const angle = Math.atan2(point.y - gesture.previous.y, point.x - gesture.previous.x) * 180 / Math.PI;
@@ -1583,8 +1600,8 @@ const specialColors = {
   lesson: '#90d3ff', review: '#aadebe', talk: '#bbabff', goodbye: '#a8c3e4',
 };
 
-function specialEffect(kind) {
-  playEffect(kind);
+function specialEffect(kind, sound = kind) {
+  playEffect(sound);
   const flash = document.createElement('div');
   flash.className = 'special-flash';
   flash.setAttribute('aria-hidden', 'true');
@@ -2227,7 +2244,12 @@ root.addEventListener('click', (event) => {
   const target = event.target.closest('button');
   if (!target) return;
   if (target.dataset.appleIndex !== undefined) {
-    if (event.detail === 0 || performance.now() >= suppressAppleClickUntil) cutApple(Number(target.dataset.appleIndex));
+    const point = { x: event.clientX, y: event.clientY };
+    const field = target.closest('.apple-field');
+    if (event.detail === 0 || (performance.now() >= suppressAppleClickUntil
+      && sliceBodyHit(point, point, appleHitbox(target), field.getBoundingClientRect()) !== null)) {
+      cutApple(Number(target.dataset.appleIndex));
+    }
     return;
   }
   if (target.dataset.gridIndex !== undefined) return;

@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+import { sliceBodyHit, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+
+test('몸통 판정은 모서리와 화면 밖을 제외하고 스와이프의 첫 접점을 반환한다', () => {
+  const body = { left: 10, top: 10, right: 30, bottom: 30 };
+  const field = { left: 0, top: 0, right: 40, bottom: 40 };
+  assert.equal(sliceBodyHit({ x: 11, y: 11 }, { x: 11, y: 11 }, body, field), null);
+  assert.equal(sliceBodyHit({ x: 20, y: 20 }, { x: 20, y: 20 }, body, field), 0);
+  assert.equal(sliceBodyHit({ x: 0, y: 20 }, { x: 40, y: 20 }, body, field), .25);
+  assert.equal(sliceBodyHit({ x: 0, y: 20 }, { x: 40, y: 20 }, body, { ...field, left: 32 }), null);
+});
 
 test('첫 표적이 공중에 있는 동안 새 표적들이 시차를 두고 올라온다', () => {
   const visibleAt = (progress) => [0, 1, 2, 3, 4].filter(index => slicePosition(1, index, progress)?.y < 95);

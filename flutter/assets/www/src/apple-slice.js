@@ -20,6 +20,29 @@ export function sliceOutcome(fruit, target) {
   return fruit.id === target.id ? 'correct' : 'wrong';
 }
 
+export function sliceBodyHit(from, to, rect, field) {
+  const radiusX = (rect.right - rect.left) / 2;
+  const radiusY = (rect.bottom - rect.top) / 2;
+  if (radiusX <= 0 || radiusY <= 0) return null;
+  const fieldEntry = swipeHit(from, to, field);
+  const reverseEntry = swipeHit(to, from, field);
+  if (fieldEntry === null || reverseEntry === null) return null;
+  const x = (from.x - rect.left) / radiusX - 1;
+  const y = (from.y - rect.top) / radiusY - 1;
+  const dx = (to.x - from.x) / radiusX;
+  const dy = (to.y - from.y) / radiusY;
+  const a = dx * dx + dy * dy;
+  const b = x * dx + y * dy;
+  const c = x * x + y * y - 1;
+  if (!a) return c <= 0 ? 0 : null;
+  const discriminant = b * b - a * c;
+  if (discriminant < 0) return null;
+  const root = Math.sqrt(discriminant);
+  const enter = Math.max(fieldEntry, (-b - root) / a);
+  const exit = Math.min(1 - reverseEntry, (-b + root) / a);
+  return enter <= exit ? enter : null;
+}
+
 export function sliceReward(combo) {
   const critical = combo > 0 && combo % 3 === 0;
   return { critical, points: 100 + Math.min(combo - 1, 8) * 25 + (critical ? 150 : 0), extraMs: critical ? 3000 : 0 };
