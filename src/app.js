@@ -1693,15 +1693,26 @@ function showLaunch() {
   overlay.innerHTML = `<i></i><i></i><div class="launch-lockup">${pixelSprite('mascot')}<strong>${letters}</strong><span class="launch-sparks"></span></div>`;
   const panel = overlay.firstElementChild;
   let paintFrame;
+  let cleanupTimer;
   overlay.classList.add('launch-overlay--paused');
+  const finish = () => {
+    clearTimeout(cleanupTimer);
+    document.removeEventListener('visibilitychange', updateVisibility);
+    cancelAnimationFrame(paintFrame);
+    overlay.remove();
+  };
   const updateVisibility = () => {
     cancelAnimationFrame(paintFrame);
+    clearTimeout(cleanupTimer);
     if (document.hidden) {
       overlay.classList.add('launch-overlay--paused');
     } else {
       paintFrame = requestAnimationFrame(() => {
         paintFrame = requestAnimationFrame(() => {
-          if (!document.hidden) overlay.classList.remove('launch-overlay--paused');
+          if (!document.hidden) {
+            overlay.classList.remove('launch-overlay--paused');
+            cleanupTimer = setTimeout(finish, 3200);
+          }
         });
       });
     }
@@ -1719,11 +1730,7 @@ function showLaunch() {
     const cue = cues[animationName];
     if (cue && !document.hidden) playEffect(cue);
   });
-  panel.addEventListener('animationend', () => {
-    document.removeEventListener('visibilitychange', updateVisibility);
-    cancelAnimationFrame(paintFrame);
-    overlay.remove();
-  }, { once: true });
+  panel.addEventListener('animationend', finish, { once: true });
   document.body.append(overlay);
   updateVisibility();
 }
