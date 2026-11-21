@@ -7,13 +7,16 @@ export const typingLevels = {
 
 export function typingPoints(difficulty, boss) {
   const level = typingLevels[difficulty] || typingLevels.normal;
-  return Math.round((boss ? 100 : 10) * level.multiplier);
+  return Math.round((boss ? 500 : 50) * level.multiplier);
 }
 
 export const upgradeCost = (level) => 6 + level * 5;
 export const waveSize = (round) => round % 10 === 0 ? 1 : Math.min(24, 4 + Math.ceil(round * 1.1));
 export const fallSeconds = (round, sight) => Math.max(5.5, 13 - round * .38 + Math.min(sight, 4) * 1.2);
-export const missDamage = (round, vitality) => Math.max(3, 10 + Math.floor((round - 1) / 3) * 2 - vitality * 2);
+export function missDamage(round, vitality, shield = false) {
+  const damage = Math.max(3, 10 + Math.floor((round - 1) / 3) * 2 - vitality * 2);
+  return shield ? Math.ceil(damage * 1.5) : damage;
+}
 export const enemyHealth = (round, random = Math.random) => {
   const base = 1 + Math.floor((round - 1) / 2);
   const variance = Math.max(1, Math.floor((round - 1) / 3) + 1);

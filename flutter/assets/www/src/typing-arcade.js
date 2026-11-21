@@ -208,8 +208,9 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
         if (enemy.item || now < typing.immuneUntil) continue;
         typing.immuneUntil = now + 1000;
         playEffect('hit');
-        typing.hp = Math.max(0, typing.hp - missDamage(typing.round, typing.stats.vitality));
-        typing.message = `${enemy.word} 단어를 놓쳐 체력이 줄었어요.`;
+        const damage = Math.min(typing.hp, missDamage(typing.round, typing.stats.vitality, enemy.shield));
+        typing.hp -= damage;
+        typing.message = `${enemy.word} 놓침 · 체력 −${damage}${enemy.shield ? ' · 방패 추가 피해' : ''}`;
         const field = root.querySelector('.typing-field');
         field?.animate([{ boxShadow: 'inset 0 0 0 8px #d59091' }, { boxShadow: 'inset 0 0 0 0 transparent' }], { duration: 290, easing: 'steps(4, end)' });
         if (!typing.hp) { typing.phase = 'over'; typing.message = `${typing.round}라운드 · ${typing.score}점`; saveBest('typing', typing.score); stopTyping(); render(); specialEffect(typing.score > typing.startingBest ? 'record' : 'over'); return; }

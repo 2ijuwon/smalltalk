@@ -30,8 +30,14 @@ test('방패는 한 번 막고 직접 대상의 방어 무시는 체력에만 �
 
 test('타자 게임 난이도 배율은 일반 적과 보스 점수에 동일하게 적용된다', () => {
   const levels = ['easy', 'normal', 'hard', 'extreme'];
-  assert.deepEqual(levels.map((level) => typingPoints(level, false)), [6, 10, 20, 30]);
-  assert.deepEqual(levels.map((level) => typingPoints(level, true)), [60, 100, 200, 300]);
+  assert.deepEqual(levels.map((level) => typingPoints(level, false)), [30, 50, 100, 150]);
+  assert.deepEqual(levels.map((level) => typingPoints(level, true)), [300, 500, 1000, 1500]);
+});
+
+test('방패가 남아 있으면 바닥에 닿을 때 피해가 50% 증가한다', () => {
+  assert.equal(missDamage(1, 0, false), 10);
+  assert.equal(missDamage(1, 0, true), 15);
+  assert.equal(missDamage(1, 9, true), 5);
 });
 
 test('증강 뽑기 경계가 60/25/10/5를 따른다', () => {

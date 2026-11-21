@@ -1,4 +1,4 @@
-import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusTime, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
+import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusPosition, sliceBonusTime, sliceCutShape, sliceDifficulty, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
 import { getLearnedIds, bestScore } from './domain.js';
 import { button, escapeHtml, gameOverActions, pixelSprite, randomInt, shuffle } from './ui.js';
 import { effectPlayer, playEffect, specialEffect } from './effects.js';
@@ -16,6 +16,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
   function appleTargetMarkup(fruit, index) {
     const shape = fruit.heal ? pixelSprite('heal') : fruit.bomb ? pixelSprite('bomb') : appleShape;
     if (fruit.heal) return `<button class="apple-fruit apple-fruit--heal" data-apple-index="${index}" type="button" aria-label="체력 회복 상자" hidden>${shape}<span class="apple-fruit__word">+1 ♥</span></button>`;
+    if (fruit.bonus) return `<button class="apple-fruit apple-fruit--bonus" data-apple-index="${index}" type="button" aria-label="보너스 사과" hidden>${shape}</button>`;
     return `<button class="apple-fruit${fruit.bomb ? ' apple-fruit--bomb' : ''}" data-apple-index="${index}" type="button" aria-label="${fruit.bomb ? '폭탄' : '사과'} · ${escapeHtml(fruit.word)}" hidden>${shape}<span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`;
   }
 
@@ -25,7 +26,10 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
   }
 
   function applePrompt(game) {
-    return `<div><small>${game.listen ? '듣고 찾기' : '뜻을 보고 찾기'} · <span data-apple-answers>정답 ${game.answersTotal - game.answersCut}개</span></small><h2 data-apple-meaning>${game.listen ? '어떤 단어일까요?' : escapeHtml(game.target.meaning)}</h2></div>
+    if (game.bonusRound) return '<div><small>20라운드 보너스</small><h2>큰 사과를 여러 번 베세요!</h2></div>';
+    const meanings = game.questionTargets.map(target => `<span data-apple-meaning-id="${escapeHtml(target.id)}">${escapeHtml(target.meaning)}</span>`).join(' · ');
+    const label = game.questionTargets.length > 1 ? '두 단어 보너스' : game.listen ? '듣고 찾기' : '뜻을 보고 찾기';
+    return `<div><small>${label} · <span data-apple-answers>정답 ${game.answersTotal - game.answersCut}개</span></small><h2 data-apple-meaning>${game.listen ? '어떤 단어일까요?' : meanings}</h2></div>
       <div class="apple-hint-actions">${button('발음 힌트', 'apple-speak', 'quiet')}${game.listen ? button('뜻 보기', 'apple-reveal', 'quiet') : ''}</div>`;
   }
 
@@ -119,30 +123,43 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     const firstRound = game.phase === 'idle';
     game.target = game.bag.shift();
     game.round += 1;
-    game.listen = game.includeListening && game.round % 4 === 0;
+    game.bonusRound = game.round % 20 === 0;
+    const difficulty = sliceDifficulty(game.flightTime);
+    const second = !game.bonusRound && Math.random() < difficulty.dualChance
+      ? shuffle(game.pool.filter(item => item.meaning !== game.target.meaning))[0] : null;
+    game.questionTargets = second ? [game.target, second] : [game.target];
+    game.listen = !game.bonusRound && !second && game.includeListening && game.round % 4 === 0;
     game.phase = 'playing';
     game.feedback = '';
     game.resolved = false;
     game.penalized = false;
-    const distractors = shuffle(game.pool.filter((item) => item !== game.target && (game.listen || item.meaning !== game.target.meaning)));
-    const addBomb = game.round % 3 === 0 || (game.round >= 6 && game.round % 2 === 0) || distractors.length < 2;
-    const targets = addBomb ? [{ ...game.pool[randomInt(game.pool.length)], bomb: true }] : [];
+    const distractors = shuffle(game.pool.filter(item => !game.questionTargets.some(target =>
+      item.id === target.id || (!game.listen && item.meaning === target.meaning))));
+    const targets = [];
+    if (!firstRound && Math.random() < difficulty.bombChance) {
+      const bombs = 1 + randomInt(difficulty.maxBombs);
+      for (let index = 0; index < bombs; index += 1) {
+        targets.push({ ...game.pool[randomInt(game.pool.length)], bomb: true });
+      }
+    }
+    if (!distractors.length && !targets.length) targets.push({ ...game.pool[randomInt(game.pool.length)], bomb: true });
     if (game.hearts < 3 && game.round % 4 === 0) targets.push({ heal: true });
-    const count = 5;
-    game.answersTotal = firstRound ? 1 : sliceAnswerCount(game.flightTime, Math.random());
+    game.answersTotal = Math.max(game.questionTargets.length, firstRound ? 1 : sliceAnswerCount(game.flightTime, Math.random()));
     game.answersCut = 0;
-    for (let index = 0; distractors.length && targets.length < count - game.answersTotal; index += 1) {
+    game.matchedTargets = new Set();
+    for (let index = 0; distractors.length && targets.length < difficulty.slots - game.answersTotal; index += 1) {
       targets.push(distractors[index % distractors.length]);
     }
     const others = shuffle(targets);
     const slotCount = others.length + game.answersTotal;
-    const answerSlots = firstRound ? [Math.min(3, others.length)] :
+    const answerSlots = firstRound && game.answersTotal === 1 ? [Math.min(3, others.length)] :
       shuffle(Array.from({ length: slotCount - 1 }, (_, index) => index + 1)).slice(0, game.answersTotal);
-    const ordered = Array.from({ length: slotCount }, (_, index) => answerSlots.includes(index) ? game.target : others.shift());
-    game.fruit = ordered.map((item) => ({ ...item, spent: false }));
+    const answerBySlot = new Map(answerSlots.map((slot, index) => [slot, game.questionTargets[index % game.questionTargets.length]]));
+    const ordered = Array.from({ length: slotCount }, (_, index) => answerBySlot.get(index) ?? others.shift());
+    game.fruit = game.bonusRound ? [{ bonus: true }] : ordered.map((item) => ({ ...item, spent: false }));
     const start = game.flightTime + (game.listen ? 420 : 0);
-    const duration = sliceFlight(game.round);
-    game.answerDeadline = start + duration * sliceFlightEnd(Math.max(...answerSlots));
+    const duration = game.bonusRound ? 5600 : sliceFlight(game.round);
+    game.answerDeadline = start + duration * (game.bonusRound ? 1 : sliceFlightEnd(Math.max(...answerSlots)));
     if (firstRound) render();
     else {
       root.querySelector('.apple-prompt').innerHTML = applePrompt(game);
@@ -170,12 +187,12 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       if (game.remaining <= 0) return finishAppleGame();
       game.flights = game.flights.filter(({ fruit, node, start, duration, index, round }) => {
         const progress = (game.flightTime - start) / duration;
-        if (fruit.spent ? game.flightTime >= fruit.removeAt : progress >= sliceFlightEnd(index)) {
+        if (fruit.spent ? game.flightTime >= fruit.removeAt : progress >= (fruit.bonus ? 1 : sliceFlightEnd(index))) {
           node.remove();
           return false;
         }
         if (fruit.spent) return true;
-        const position = slicePosition(round, index, progress);
+        const position = fruit.bonus ? sliceBonusPosition(progress) : slicePosition(round, index, progress);
         const show = Boolean(position && position.y <= 94);
         if (node.hidden === show) node.hidden = !show;
         if (show) {
@@ -187,7 +204,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       setAppleFuse(!game.resolved && game.flights.some(({ fruit, node, round }) =>
         round === game.round && fruit.bomb && !fruit.spent && !node.hidden));
       if (!game.resolved && game.flightTime >= game.answerDeadline) {
-        if (game.answersCut) resolveAppleRound(130);
+        if (game.bonusRound || game.matchedTargets.size === game.questionTargets.length) resolveAppleRound(130);
         else missAppleRound();
       }
       appleFrame = requestAnimationFrame(tick);
@@ -224,7 +241,10 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       node.disabled = true;
       node.removeAttribute('data-apple-index');
       node.setAttribute('aria-hidden', 'true');
-      if (!flight.fruit.spent) node.classList.add('apple-fruit--retiring');
+      if (!flight.fruit.spent) {
+        node.classList.add('apple-fruit--retiring');
+        if (!flight.fruit.heal) node.innerHTML = pixelSprite(flight.fruit.bomb ? 'bombOutline' : 'orchardAppleOutline');
+      }
     }
     appleWait = setTimeout(launchAppleRound, delay);
   }
@@ -238,12 +258,50 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     resolveAppleRound(220);
   }
 
-  function cutApple(index, angle = -25) {
+  function carveApple(node, from, to, spread) {
+    const shape = node.querySelector('.apple-shape');
+    const bounds = shape.getBoundingClientRect();
+    const center = { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+    const cut = sliceCutShape(bounds, from ?? center, to ?? { x: center.x + 20, y: center.y - 9 });
+    if (!cut) return;
+    const parent = node.getBoundingClientRect();
+    node.style.setProperty('--blade-angle', `${cut.angle}deg`);
+    node.style.setProperty('--blade-x', `${bounds.left - parent.left + bounds.width * cut.x / 100}px`);
+    node.style.setProperty('--blade-y', `${bounds.top - parent.top + bounds.height * cut.y / 100}px`);
+    if (!spread) return;
+    const halves = [shape.querySelector('.apple-fruit__left'), shape.querySelector('.apple-fruit__right')];
+    halves.forEach((half, index) => {
+      const distance = index === 0 ? -spread : spread;
+      half.style.clipPath = cut.halves[index];
+      half.style.setProperty('--half-x', `${cut.nx * distance}px`);
+      half.style.setProperty('--half-y', `${cut.ny * distance}px`);
+    });
+  }
+
+  function cutApple(index, from, to) {
     const game = apples;
     const fruit = game?.fruit?.[index];
     if (getScreen() !== 'duel' || game.phase !== 'playing' || game.resolved || game.dullUntil || !fruit || fruit.spent) return;
     const node = root.querySelector(`[data-apple-index="${index}"]`);
     if (!node || node.hidden) return;
+    if (fruit.bonus) {
+      if (game.flightTime < (fruit.nextHitAt ?? 0)) return;
+      fruit.nextHitAt = game.flightTime + 85;
+      game.score += 100;
+      playEffect('slice');
+      carveApple(node, from, to, 0);
+      const stroke = document.createElement('i');
+      stroke.className = 'apple-bonus-cut';
+      stroke.setAttribute('aria-hidden', 'true');
+      stroke.style.left = node.style.getPropertyValue('--blade-x');
+      stroke.style.top = node.style.getPropertyValue('--blade-y');
+      stroke.style.rotate = node.style.getPropertyValue('--blade-angle');
+      node.append(stroke);
+      stroke.addEventListener('animationend', () => stroke.remove(), { once: true });
+      node.animate([{ filter: 'brightness(1.45)' }, { filter: 'none' }], { duration: 125 });
+      updateAppleHud('보너스 +100점');
+      return;
+    }
     fruit.spent = true;
     fruit.removeAt = game.flightTime + 700;
     if (fruit.heal) {
@@ -255,7 +313,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       updateAppleHud(restored ? '체력 +1칸' : '체력이 가득 찼어요');
       return;
     }
-    const outcome = sliceOutcome(fruit, game.target);
+    const outcome = sliceOutcome(fruit, game.questionTargets);
     if (outcome !== 'correct') {
       node.disabled = true;
       game.combo = 0;
@@ -269,10 +327,11 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
         specialEffect('bomb', 'clang');
         updateAppleHud('폭탄 · 칼 무뎌짐 1초');
       } else {
-        if (!game.reviewIds.has(game.target.id)) {
-          recordMistake(game.target.id);
+        const missed = game.questionTargets.find(target => !game.matchedTargets.has(target.id)) || game.target;
+        if (!game.reviewIds.has(missed.id)) {
+          recordMistake(missed.id);
         }
-        game.reviewIds.add(game.target.id);
+        game.reviewIds.add(missed.id);
         node.classList.add('apple-fruit--wrong');
         playEffect('retry');
         updateAppleHud('오답 · 칼 무뎌짐 1초');
@@ -285,11 +344,13 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     const gainedMs = sliceBonusTime(game.flightTime);
     game.remaining += gainedMs;
     game.answersCut += 1;
+    game.matchedTargets.add(fruit.id);
+    root.querySelector(`[data-apple-meaning-id="${CSS.escape(fruit.id)}"]`)?.classList.add('apple-meaning--matched');
     root.querySelector('[data-apple-answers]').textContent = `정답 ${game.answersTotal - game.answersCut}개`;
     game.correct += 1;
     if (reward.critical) game.golden += 1;
     game.longest = Math.max(game.longest, game.combo);
-    node.style.setProperty('--blade-angle', `${angle}deg`);
+    carveApple(node, from, to, reward.critical ? 52 : 35);
     node.classList.add('apple-fruit--split');
     node.disabled = true;
     node.style.setProperty('--apple-cut-color', sliceBladeColor(game.combo));
@@ -330,13 +391,19 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     tip.style.top = `${point.y - bounds.top}px`;
     if (!apples.resolved && !apples.dullUntil) {
       const hits = [...gesture.field.querySelectorAll('[data-apple-index]:not(:disabled, [hidden])')]
-        .map((node) => ({ index: Number(node.dataset.appleIndex), at: appleTargetHit(gesture.previous, point, node, bounds) }))
+        .map((node) => {
+          const index = Number(node.dataset.appleIndex);
+          const position = appleTargetHit(gesture.previous, point, node, bounds);
+          if (!apples.fruit[index].bonus) return { index, at: position };
+          const wasInside = gesture.bonusInside;
+          gesture.bonusInside = appleTargetHit(point, point, node, bounds) !== null;
+          return { index, at: wasInside ? null : position };
+        })
         .filter(({ at }) => at !== null).sort((a, b) => a.at - b.at);
       if (hits.length) {
-        const angle = Math.atan2(point.y - gesture.previous.y, point.x - gesture.previous.x) * 180 / Math.PI;
         for (const hit of hits) {
           if (apples.resolved || apples.dullUntil) break;
-          cutApple(hit.index, angle);
+          cutApple(hit.index, gesture.previous, point);
         }
       }
     }

@@ -1,6 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusTime, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusPosition, sliceBonusTime, sliceCutShape, sliceDifficulty, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+
+test('후반에는 더 많은 표적과 폭탄이 나오고 두 단어 보너스 확률도 올라간다', () => {
+  const stages = [0, 30_000, 60_000, 120_000, 180_000].map(sliceDifficulty);
+  assert.deepEqual(stages.map(stage => stage.slots), [5, 6, 7, 8, 9]);
+  assert.deepEqual(stages.map(stage => stage.maxBombs), [1, 2, 2, 3, 3]);
+  assert.deepEqual(stages.map(stage => stage.dualChance), [0, 0, .25, .4, .55]);
+  assert.ok(slicePosition(41, 8, .8));
+  assert.equal(sliceBonusPosition(.2).y, sliceBonusPosition(.8).y);
+});
+
+test('사과 분할 경계는 중심에서 빗나간 스와이프 위치도 따라간다', () => {
+  const rect = { left: 10, top: 10, width: 100 };
+  const cut = sliceCutShape(rect, { x: 10, y: 35 }, { x: 110, y: 35 });
+  assert.equal(cut.angle, 0);
+  assert.equal(cut.y, 25);
+  assert.ok(cut.halves.every(half => half.includes('25.00%')));
+  assert.equal(sliceCutShape(rect, { x: 40, y: 10 }, { x: 40, y: 110 }).angle, 90);
+});
 
 test('칼날은 파랑에서 10콤보에 금빛이 되고 이후 붉어진다', () => {
   assert.equal(sliceBladeColor(0), 'rgb(74, 190, 255)');
@@ -42,9 +60,11 @@ test('첫 표적이 공중에 있는 동안 새 표적들이 시차를 두고 �
 
 test('정답 단어가 적힌 폭탄은 폭발하고 같은 단어가 적힌 사과만 정답이다', () => {
   const target = { id: 'apple', word: 'apple', meaning: '사과' };
-  assert.equal(sliceOutcome(target, target), 'correct');
-  assert.equal(sliceOutcome({ ...target, bomb: true }, target), 'bomb');
-  assert.equal(sliceOutcome({ id: 'apples', word: 'apples', meaning: target.meaning }, target), 'wrong');
+  const second = { id: 'network', word: 'network', meaning: '네트워크' };
+  assert.equal(sliceOutcome(target, [target, second]), 'correct');
+  assert.equal(sliceOutcome(second, [target, second]), 'correct');
+  assert.equal(sliceOutcome({ ...target, bomb: true }, [target, second]), 'bomb');
+  assert.equal(sliceOutcome({ id: 'apples', word: 'apples', meaning: target.meaning }, [target, second]), 'wrong');
 });
 
 test('세 번째 연속 정답은 금빛 베기 점수를 준다', () => {

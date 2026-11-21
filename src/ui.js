@@ -28,7 +28,8 @@ function pixelIcon(name) {
 
 const spriteColors = {
   o: '#173d64', b: '#3379b3', s: '#6eb6e9', l: '#bde7ff', w: '#fff', y: '#ffdc83', k: '#101b2a', p: '#f48eae', v: '#7e82cc', m: '#afb3ec', t: '#e2e5ff',
-  R: '#d95259', D: '#832f3d', H: '#ff9e88', G: '#569454', T: '#754831',
+  R: '#ec4852', D: '#9b283c', H: '#ffb79a', G: '#569454', T: '#754831',
+  B: '#56718b', N: '#344b63', P: '#a8c5dc', E: '#a9bed3',
 };
 const spriteRows = {
   mascot: [
@@ -63,9 +64,9 @@ const spriteRows = {
   ],
   bomb: [
     '..........y.y...', '...........y....', '..........yoy...', '.........oo.....',
-    '......oooooo....', '....ookkkkkkoo..', '...okwwkkkkkkko.', '...okwkkkkkkkko.',
-    '..okkkkkkkkkkkko', '..okkkkkkkkkkkko', '..okkkkkkkkkkkko', '...okkkkkkkkkko.',
-    '...okkkkkkkkkko.', '....ookkkkkkoo..', '......oooooo....', '................',
+    '......oooooo....', '....ooBBBBBBoo..', '...oBPPBBBBBBBo.', '...oPBBBBBBBBBo.',
+    '..oBBBBBBBBBBBNo', '..oBBBBBBBBBBNNo', '..oBBBBBBBBBNNNo', '...oBBBBBBNNNNo.',
+    '...oBNNNNNNNNNo.', '....ooNNNNNNoo..', '......oooooo....', '................',
   ],
   orchardApple: [
     '...........GG...', '........T.GGGG..', '........TGGG....', '.......DDD......',
@@ -123,7 +124,12 @@ function renderPixelSprite(name) {
   }
   const spriteCells = (rows) => rows.flatMap((row, y) => [...row].flatMap((cell, x) =>
     spriteColors[cell] ? [`${x}px ${y}px ${spriteColors[cell]}`] : []));
-  const cells = spriteCells(spriteRows[name]);
+  const outlined = name.endsWith('Outline');
+  const rows = spriteRows[outlined ? name.slice(0, -7) : name];
+  const cells = spriteCells(outlined ? rows.map((row, y) => [...row].map((cell, x) => {
+    if (cell === '.') return '.';
+    return [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].some(([nx, ny]) => (rows[ny]?.[nx] ?? '.') === '.') ? 'E' : '.';
+  }).join('')) : rows);
   return `<span class="pixel-sprite" aria-hidden="true" style="--sprite:${cells.join(',')}"></span>`;
 }
 
