@@ -1,7 +1,7 @@
 import { speechClips } from './speech-clips.js';
 import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
-import { sliceBonusLimit, sliceDuration, sliceFlight, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
+import { sliceBonusLimit, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
 import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
 import {
   applyGradedResult, applyLearningBatch, getStats, getTodayStats, loadState, saveState,
@@ -950,9 +950,11 @@ function learnedGamePool() {
   return shuffle(validIds(getLearnedIds(state)).map(byId)).slice(0, 5);
 }
 
+const appleShape = '<span class="apple-shape" aria-hidden="true"><span class="apple-fruit__left"></span><span class="apple-fruit__right"></span></span>';
+
 function appleTargetMarkup(fruit, index) {
-  const shape = fruit.bomb ? pixelSprite('bomb') : '<span class="apple-fruit__left"></span><span class="apple-fruit__right"></span>';
-  return `<button class="apple-fruit${fruit.bomb ? ' apple-fruit--bomb' : ''}" data-apple-index="${index}" type="button" aria-label="${fruit.bomb ? '폭탄' : '사과'} · ${escapeHtml(fruit.word)}" style="--apple-x:${fruit.lane}%;--apple-y:110%">${shape}<span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`;
+  const shape = fruit.bomb ? pixelSprite('bomb') : appleShape;
+  return `<button class="apple-fruit${fruit.bomb ? ' apple-fruit--bomb' : ''}" data-apple-index="${index}" type="button" aria-label="${fruit.bomb ? '폭탄' : '사과'} · ${escapeHtml(fruit.word)}" hidden>${shape}<span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`;
 }
 
 function appleComboMarkup(combo) {
@@ -974,7 +976,7 @@ function appleView() {
     </div>
     <div class="apple-field" aria-label="날아오르는 사과와 폭탄">
       ${active ? `<svg class="apple-trail" aria-hidden="true"><polyline fill="none" /></svg>${game.fruit.map(appleTargetMarkup).join('')}`
-      : game.phase === 'ended' ? `<div class="apple-result-summary"><strong>정답 ${game.correct}개 · 골든 ${game.golden}회</strong>${game.reviewIds.size ? `<span>다시 볼 단어 · ${[...game.reviewIds].slice(0, 3).map((id) => escapeHtml(byId(id).word)).join(' · ')}</span>` : ''}</div>` : `<div class="apple-demo"><figure><span class="apple-fruit" aria-hidden="true"><span class="apple-fruit__left"></span><span class="apple-fruit__right"></span></span><figcaption>사과는 베기</figcaption></figure><figure>${pixelSprite('bomb')}<figcaption>폭탄은 피하기</figcaption></figure></div>`}
+      : game.phase === 'ended' ? `<div class="apple-result-summary"><strong>정답 ${game.correct}개 · 골든 ${game.golden}회</strong>${game.reviewIds.size ? `<span>다시 볼 단어 · ${[...game.reviewIds].slice(0, 3).map((id) => escapeHtml(byId(id).word)).join(' · ')}</span>` : ''}</div>` : `<div class="apple-demo"><figure>${appleShape}<figcaption>사과는 베기</figcaption></figure><figure>${pixelSprite('bomb')}<figcaption>폭탄은 피하기</figcaption></figure></div>`}
     </div>
     ${active ? `<div class="apple-round-footer"><p class="apple-feedback" role="status" data-apple-feedback>${game.feedback || (round === 1 ? '사과를 긋거나 눌러 베기' : '')}</p><div class="apple-combo" data-apple-combo>${appleComboMarkup(game.combo)}</div></div>`
     : game.phase === 'ended' ? `${game.reviewIds.size ? button('헷갈린 단어 다시 보기', 'apple-review', 'quiet') : ''}${gameOverActions('duel-restart', game.score, game.startingBest)}`
@@ -1018,9 +1020,15 @@ function launchAppleRound() {
   game.penalized = false;
   const distractors = shuffle(game.pool.filter((item) => item !== game.target && (game.listen || item.meaning !== game.target.meaning)));
   const addBomb = game.round % 3 === 0 || (game.round >= 6 && game.round % 2 === 0) || distractors.length < 2;
-  const targets = [game.target, ...distractors.slice(0, addBomb ? 1 : 2)];
-  if (addBomb) targets.push({ ...game.target, bomb: true });
-  game.fruit = shuffle(targets).map((item, index) => ({ ...item, lane: 50 + (index - (targets.length - 1) / 2) * 32, spent: false }));
+  const targets = addBomb ? [{ ...game.target, bomb: true }] : [];
+  const count = game.round === 1 ? 3 : 5;
+  for (let index = 0; distractors.length && targets.length < count - 1; index += 1) {
+    targets.push(distractors[index % distractors.length]);
+  }
+  const ordered = shuffle(targets);
+  const answerIndex = game.round === 1 ? 0 : Math.min(ordered.length, 1 + randomInt(count - 1));
+  ordered.splice(answerIndex, 0, game.target);
+  game.fruit = ordered.map((item) => ({ ...item, spent: false }));
   render();
   if (game.listen) speakText(game.target.word);
   const nodes = [...root.querySelectorAll('.apple-fruit')];
@@ -1044,11 +1052,13 @@ function launchAppleRound() {
     const seconds = `${Math.ceil(game.remaining / 1000)}초`;
     if (clock.textContent !== seconds) clock.textContent = seconds;
     if (game.remaining <= 0) return finishAppleGame();
-    if (elapsed >= duration) return missAppleRound();
     const progress = elapsed / duration;
+    if (progress >= sliceFlightEnd(answerIndex)) return missAppleRound();
     nodes.forEach((node, index) => {
       if (game.fruit[index].spent) return;
-      const position = slicePosition(game.round, index, nodes.length, progress);
+      const position = slicePosition(game.round, index, progress);
+      if (node.hidden !== !position) node.hidden = !position;
+      if (!position) return;
       node.style.setProperty('--apple-y', `${position.y}%`);
       node.style.setProperty('--apple-x', `${position.x}%`);
     });
@@ -1096,7 +1106,7 @@ function cutApple(index, angle = -25) {
   const fruit = game?.fruit?.[index];
   if (screen !== 'duel' || game.phase !== 'playing' || game.resolved || !fruit || fruit.spent) return;
   const node = root.querySelector(`[data-apple-index="${index}"]`);
-  if (!node) return;
+  if (!node || node.hidden) return;
   fruit.spent = true;
   const outcome = sliceOutcome(fruit, game.target);
   if (outcome !== 'correct') {
@@ -1163,7 +1173,7 @@ window.addEventListener('pointermove', (event) => {
   const line = gesture.field.querySelector('.apple-trail polyline');
   line.setAttribute('points', gesture.trail.map(({ x, y }) => `${x - bounds.left},${y - bounds.top}`).join(' '));
   if (!gesture.cut && !apples.resolved) {
-    const hits = [...gesture.field.querySelectorAll('[data-apple-index]:not(:disabled)')]
+    const hits = [...gesture.field.querySelectorAll('[data-apple-index]:not(:disabled, [hidden])')]
       .map((node) => {
         const rect = node.getBoundingClientRect();
         const clip = {
@@ -1236,7 +1246,7 @@ function typingView() {
     ${game.offers.length ? typingAugmentPanel(game) : `<div class="typing-field" aria-label="떨어지는 영어 단어">${game.enemies.map(typingEnemyMarkup).join('')}<div class="typing-ground"></div></div>`}
     ${running ? `<form class="typing-form"><input data-typing-input autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="떨어지는 영어 단어 입력" placeholder="영어 단어 입력"/><button class="button button--primary" type="submit">입력</button></form>` :
       `<div class="typing-panel">${game.phase === 'ready' ? `
-        <div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>방패는 첫 타격을 막고, 단어는 입력 즉시 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div>
+        <div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>적중하면 단어가 바뀝니다. 시간 정지 중에는 입력 즉시 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div>
         <div class="typing-levels">${Object.entries(typingLevels).map(([id, level]) => `<button class="button button--${game.difficulty === id ? 'primary' : 'secondary'}" aria-pressed="${game.difficulty === id}" data-action="typing-level:${id}">${level.label} <small>×${level.multiplier}</small></button>`).join('')}</div>
         ${button('시작하기', 'typing-start')}` : `<p>${game.message}</p>${game.phase === 'over' ? gameOverActions('typing-restart', game.score, game.startingBest) :
         `<div class="typing-shop"><div class="typing-upgrades">${upgrades.map(([key, name, desc]) => `
@@ -1305,7 +1315,7 @@ function spawnTypingTarget({ boss = false, item = null, y = 0 } = {}) {
   const hp = item ? 1 : Math.max(1, Math.round(enemyHealth(healthRound) * (boss ? 1 : level.health)));
   const enemy = {
     id: ++typing.nextId, word: nextTypingWord(''), x: boss ? 50 : 10 + randomInt(81),
-    y, hp, maxHp: hp, boss, item, pendingShots: 0,
+    y, hp, maxHp: hp, boss, item, pendingShots: 0, wordRevision: 0,
     shield: !item && (typing.difficulty === 'extreme' ||
       (!boss && typing.round >= 3 && Math.random() < Math.min(.32, .08 + typing.round * .018))),
   };
@@ -1419,6 +1429,12 @@ function updateTypingEnemy(enemy) {
   node.querySelector('.typing-enemy-hp i').style.width = `${enemy.hp / enemy.maxHp * 100}%`;
 }
 
+function rotateTypingWord(enemy, node) {
+  enemy.word = nextTypingWord(enemy.word);
+  enemy.wordRevision += 1;
+  node?.querySelector('strong')?.replaceChildren(enemy.word);
+}
+
 function typingProjectile(from, to, small = false) {
   if (!from || !to) return Promise.resolve();
   const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
@@ -1516,20 +1532,24 @@ function collectTypingItem(target) {
 function submitTyping(value) {
   if (typing?.phase !== 'playing') return;
   const word = value.trim().toLowerCase();
-  const enemy = typing.enemies.filter((entry) => entry.word === word).sort((a, b) => b.y - a.y)[0];
+  const frozen = Boolean(typing.stoppedUntil);
+  const enemy = typing.enemies.filter((entry) => entry.word === word && (frozen || !entry.pendingShots)).sort((a, b) => b.y - a.y)[0];
   const input = root.querySelector('[data-typing-input]');
   if (input) input.value = '';
   if (!enemy) { playEffect('retry'); typing.message = '화면에 있는 단어를 입력하세요.'; root.querySelector('.typing-page > .game-message').textContent = typing.message; return; }
   if (enemy.item) { collectTypingItem(enemy); return; }
   const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
-  enemy.word = nextTypingWord(enemy.word);
-  node?.querySelector('strong')?.replaceChildren(enemy.word);
+  const wordRevision = enemy.wordRevision;
+  if (frozen) rotateTypingWord(enemy, node);
   enemy.pendingShots += 1;
   playEffect('place');
   const game = typing;
   typingProjectile(input, node).then(() => {
-    if (typing !== game || screen !== 'typing') return;
+    if (typing !== game || screen !== 'typing' || game.phase !== 'playing') return;
     applyTypingDamage(enemy, 1 + typing.stats.power + 3 * typing.augments.filter((id) => id === 'double').length, typing.augments.includes('pierce'), node);
+    if (!frozen && enemy.wordRevision === wordRevision && game.enemies.includes(enemy)) {
+      rotateTypingWord(enemy, node);
+    }
   });
   typing.message = '';
   root.querySelector('.typing-page > .game-message').textContent = '';

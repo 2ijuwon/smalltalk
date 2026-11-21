@@ -1,18 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceReward, sliceFlight, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+import { sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
 
-test('발사 순서는 번갈아 바뀌며 사과는 자기 레인 안에서 움직인다', () => {
-  assert.ok(slicePosition(3, 0, 3, .12).y < slicePosition(3, 2, 3, .12).y);
-  assert.ok(slicePosition(4, 2, 3, .12).y < slicePosition(4, 0, 3, .12).y);
-  for (const round of [1, 2, 3, 4, 6, 30]) {
-    for (const progress of [0, .1, .4, .75, 1]) {
-      const positions = [0, 1, 2].map(index => slicePosition(round, index, 3, progress));
-      assert.ok(positions[0].x >= 12 && positions[2].x <= 88);
-      assert.ok(positions[2].x - positions[1].x >= 24);
-      assert.ok(positions[1].x - positions[0].x >= 24);
-    }
-  }
+test('첫 표적이 공중에 있는 동안 새 표적들이 시차를 두고 올라온다', () => {
+  const visibleAt = (progress) => [0, 1, 2, 3, 4].filter(index => slicePosition(1, index, progress)?.y < 95);
+  assert.deepEqual(visibleAt(.14), [0]);
+  assert.deepEqual(visibleAt(.32), [0, 1, 2]);
+  assert.deepEqual(visibleAt(.65), [0, 1, 2, 3, 4]);
+  assert.equal(slicePosition(1, 0, sliceFlightEnd(0)), null);
+  assert.ok(slicePosition(1, 4, 1.2));
+  assert.ok(slicePosition(1, 1, .4).x < 50 && slicePosition(2, 1, .4).x > 50);
 });
 
 test('정답 단어가 적힌 폭탄은 폭발하고 같은 단어가 적힌 사과만 정답이다', () => {

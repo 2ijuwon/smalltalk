@@ -1289,8 +1289,6 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 }
 .apple-demo { display: flex; justify-content: center; align-items: end; gap: clamp(18px, 8vw, 54px); text-align: center; }
 .apple-demo figure { display: grid; justify-items: center; gap: 8px; margin: 0; font-size: .88rem; font-weight: 750; }
-.apple-demo .apple-fruit { position: relative; inset: auto; translate: none; width: 56px; height: 48px; cursor: inherit; }
-.apple-demo .pixel-sprite { width: 48px; height: 48px; --sprite-scale: 3; }
 .apple-result-summary { display: grid; gap: 8px; padding: 12px; text-align: center; }
 .apple-round-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 43px; }
 .apple-round-footer .apple-feedback { text-align: start; }
@@ -1309,7 +1307,10 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   top: var(--apple-y);
   translate: -50% -50%;
   display: grid;
+  grid-template-rows: auto auto;
   place-items: center;
+  align-content: center;
+  gap: 2px;
   width: clamp(60px, 23cqi, 146px);
   height: clamp(54px, 14dvh, 94px);
   padding: 5px;
@@ -1318,37 +1319,46 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   border-radius: 12px;
   cursor: crosshair;
 }
+.apple-fruit[hidden] { display: none; }
 .apple-fruit:nth-of-type(2) { --apple-skin: #a54d61; --apple-rim: #733346; }
 .apple-fruit:nth-of-type(3) { --apple-skin: #b35839; --apple-rim: #703823; }
-.apple-fruit::before {
+.apple-shape, .apple-demo .pixel-sprite, .apple-fruit--bomb .pixel-sprite {
+  width: 48px;
+  height: 48px;
+  --sprite-scale: 3;
+}
+.apple-shape { position: relative; display: block; pointer-events: none; }
+.apple-demo .apple-shape { --apple-skin: #b84755; --apple-rim: #79333c; }
+.apple-shape::before {
   content: '';
   position: absolute;
   width: 7px;
   height: 13px;
-  top: 0;
+  top: -2px;
   left: 48%;
   background: #72513b;
   rotate: 12deg;
 }
-.apple-fruit::after {
+.apple-shape::after {
   content: '';
   position: absolute;
   width: 18px;
   height: 8px;
-  top: 0;
+  top: -2px;
   left: 51%;
   background: #428458;
   clip-path: polygon(0 100%, 30% 0, 100% 0, 75% 85%);
 }
 .apple-fruit__left, .apple-fruit__right {
   position: absolute;
-  inset: 9% 0 0;
+  inset: 12% 6% 0;
+  border-radius: 50%;
   background: var(--apple-skin);
   box-shadow: inset 0 -8px var(--apple-rim);
   pointer-events: none;
 }
-.apple-fruit__left { clip-path: polygon(50% 15%, 36% 8%, 19% 8%, 7% 20%, 0 42%, 7% 69%, 22% 90%, 37% 100%, 50% 100%); }
-.apple-fruit__right { clip-path: polygon(50% 15%, 64% 8%, 81% 8%, 93% 20%, 100% 42%, 93% 69%, 78% 90%, 63% 100%, 50% 100%); }
+.apple-fruit__left { clip-path: inset(0 50% 0 0); }
+.apple-fruit__right { clip-path: inset(0 0 0 50%); }
 .apple-fruit__word {
   z-index: 1;
   color: #fff;
@@ -1357,13 +1367,11 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   font-weight: 800;
   overflow-wrap: anywhere;
   max-width: 100%;
+  background: #612733;
+  border: 1px solid #f2ad91;
+  padding: 2px 3px;
 }
-.apple-fruit--bomb { grid-template-rows: auto auto; align-content: center; gap: 2px; }
-.apple-fruit--bomb::before, .apple-fruit--bomb::after { content: none; }
 .apple-fruit--bomb .pixel-sprite {
-  --sprite-scale: 3;
-  width: 48px;
-  height: 48px;
   filter: drop-shadow(2px 2px #497da6);
 }
 .apple-fruit--bomb .apple-fruit__word {
@@ -1389,11 +1397,13 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 }
 @media (max-height: 650px) {
   .apple-page[data-phase="idle"] .apple-field { flex-basis: 112px; }
-  .apple-fruit--bomb .pixel-sprite { --sprite-scale: 2; width: 32px; height: 32px; }
+  .apple-shape, .apple-demo .pixel-sprite, .apple-fruit--bomb .pixel-sprite { --sprite-scale: 2; width: 32px; height: 32px; }
 }
 .apple-fruit--wrong { opacity: .48; animation: apple-reject .24s ease-out both; pointer-events: none; }
 .apple-fruit--split { opacity: 1; z-index: 5; pointer-events: none; }
-.apple-fruit--split :is(.apple-fruit__word), .apple-fruit--split::before { opacity: 0; }
+.apple-fruit--split .apple-fruit__word,
+.apple-fruit--split .apple-shape::before,
+.apple-fruit--split .apple-shape::after { opacity: 0; }
 .apple-fruit--split .apple-fruit__left {
   animation: apple-half .41s ease-out both;
   --half-x: -34px; --half-rotate: -21deg;
@@ -1403,6 +1413,8 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   --half-x: 34px; --half-rotate: 21deg;
 }
 .apple-fruit--split::after {
+  content: '';
+  position: absolute;
   inset: 50% auto auto 50%;
   width: 120%;
   height: 4px;

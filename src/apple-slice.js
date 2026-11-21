@@ -2,14 +2,16 @@ export const sliceDuration = 45_000;
 export const sliceBonusLimit = 15_000;
 export const sliceFlight = (round) => Math.max(2100, 4250 - (round - 1) * 135);
 
-export function slicePosition(round, index, count, progress) {
-  const order = round % 2 ? index : count - 1 - index;
-  const stagger = round <= 2 ? .035 : round % 3 === 0 ? .1 : .055;
-  const delay = order * stagger;
-  const flight = Math.max(0, Math.min(1, (progress - delay) / (1 - delay)));
-  const lane = 50 + (index - (count - 1) / 2) * 32;
-  const drift = round <= 2 ? 0 : (index % 2 ? -1 : 1) * Math.sin(Math.PI * flight) * 4;
-  const height = round <= 2 ? 90 : 86 + (order % 2) * 7;
+const sliceLanes = [50, 18, 82, 50, 18];
+const sliceDelays = [0, .18, .22, .48, .51];
+export const sliceFlightEnd = (index) => 1 + sliceDelays[index];
+
+export function slicePosition(round, index, progress) {
+  const flight = progress - sliceDelays[index];
+  if (flight <= 0 || flight >= 1) return null;
+  const lane = round % 2 ? sliceLanes[index] : 100 - sliceLanes[index];
+  const drift = (index % 2 ? -1 : 1) * Math.sin(Math.PI * flight) * 3;
+  const height = [91, 89, 80, 68, 64][index];
   return { x: lane + drift, y: 110 - height * 4 * flight * (1 - flight) };
 }
 
