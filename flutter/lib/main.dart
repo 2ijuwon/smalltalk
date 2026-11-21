@@ -44,17 +44,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
   static const _assets = <String, String>{
     '/': 'index.html',
     '/index.html': 'index.html',
-    '/src/app.js': 'src/app.js',
     '/src/brand-icon.svg': 'src/brand-icon.svg',
-    '/src/apple-slice.js': 'src/apple-slice.js',
-    '/src/speech-clips.js': 'src/speech-clips.js',
-    '/src/slime-dialogue.js': 'src/slime-dialogue.js',
-    '/src/data.js': 'src/data.js',
-    '/src/content.generated.js': 'src/content.generated.js',
-    '/src/domain.js': 'src/domain.js',
-    '/src/duel-motion.js': 'src/duel-motion.js',
-    '/src/duel-rules.js': 'src/duel-rules.js',
-    '/src/typing-game.js': 'src/typing-game.js',
     '/src/styles/pixel.css': 'src/styles/pixel.css',
     '/src/styles/font.css': 'src/styles/font.css',
     '/src/styles/Galmuri11.woff2': 'src/styles/Galmuri11.woff2',
@@ -288,7 +278,9 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     final path = request.requestedUri.path;
     final file =
         _assets[path] ??
-        (RegExp(r'^/src/audio/(?:[0-9]+|fx-[a-z]+)\.wav$').hasMatch(path)
+        (RegExp(
+              r'^/src/(?:[a-z][a-z0-9.-]*\.js|audio/(?:[0-9]+|fx-[a-z]+)\.wav)$',
+            ).hasMatch(path)
             ? path.substring(1)
             : null);
     if (file == null) return shelf.Response.notFound('Not found');

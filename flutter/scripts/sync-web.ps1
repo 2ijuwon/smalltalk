@@ -7,19 +7,11 @@ $destination = Join-Path $PSScriptRoot '..\assets\www'
 node (Join-Path $Source 'scripts\content.mjs') --check-audio
 if ($LASTEXITCODE -ne 0) { throw 'Content validation failed.' }
 $sourceFiles = @(
-  'src\app.js',
   'src\brand-icon.svg',
-  'src\apple-slice.js',
-  'src\speech-clips.js',
-  'src\slime-dialogue.js',
-  'src\data.js',
-  'src\content.generated.js',
-  'src\domain.js',
-  'src\duel-motion.js',
-  'src\duel-rules.js',
-  'src\typing-game.js',
   'src\styles\pixel.css'
 )
+$sourceFiles += Get-ChildItem -LiteralPath (Join-Path $Source 'src') -Filter '*.js' -File |
+  ForEach-Object { Join-Path 'src' $_.Name }
 
 foreach ($relative in $sourceFiles) {
   $origin = Join-Path $Source $relative

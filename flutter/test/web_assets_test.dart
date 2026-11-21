@@ -8,6 +8,14 @@ void main() {
     final html = await rootBundle.loadString('assets/www/index.html');
     const files = [
       'src/app.js',
+      'src/ui.js',
+      'src/orchard.js',
+      'src/typing-arcade.js',
+      'src/conversation.js',
+      'src/speech.js',
+      'src/effects.js',
+      'src/layout-motion.js',
+      'src/word-search.js',
       'src/data.js',
       'src/domain.js',
       'src/duel-motion.js',

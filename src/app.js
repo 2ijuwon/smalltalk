@@ -1,8 +1,13 @@
-import { speechClips } from './speech-clips.js';
+import { buildWordGrid, straightPath } from './word-search.js';
+import { escapeHtml, shuffle, randomInt, pixelIcon, pixelSprite, brandMark, button, card, progress, gameOverActions } from './ui.js';
+import { initializeTheme, reactToSlime, showLaunch, playEffect, specialEffect } from './effects.js';
+import { createLayoutMotion } from './layout-motion.js';
+import { createSpeech } from './speech.js';
+import { createConversation } from './conversation.js';
+import { createOrchard } from './orchard.js';
+import { createTypingArcade } from './typing-arcade.js';
 import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
-import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusTime, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
-import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
 import {
   applyGradedResult, applyLearningBatch, getStats, getTodayStats, loadState, saveState,
   STORAGE_KEY, initialState, nextStage, rankedWords, pickReviewWords, getLearnedIds, bestScore, withBestScore,
@@ -28,13 +33,7 @@ let draftDifficulty = state.preferences.difficulty;
 let notice = loaded.error;
 let learningSession = null;
 let quickSession = null;
-let apples = null;
-let appleFrame = 0;
-let appleWait = 0;
-let appleGesture = null;
-let suppressAppleClickUntil = 0;
 let resetOpen = false;
-const effectPlayers = new Map();
 let draggedToken = '';
 let matchFeedbackTimer = 0;
 let searchTimer = 0;
@@ -56,184 +55,20 @@ let talkChoice = { day: '', difficulty: '', index: -1, seen: [] };
 let talkPointer = null;
 let dragGhost = null;
 let suppressTalkClick = -1;
-let speechAudio;
-let speechFrame;
-const conversationTopics = [
-  ['카페에서 음료 고르기', 'Choosing a drink at a cafe'],
-  ['주말에 하고 싶은 일', 'Weekend plans'],
-  ['좋아하는 간식', 'Favorite snacks'],
-  ['길을 잃었을 때', 'Getting lost and asking for directions'],
-  ['친구에게 취미 소개하기', 'Sharing hobbies with a friend'],
-  ['비 오는 날', 'Things to do on a rainy day'],
-  ['가고 싶은 여행지', 'Places we want to visit'],
-  ['도서관에서 책 찾기', 'Finding a book at the library'],
-];
-const conversationGoal = 5;
-let conversationEpoch = 0;
-let conversationRequest;
-let conversationError = '';
 let resultGrade = null;
 let resultWordCount = 0;
 let resultReward = 0;
 let resultBossHp = 0;
 let xpClaimTimer = 0;
-let typing = null;
-let typingFrame = 0;
-let typingLast = 0;
 let bossHitSequence = 0;
 let bossHitSeen = 0;
 let searchPuzzleSequence = 0;
 
 const praiseMessages = ['맞혔어요!', '잘했어요!', '좋아요!'];
 
-const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
-function shuffle(items) {
-  const result = [...items];
-  for (let index = result.length - 1; index > 0; index -= 1) {
-    const other = randomInt(index + 1);
-    [result[index], result[other]] = [result[other], result[index]];
-  }
-  return result;
-}
-const byId = (id) => vocabulary.find((item) => item.id === id);
+const vocabularyById = new Map(vocabulary.map(item => [item.id, item]));
+const byId = (id) => vocabularyById.get(id);
 const validIds = (ids) => [...new Set(ids)].filter((id) => byId(id));
-const randomInt = (max) => Math.floor(Math.random() * max);
-
-const pixelPatterns = {
-  talk: ['0111110', '1111111', '1101011', '1111111', '1111110', '0111000', '0100000'],
-  home: ['0001000', '0011100', '0111110', '1111111', '0110110', '0110110', '0110110'],
-  review: ['0011110', '0100001', '1100001', '1110010', '0000100', '0101000', '0010000'],
-  stats: ['0000011', '0000011', '0011011', '0011011', '1111011', '1111011', '1111111'],
-  settings: ['0011100', '0111110', '1100011', '1101011', '1100011', '0111110', '0011100'],
-  search: ['0111000', '1000100', '1000100', '1000100', '0111100', '0000010', '0000001'],
-  duel: ['0000011', '0000111', '0001110', '1011100', '0111000', '1110000', '1100000'],
-  refresh: ['0011100', '0100011', '1000111', '1000000', '1000001', '0100010', '0011100'],
-};
-
-function pixelIcon(name) {
-  const cells = pixelPatterns[name].flatMap((row, y) => [...row].flatMap((cell, x) =>
-    cell === '1' ? [`${x * 2}px ${y * 2}px`] : []));
-  return `<span class="pixel-icon" aria-hidden="true" style="--pixels:${cells.join(',')}"></span>`;
-}
-
-const spriteColors = {
-  o: '#173d64', b: '#3379b3', s: '#6eb6e9', l: '#bde7ff', w: '#fff', y: '#ffdc83', k: '#101b2a', p: '#f48eae', v: '#7e82cc', m: '#afb3ec', t: '#e2e5ff',
-  R: '#d95259', D: '#832f3d', H: '#ff9e88', G: '#569454', T: '#754831',
-};
-const spriteRows = {
-  mascot: [
-    '................', '.....oooooo.....', '...oossssssoo...', '..osssssssssso..',
-    '.osssllllllssso.', '.osllllllllllso.', 'osllllkllkllllso', 'osllllkllkllllso',
-    'osllllllllllllso', 'osllllkllkllllso', '.osllllkkllllso.', '.osllllllllllso.',
-    '..osllllllllso..', '...oossssssoo...', '.....oooooo.....', '................',
-  ],
-  boss: [
-    '................', '.....oooooo.....', '...oovvvvvvoo...', '..ovvvvvvvvvvo..',
-    '.ovvvmmmmmmvvvo.', '.ovmmmmmmmmmmvo.', 'ovmmmmkmmkmmmmvo', 'ovmmmmkmmkmmmmvo',
-    'ovmmmmmmmmmmmmvo', 'ovmmmmkkkkmmmmvo', '.ovmmmkkkkmmmvo.', '.ovmmmmmmmmmmvo.',
-    '..ovmmmmmmmmvo..', '...oovvvvvvoo...', '.....oooooo.....', '................',
-  ],
-  book: [
-    '................', '................', '...oooo.oooo....', '..ollllollllo...',
-    '..olwllolwllo...', '..ollllollllo...', '..olwwlolwwlo...', '..ollllollllo...',
-    '..olwwlolwwlo...', '..ollllollllo...', '..ossssosssso...', '..ooooooooooo...',
-    '...bbbbbbbbb....', '................', '................', '................',
-  ],
-  search: [
-    '................', '................', '..ooooooo.......', '..olllwlo.......',
-    '..olwlllo.......', '..olllwlo.......', '..olwlooooo.....', '..oloolsslooo...',
-    '..oooolsslooo...', '......ooooosoo..', '........oossso..', '.........ooooo..',
-    '................', '................', '................', '................',
-  ],
-  duel: [
-    '................', '............ooo.', '...........owwo.', '..........owlo..',
-    '.........owlo...', '........owlo....', '.......owlo.....', '......owlo......',
-    '...ooowlo.......', '...oyyoo........', '....oyyoo.......', '...obyyo........',
-    '..oboooo........', '..ooo...........', '................', '................',
-  ],
-  bomb: [
-    '..........y.y...', '...........y....', '..........yoy...', '.........oo.....',
-    '......oooooo....', '....ookkkkkkoo..', '...okwwkkkkkkko.', '...okwkkkkkkkko.',
-    '..okkkkkkkkkkkko', '..okkkkkkkkkkkko', '..okkkkkkkkkkkko', '...okkkkkkkkkko.',
-    '...okkkkkkkkkko.', '....ookkkkkkoo..', '......oooooo....', '................',
-  ],
-  orchardApple: [
-    '...........GG...', '........T.GGGG..', '........TGGG....', '.......DDD......',
-    '.....DDRRRDD....', '....DRHHHRRRDD..', '...DRHHRRRRRRRD.', '..DRHRRRRRRRRRD.',
-    '..DRRRRRRRRRRRD.', '..DRRRRRRRRRRRD.', '..DRRRRRRRRRRRD.', '...DRRRRRRRRRD..',
-    '....DRRRRRRRD...', '.....DDRRRDD....', '.......DDD......', '................',
-  ],
-  watch: [
-    '.......ooo......', '......oyyyo.....', '.......ooo......', '.....ooooooo....',
-    '....oyyyyyyyo...', '...oywwwwwwwyo..', '..oywwwowwwwwyo.', '..oywwwowwwwwyo.',
-    '..oywwwoowwwwyo.', '..oywwwwwwwwwyo.', '..oywwwwwwwwwyo.', '...oywwwwwwwyo..',
-    '....oyyyyyyyo...', '.....ooooooo....', '................', '................',
-  ],
-  heal: [
-    '................', '......oooo......', '.....oowwoo.....', '.....owwwwo.....',
-    '..oooooooooooo..', '.owwwwwwwwwwwwo.', '.owwwwwppwwwwwo.', '.owwwwwppwwwwwo.',
-    '.owwwppppppwwwo.', '.owwwppppppwwwo.', '.owwwwwppwwwwwo.', '.owwwwwppwwwwwo.',
-    '.ollllllllllllo.', '..oooooooooooo..', '................', '................',
-  ],
-};
-
-const spriteFrames = {
-  mascot: [
-    '................', '.....oooooo.....', '...oossssssoo...', '..osssssssssso..',
-    '.osssllllllssso.', '.osllllllllllso.', 'osllllkllkllllso', 'osllllkllkllllso',
-    'osllllllllllllso', 'osllllkllkllllso', '.oslllllkklllso.', '.osllllllllllso.',
-    '..osllllllllso..', '...oossssssoo...', '....oooooooo....', '................',
-  ],
-  boss: [
-    '................', '.....oooooo.....', '...oovvvvvvoo...', '..ovvvvvvvvvvo..',
-    '.ovvvmmmmmmvvvo.', '.ovmmmmmmmmmmvo.', 'ovmmmmkmmkmmmmvo', 'ovmmmmkmmkmmmmvo',
-    'ovmmmmmmmmmmmmvo', 'ovmmmmkkkkmmmmvo', '.ovmmmmkkmmmmvo.', '.ovmmmmmmmmmmvo.',
-    '..ovmmmmmmmmvo..', '...oovvvvvvoo...', '....oooooooo....', '................',
-  ],
-};
-
-function pixelSprite(name) {
-  if (['mascot', 'boss', 'surprised'].includes(name)) {
-    const sprites = name === 'surprised'
-      ? [spriteFrames.mascot.map((row, y) => {
-        if (y === 9) return 'osllllkkkkllllso';
-        if (y === 11) return '.oslllllkklllso.';
-        return row;
-      })]
-      : slimeFrames(name);
-    const frames = sprites.map((rows, frame) => `<g class="slime-frame slime-frame--${frame}">${rows.flatMap((row, y) => [...row].map((cell, x) => spriteColors[cell] ? `<rect data-pixel="${cell}" x="${x}" y="${y}" width="1" height="1" fill="${spriteColors[cell]}"/>` : '')).join('')}</g>`).join('');
-    return `<span class="pixel-sprite pixel-sprite--slime${name === 'boss' ? ' pixel-sprite--boss' : ''}" aria-hidden="true"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" focusable="false">${frames}</svg></span>`;
-  }
-  const spriteCells = (rows) => rows.flatMap((row, y) => [...row].flatMap((cell, x) =>
-    spriteColors[cell] ? [`${x}px ${y}px ${spriteColors[cell]}`] : []));
-  const cells = spriteCells(spriteRows[name]);
-  return `<span class="pixel-sprite" aria-hidden="true" style="--sprite:${cells.join(',')}"></span>`;
-}
-
-function slimeFrames(name) {
-  const base = spriteRows[name];
-  const fill = name === 'boss' ? 'v' : 's';
-  const light = name === 'boss' ? 'm' : 'l';
-  const blink = base.map((row, y) => {
-    if (y === 6) return row.replaceAll('k', light);
-    if (y === 7) return `o${fill}${light.repeat(3)}kk${light.repeat(2)}kk${light.repeat(3)}${fill}o`;
-    return row;
-  });
-  const smile = blink.map((row, y) => {
-    if (y === 9) return `o${fill}${light.repeat(3)}k${light.repeat(4)}k${light.repeat(3)}${fill}o`;
-    if (y === 10) return `.o${fill}${light.repeat(3)}kkkk${light.repeat(3)}${fill}o.`;
-    return row;
-  });
-  return [base, blink, smile];
-}
-
-function brandMark() { return `<span class="brand-mark">${pixelSprite('mascot')}</span>`; }
-function button(label, action, variant = 'primary', disabled = false) { return `<button class="button button--${variant}" data-action="${action}" ${disabled ? 'disabled' : ''}>${label}</button>`; }
-function card(content, className = '') { return `<section class="card ${className}">${content}</section>`; }
-function progress(value, max, label) {
-  const percent = Math.min(100, Math.round(value / Math.max(1, max) * 100));
-  return `<div class="progress-wrap"><div class="progress-label"><span>${label}</span><strong data-motion-key="progress-value">${value}/${max}</strong></div><div class="progress" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${value}"><span data-motion-key="progress-fill" style="width:${percent}%"></span></div></div>`;
-}
 
 function triggerCelebration(detail, kind = '') {
   playEffect('finish');
@@ -274,25 +109,16 @@ function stopSearchTimer() {
 
 function navigate(next) {
   stopSpeech();
-  if (screen === 'conversation') {
-    const input = root.querySelector('.conversation-form input');
-    if (input && !conversationRequest && state.conversationGame) {
-      state.conversationGame.draft = input.value;
-      persist();
-    }
-    conversationEpoch += 1;
-    conversationRequest?.abort();
-    conversationRequest = null;
-  }
+  if (screen === 'conversation') conversation.leave();
   if (next !== 'home') { window.clearTimeout(xpClaimTimer); xpClaimTimer = 0; }
   if (screen === 'learn') {
     stopSearchTimer();
     window.clearTimeout(searchTransitionTimer);
     searchTransitionTimer = 0;
   }
-  if (screen === 'duel') stopAppleGame();
+  if (screen === 'duel') orchard.stop();
   if (next !== 'settings') resetOpen = false;
-  if (screen === 'typing') { stopTyping(); typing.phase = 'stopped'; }
+  if (screen === 'typing') typingGame.leave();
   screen = next;
   notice = '';
   render({ resetScroll: true });
@@ -496,42 +322,6 @@ function sentenceGame() {
   const total = Math.min(sentenceLimit(), session.items.length);
   const item = session.items[session.itemIndex];
   return `<div class="page game-page">${stageHeader(3, '문장 조립', '')}${progress(session.itemIndex + 1, total, '문장')}<section class="sentence-card"><div class="sentence-prompt"><span>${clickableWord(item.word, item.meaning)}</span><h2>${item.translation}</h2></div><div class="sentence-zone ${session.sentenceAnswer.length ? '' : 'empty'}" data-drop-zone="answer">${session.sentenceAnswer.length ? session.sentenceAnswer.map((id, index) => tokenMarkup(id, 'answer', index)).join('') : '<p>단어를 순서대로 놓으세요</p>'}</div><div class="sentence-bank" data-drop-zone="bank">${session.sentenceBank.map((id) => tokenMarkup(id, 'bank')).join('')}</div><p class="game-message ${session.feedback?.type || ''}" role="status">${session.feedback?.text || '단어를 누르거나 끌어 옮기세요.'}</p>${session.sentenceSolved ? button(session.itemIndex === total - 1 ? '단어찾기로 이어가기' : '다음 문장', 'sentence-next') : button('문장 확인', 'check-sentence', 'primary', session.sentenceBank.length > 0)}</section></div>`;
-}
-
-function buildWordGrid(items, rules, retry = 0) {
-  const words = items.map((item) => item.word.toUpperCase().replace(/[^A-Z]/g, ''));
-  const size = Math.max(rules.gridSize, ...words.map((word) => word.length));
-  const cells = Array(size * size).fill('');
-  const directions = [[0,1],[1,0],[1,1],[-1,1],[0,-1],[-1,0],[-1,-1],[1,-1]];
-  const placements = [];
-  let failed = false;
-  words.forEach((word, wordIndex) => {
-    if (failed) return;
-    let placed = false;
-    for (let attempt = 0; attempt < 240 && !placed; attempt += 1) {
-      const [dr, dc] = directions[randomInt(directions.length)];
-      const rowMin = dr < 0 ? word.length - 1 : 0;
-      const rowMax = dr > 0 ? size - word.length : size - 1;
-      const colMin = dc < 0 ? word.length - 1 : 0;
-      const colMax = dc > 0 ? size - word.length : size - 1;
-      if (rowMax < rowMin || colMax < colMin) continue;
-      const row = rowMin + randomInt(rowMax - rowMin + 1);
-      const col = colMin + randomInt(colMax - colMin + 1);
-      const indices = [...word].map((_, index) => (row + dr * index) * size + col + dc * index);
-      if (indices.every((position, index) => !cells[position] || cells[position] === word[index])) {
-        indices.forEach((position, index) => { cells[position] = word[index]; });
-        placements.push({ id: items[wordIndex].id, word, indices });
-        placed = true;
-      }
-    }
-    if (!placed) failed = true;
-  });
-  if (failed) {
-    if (retry < 8) return buildWordGrid(items, rules, retry + 1);
-    throw new Error('단어 퍼즐을 배치하지 못했어요.');
-  }
-  cells.forEach((letter, index) => { if (!letter) cells[index] = String.fromCharCode(65 + randomInt(26)); });
-  return { size, cells, placements };
 }
 
 function prepareWordSearch() {
@@ -793,1040 +583,12 @@ function clickableSentence(text) {
   return text.split(/\s+/).map((word) => `<span data-spoken-start>${clickableWord(word)}</span>`).join(' ');
 }
 
-function stopSpeech() {
-  window.speechSynthesis?.cancel();
-  speechAudio?.pause();
-  speechAudio = null;
-  cancelAnimationFrame(speechFrame);
-  root.querySelectorAll('.spoken-active').forEach((part) => part.classList.remove('spoken-active'));
-}
-
 function speakSmallTalk(manual = false) {
   return speakText(currentTalk().selected[0], [...root.querySelectorAll('[data-spoken-start]')], { manual });
 }
 
-function conversationView() {
-  const game = state.conversationGame;
-  const topic = conversationTopics[game?.topic];
-  const header = `<div class="game-header"><h1>슬라임과 대화</h1><button class="game-exit" data-nav="smalltalk">나가기</button></div>`;
-  if (!topic || game.phase === 'picked') return `<div class="page conversation-page">${header}
-    <section class="card conversation-topic-card">${pixelSprite('mascot')}<h2>${topic ? topic[0] : '어떤 이야기를 할까요?'}</h2>
-    <p>${topic ? '먼저 영어로 말을 걸어 보세요.' : '주제를 뽑고 영어로 다섯 번 대화하세요.'}</p>
-    ${topic ? button('대화 시작', 'conversation-start') : button('랜덤 주제 뽑기', 'conversation-draw')}</section></div>`;
-  const writing = ['active', 'free'].includes(game.phase);
-  const status = game.phase === 'cleared' ? '대화 클리어!' : game.phase === 'failed' ? game.reason : '';
-  return `<div class="page conversation-page">${header}
-    <div class="conversation-topic-line"><strong>${topic[0]}</strong><span>${game.phase === 'free' ? '자유 대화' : `${game.completed}/${conversationGoal}`}</span></div>
-    <div class="conversation-log" role="log">${game.turns.map(({ english, korean, user }, index) => `<article class="conversation-line${user ? ' conversation-line--user' : ''}">${user ? '' : pixelSprite('mascot')}<div><p lang="en">${clickableSentence(english)}</p>${korean ? `<small>${escapeHtml(korean)}</small>` : ''}</div>${user ? '' : `<button type="button" class="listen-button" data-action="conversation-play" data-line="${index}" aria-label="문장 발음 듣기">▶</button>`}</article>`).join('')}</div>
-    <div class="conversation-controls">
-      ${writing ? `<form class="conversation-form"><input aria-label="영어로 대화하기" placeholder="영어로 입력" maxlength="200" value="${escapeHtml(game.draft)}" ${conversationRequest ? 'disabled' : ''} required><button type="submit" class="button button--primary" ${conversationRequest ? 'disabled' : ''}>보내기</button><button type="button" class="button button--secondary" data-action="conversation-mic" ${conversationRequest ? 'disabled' : ''}>말하기</button></form>` : ''}
-      <p class="game-message conversation-status" role="status">${game.phase === 'failed' ? '대화 실패 · ' : ''}${escapeHtml(conversationRequest ? '슬라임이 생각 중이에요…' : conversationError || status)}</p>
-      <div class="conversation-actions">${conversationError && writing ? button('다시 보내기', 'conversation-retry', 'secondary') : ''}
-      ${game.phase === 'cleared' ? button('이어서 대화', 'conversation-continue') : ''}
-      ${!writing ? button('새로운 대화', 'conversation-draw', 'secondary') : ''}${button('대화 종료', 'conversation-end', 'quiet')}</div>
-    </div>
-  </div>`;
-}
-
-function openConversation() {
-  conversationError = '';
-  navigate('conversation');
-  const log = root.querySelector('.conversation-log');
-  if (log) log.scrollTop = log.scrollHeight;
-  specialEffect('talk');
-}
-
-function drawConversationTopic() {
-  const choices = conversationTopics.map((_, index) => index).filter((index) => index !== state.lastConversationTopic);
-  const topic = choices[randomInt(choices.length)];
-  state.lastConversationTopic = topic;
-  state.conversationGame = { topic, phase: 'picked', completed: 0, turns: [], draft: '', reason: '' };
-  conversationError = '';
-  playEffect('loot');
-  persist();
-  render();
-}
-
-async function requestConversation(text = '') {
-  const game = state.conversationGame;
-  if (screen !== 'conversation' || conversationRequest || !text || !['active', 'free'].includes(game?.phase)) return;
-  const epoch = conversationEpoch;
-  const request = new AbortController();
-  conversationRequest = request;
-  conversationError = '';
-  game.draft = text;
-  persist();
-  render();
-
-  const turns = game.turns.slice(-8).map(({ english, user }) => ({
-    role: user ? 'user' : 'assistant', text: english,
-  }));
-  if (text) turns.push({ role: 'user', text });
-  const timeout = setTimeout(() => request.abort(), 18000);
-  try {
-    const endpoint = location.hostname === 'ljw.yeonw.com' ? 'https://smalltalk-2ijuwon.vercel.app/api/slime-chat' : '/api/slime-chat';
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: request.signal,
-      body: JSON.stringify({
-        turns,
-        topic: conversationTopics[game.topic][1],
-        learnedIds: getLearnedIds(state).slice(-80),
-      }),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload) throw new Error(payload?.error || 'unavailable');
-    if (epoch !== conversationEpoch) return;
-    if (payload.valid === true && typeof payload.english === 'string' && typeof payload.korean === 'string') {
-      game.turns.push({ english: text, user: true }, { english: payload.english, korean: payload.korean });
-      if (game.phase === 'active' && ++game.completed === conversationGoal) {
-        game.phase = 'cleared';
-        specialEffect('lesson');
-      }
-    } else if (payload.valid === false && typeof payload.reason === 'string') {
-      game.turns.push({ english: text, user: true });
-      game.phase = 'failed';
-      game.reason = payload.reason;
-      playEffect('retry');
-    } else throw new Error('reply');
-    game.draft = '';
-    persist();
-  } catch (error) {
-    if (epoch === conversationEpoch) {
-      if (error.message === 'provider_setup') {
-        conversationError = 'AI 서비스 계정 인증이 필요해요. 인증이 끝나면 대화할 수 있어요.';
-      } else if (error.message === 'rate') {
-        conversationError = '요청이 많아요. 잠시 후 다시 시도해 주세요.';
-      } else if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
-        conversationError = 'AI 대화는 온라인 화면에서 할 수 있어요.';
-      } else {
-        conversationError = 'AI 서비스가 응답하지 않았어요. 잠시 후 다시 시도해 주세요.';
-      }
-    }
-  } finally {
-    clearTimeout(timeout);
-    if (epoch === conversationEpoch) {
-      conversationRequest = null;
-      render();
-      const log = root.querySelector('.conversation-log');
-      if (log) log.scrollTop = log.scrollHeight;
-    }
-  }
-}
-
-function submitConversation(text) {
-  const message = text.trim().slice(0, 200);
-  if (message) requestConversation(message);
-}
-
-function recognizeConversation() {
-  const epoch = conversationEpoch;
-  const status = root.querySelector('.conversation-status');
-  const receive = (text) => {
-    if (epoch !== conversationEpoch || screen !== 'conversation') return;
-    if (text) {
-      const input = root.querySelector('.conversation-form input');
-      input.value = text.slice(0, 200);
-      input.focus();
-      status.textContent = '인식한 문장을 확인하고 보내세요.';
-    } else {
-      status.textContent = '음성을 인식하지 못했어요. 영어를 직접 입력할 수 있어요.';
-    }
-  };
-  if (window.SmalltalkMic) {
-    window.receiveSmalltalkSpeech = receive;
-    window.SmalltalkMic.postMessage('start');
-    return;
-  }
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Recognition) return receive('');
-  const recognition = new Recognition();
-  recognition.lang = 'en-US';
-  recognition.onresult = (event) => receive(event.results[0][0].transcript);
-  recognition.onerror = () => receive('');
-  status.textContent = '영어로 말하세요.';
-  try { recognition.start(); } catch { receive(''); }
-}
-
-function gameOverActions(restart, score, startingBest) {
-  return `<div class="game-over"><strong class="record-banner" ${score > startingBest ? '' : 'hidden'}>신기록 달성!</strong><div class="game-over-actions"><button class="button button--secondary" data-nav="home">게임 종료</button>${button('다시 시작', restart)}</div></div>`;
-}
-
 function learnedGamePool() {
   return shuffle(validIds(getLearnedIds(state)).map(byId)).slice(0, 5);
-}
-
-const orchardAppleArt = pixelSprite('orchardApple');
-const appleShape = `<span class="apple-shape" aria-hidden="true"><span class="apple-body"></span>${orchardAppleArt}<span class="apple-fruit__left">${orchardAppleArt}</span><span class="apple-fruit__right">${orchardAppleArt}</span></span>`;
-
-function appleTargetMarkup(fruit, index) {
-  const shape = fruit.heal ? pixelSprite('heal') : fruit.bomb ? pixelSprite('bomb') : appleShape;
-  if (fruit.heal) return `<button class="apple-fruit apple-fruit--heal" data-apple-index="${index}" type="button" aria-label="체력 회복 상자" hidden>${shape}<span class="apple-fruit__word">+1 ♥</span></button>`;
-  return `<button class="apple-fruit${fruit.bomb ? ' apple-fruit--bomb' : ''}" data-apple-index="${index}" type="button" aria-label="${fruit.bomb ? '폭탄' : '사과'} · ${escapeHtml(fruit.word)}" hidden>${shape}<span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`;
-}
-
-function appleComboMarkup(combo) {
-  const progress = combo > 0 ? (combo - 1) % 3 + 1 : 0;
-  return `<span aria-hidden="true">${'◆'.repeat(progress)}${'◇'.repeat(3 - progress)}</span><small>${progress === 2 ? '다음 정답 골든' : `${combo}연속`}</small>`;
-}
-
-function applePrompt(game) {
-  return `<div><small>${game.listen ? '듣고 찾기' : '뜻을 보고 찾기'} · <span data-apple-answers>정답 ${game.answersTotal - game.answersCut}개</span></small><h2 data-apple-meaning>${game.listen ? '어떤 단어일까요?' : escapeHtml(game.target.meaning)}</h2></div>
-    <div class="apple-hint-actions">${button('발음 힌트', 'apple-speak', 'quiet')}${game.listen ? button('뜻 보기', 'apple-reveal', 'quiet') : ''}</div>`;
-}
-
-function appleView() {
-  const game = apples;
-  const active = game.phase === 'playing';
-  const round = game.round;
-  return `<div class="page apple-page" data-phase="${game.phase}">
-    <div class="game-header"><div><p class="eyebrow">최고 ${bestScore(state, 'slice')}점</p><h1>사과 베기</h1></div><button class="game-exit" data-nav="home">나가기</button></div>
-    ${active ? `<div class="apple-hud"><strong data-apple-clock>${Math.ceil(game.remaining / 1000)}초</strong><span data-apple-score>${game.score}점</span><span data-apple-hearts aria-label="남은 기회 ${game.hearts}회">${'♥'.repeat(game.hearts)}${'♡'.repeat(3 - game.hearts)}</span></div>` : ''}
-    <div class="apple-prompt">
-      ${active ? applePrompt(game)
-      : `<div><h2>${game.phase === 'ended' ? `최종 ${game.score}점` : '단어 과수원'}</h2><p>${game.phase === 'ended' ? `연속 정답 최고 ${game.longest}회` : '정답 단어가 적힌 사과만 베세요. 같은 단어라도 폭탄을 베면 터져요.'}</p></div>`}
-    </div>
-    <div class="apple-field" aria-label="날아오르는 사과와 폭탄">
-      ${active ? `<svg class="apple-trail" aria-hidden="true"><polyline fill="none" /></svg><i class="apple-blade-tip" aria-hidden="true" hidden></i>${game.fruit.map(appleTargetMarkup).join('')}`
-      : game.phase === 'ended' ? `<div class="apple-result-summary"><strong>정답 ${game.correct}개 · 골든 ${game.golden}회</strong>${game.reviewIds.size ? `<span>다시 볼 단어 · ${[...game.reviewIds].slice(0, 3).map((id) => escapeHtml(byId(id).word)).join(' · ')}</span>` : ''}</div>` : `<div class="apple-demo"><figure>${appleShape}<figcaption>사과는 베기</figcaption></figure><figure>${pixelSprite('bomb')}<figcaption>폭탄은 피하기</figcaption></figure></div>`}
-    </div>
-    ${active ? `<div class="apple-round-footer"><p class="apple-feedback" role="status" data-apple-feedback>${game.feedback || (round === 1 ? '사과를 긋거나 눌러 베기' : '')}</p><div class="apple-combo" data-apple-combo>${appleComboMarkup(game.combo)}</div></div>`
-    : game.phase === 'ended' ? `${game.reviewIds.size ? button('헷갈린 단어 다시 보기', 'apple-review', 'quiet') : ''}${gameOverActions('duel-restart', game.score, game.startingBest)}`
-    : `<p class="apple-rules">60초 · 기회 3번 · 정답 시간 보너스 +5 → +3 → +2 → +1초</p>
-      <div class="apple-modes" role="group" aria-label="문제 유형">${[[false, '뜻만'], [true, '듣기 포함']].map(([listen, label]) => `<button type="button" class="button button--${game.includeListening === listen ? 'primary' : 'secondary'}" aria-pressed="${game.includeListening === listen}" data-action="apple-mode:${listen}">${label}</button>`).join('')}</div>
-      ${button('시작하기', 'duel-start')}`}
-  </div>`;
-}
-
-function openAppleGame(includeListening = false) {
-  stopAppleGame();
-  const pool = [...new Map(shuffle(validIds(getLearnedIds(state)).map(byId)).map((item) => [item.word.toLowerCase(), item])).values()].slice(0, 5);
-  if (pool.length < 3) return;
-  apples = { pool, bag: [], flights: [], flightTime: 0, dullUntil: 0, phase: 'idle', includeListening, round: 0, score: 0, correct: 0, golden: 0, reviewIds: new Set(), remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
-  screen = 'duel';
-  render({ resetScroll: true });
-}
-
-function stopAppleGame() {
-  setAppleFuse(false);
-  cancelAnimationFrame(appleFrame);
-  clearTimeout(appleWait);
-  appleFrame = appleWait = 0;
-  appleGesture = null;
-  suppressAppleClickUntil = 0;
-}
-
-function setAppleFuse(audible) {
-  if (!apples || Boolean(apples.fuseAudible) === audible) return;
-  apples.fuseAudible = audible;
-  const player = effectPlayer('fuse');
-  if (audible) {
-    player.loop = true;
-    playEffect('fuse');
-  } else {
-    player.pause();
-  }
-}
-
-function appleHitbox(node) {
-  const body = node.querySelector('.apple-body');
-  if (body) return body.getBoundingClientRect();
-  const { left, top, width, height } = node.querySelector('.pixel-sprite').getBoundingClientRect();
-  return { left: left + width * 2 / 16, right: left + width, top: top + height * 4 / 16, bottom: top + height * 15 / 16 };
-}
-
-function appleTargetHit(from, to, node, field) {
-  if (!node.classList.contains('apple-fruit--heal')) return sliceBodyHit(from, to, appleHitbox(node), field);
-  const rect = node.querySelector('.pixel-sprite').getBoundingClientRect();
-  const body = {
-    left: Math.max(field.left, rect.left + rect.width / 16),
-    right: Math.min(field.right, rect.right - rect.width / 16),
-    top: Math.max(field.top, rect.top + rect.height * 4 / 16),
-    bottom: Math.min(field.bottom, rect.bottom - rect.height * 2 / 16),
-  };
-  return body.left < body.right && body.top < body.bottom ? swipeHit(from, to, body) : null;
-}
-
-function updateAppleBlade(game) {
-  const field = root.querySelector('.apple-field');
-  field.classList.toggle('apple-blade--dull', Boolean(game.dullUntil));
-  field.classList.toggle('apple-blade--fire', game.combo > 10);
-  field.style.setProperty('--apple-ready-color', sliceBladeColor(game.combo));
-}
-
-function launchAppleRound() {
-  if (screen !== 'duel') return;
-  const game = apples;
-  if (!game.hearts || game.remaining <= 0) return finishAppleGame();
-  if (!game.bag.length) {
-    game.bag = shuffle(game.pool);
-    if (game.bag[0].id === game.target?.id) game.bag.push(game.bag.shift());
-  }
-  const firstRound = game.phase === 'idle';
-  game.target = game.bag.shift();
-  game.round += 1;
-  game.listen = game.includeListening && game.round % 4 === 0;
-  game.phase = 'playing';
-  game.feedback = '';
-  game.resolved = false;
-  game.penalized = false;
-  const distractors = shuffle(game.pool.filter((item) => item !== game.target && (game.listen || item.meaning !== game.target.meaning)));
-  const addBomb = game.round % 3 === 0 || (game.round >= 6 && game.round % 2 === 0) || distractors.length < 2;
-  const targets = addBomb ? [{ ...game.pool[randomInt(game.pool.length)], bomb: true }] : [];
-  if (game.hearts < 3 && game.round % 4 === 0) targets.push({ heal: true });
-  const count = 5;
-  game.answersTotal = firstRound ? 1 : sliceAnswerCount(game.flightTime, Math.random());
-  game.answersCut = 0;
-  for (let index = 0; distractors.length && targets.length < count - game.answersTotal; index += 1) {
-    targets.push(distractors[index % distractors.length]);
-  }
-  const others = shuffle(targets);
-  const slotCount = others.length + game.answersTotal;
-  const answerSlots = firstRound ? [Math.min(3, others.length)] :
-    shuffle(Array.from({ length: slotCount - 1 }, (_, index) => index + 1)).slice(0, game.answersTotal);
-  const ordered = Array.from({ length: slotCount }, (_, index) => answerSlots.includes(index) ? game.target : others.shift());
-  game.fruit = ordered.map((item) => ({ ...item, spent: false }));
-  const start = game.flightTime + (game.listen ? 420 : 0);
-  const duration = sliceFlight(game.round);
-  game.answerDeadline = start + duration * sliceFlightEnd(Math.max(...answerSlots));
-  if (firstRound) render();
-  else {
-    root.querySelector('.apple-prompt').innerHTML = applePrompt(game);
-    root.querySelector('.apple-field').insertAdjacentHTML('beforeend', game.fruit.map(appleTargetMarkup).join(''));
-  }
-  const nodes = [...root.querySelectorAll('.apple-fruit[data-apple-index]')];
-  game.fruit.forEach((fruit, index) => game.flights.push({ fruit, node: nodes[index], round: game.round, index, start, duration }));
-  if (game.listen) speakText(game.target.word);
-  if (!firstRound) return;
-  const clock = root.querySelector('[data-apple-clock]');
-  let previous = performance.now();
-  const tick = (now) => {
-    if (screen !== 'duel' || apples !== game) return;
-    const delta = Math.min(50, Math.max(0, now - previous));
-    previous = now;
-    if (document.hidden) { setAppleFuse(false); appleFrame = requestAnimationFrame(tick); return; }
-    game.flightTime += delta;
-    if (game.dullUntil && game.flightTime >= game.dullUntil) {
-      game.dullUntil = 0;
-      updateAppleHud('칼날 회복');
-    }
-    game.remaining = Math.max(0, game.remaining - delta);
-    const seconds = `${Math.ceil(game.remaining / 1000)}초`;
-    if (clock.textContent !== seconds) clock.textContent = seconds;
-    if (game.remaining <= 0) return finishAppleGame();
-    game.flights = game.flights.filter(({ fruit, node, start, duration, index, round }) => {
-      const progress = (game.flightTime - start) / duration;
-      if (fruit.spent ? game.flightTime >= fruit.removeAt : progress >= sliceFlightEnd(index)) {
-        node.remove();
-        return false;
-      }
-      if (fruit.spent) return true;
-      const position = slicePosition(round, index, progress);
-      const show = Boolean(position && position.y <= 94);
-      if (node.hidden === show) node.hidden = !show;
-      if (show) {
-        node.style.setProperty('--apple-y', `${position.y}%`);
-        node.style.setProperty('--apple-x', `${position.x}%`);
-      }
-      return true;
-    });
-    setAppleFuse(!game.resolved && game.flights.some(({ fruit, node, round }) =>
-      round === game.round && fruit.bomb && !fruit.spent && !node.hidden));
-    if (!game.resolved && game.flightTime >= game.answerDeadline) {
-      if (game.answersCut) resolveAppleRound(130);
-      else missAppleRound();
-    }
-    appleFrame = requestAnimationFrame(tick);
-  };
-  appleFrame = requestAnimationFrame(tick);
-}
-
-function finishAppleGame() {
-  stopAppleGame();
-  apples.phase = 'ended';
-  saveBest('slice', apples.score);
-  render();
-  specialEffect(apples.score > apples.startingBest ? 'record' : 'over');
-}
-
-function updateAppleHud(message) {
-  const game = apples;
-  root.querySelector('[data-apple-feedback]').textContent = message;
-  root.querySelector('[data-apple-score]').textContent = `${game.score}점`;
-  root.querySelector('[data-apple-clock]').textContent = `${Math.ceil(game.remaining / 1000)}초`;
-  root.querySelector('[data-apple-combo]').innerHTML = appleComboMarkup(game.combo);
-  const hearts = root.querySelector('[data-apple-hearts]');
-  hearts.textContent = '♥'.repeat(game.hearts) + '♡'.repeat(3 - game.hearts);
-  hearts.setAttribute('aria-label', `남은 기회 ${game.hearts}회`);
-  updateAppleBlade(game);
-}
-
-function resolveAppleRound(delay) {
-  apples.resolved = true;
-  setAppleFuse(false);
-  for (const flight of apples.flights) {
-    if (flight.round !== apples.round) continue;
-    const { node } = flight;
-    node.disabled = true;
-    node.removeAttribute('data-apple-index');
-    node.setAttribute('aria-hidden', 'true');
-    if (!flight.fruit.spent) node.classList.add('apple-fruit--retiring');
-  }
-  appleWait = setTimeout(launchAppleRound, delay);
-}
-
-function missAppleRound() {
-  if (!apples.penalized) apples.hearts -= 1;
-  apples.combo = 0;
-  playEffect('retry');
-  if (apples.includeListening) speakText(apples.target.word);
-  updateAppleHud(`놓쳤어요 · ${apples.target.word} = ${apples.target.meaning}`);
-  resolveAppleRound(220);
-}
-
-function cutApple(index, angle = -25) {
-  const game = apples;
-  const fruit = game?.fruit?.[index];
-  if (screen !== 'duel' || game.phase !== 'playing' || game.resolved || game.dullUntil || !fruit || fruit.spent) return;
-  const node = root.querySelector(`[data-apple-index="${index}"]`);
-  if (!node || node.hidden) return;
-  fruit.spent = true;
-  fruit.removeAt = game.flightTime + 700;
-  if (fruit.heal) {
-    const restored = game.hearts < 3;
-    game.hearts = Math.min(3, game.hearts + 1);
-    node.disabled = true;
-    node.classList.add('apple-fruit--healed');
-    playEffect('heal');
-    updateAppleHud(restored ? '체력 +1칸' : '체력이 가득 찼어요');
-    return;
-  }
-  const outcome = sliceOutcome(fruit, game.target);
-  if (outcome !== 'correct') {
-    node.disabled = true;
-    game.combo = 0;
-    game.dullUntil = game.flightTime + 1000;
-    game.hearts -= 1;
-    game.penalized = true;
-    if (outcome === 'bomb') {
-      node.classList.add('apple-fruit--exploded');
-      node.insertAdjacentHTML('beforeend', '<i class="apple-bomb-burst" aria-hidden="true"></i>');
-      setAppleFuse(false);
-      specialEffect('bomb', 'clang');
-      updateAppleHud('폭탄 · 칼 무뎌짐 1초');
-    } else {
-      if (!game.reviewIds.has(game.target.id)) {
-        state = applyGradedResult(state, game.target.id, 'incorrect', new Date(), { reward: false });
-        persist();
-      }
-      game.reviewIds.add(game.target.id);
-      node.classList.add('apple-fruit--wrong');
-      playEffect('retry');
-      updateAppleHud('오답 · 칼 무뎌짐 1초');
-    }
-    if (!game.hearts) resolveAppleRound(680);
-    return;
-  }
-  const reward = sliceReward(++game.combo);
-  game.score += reward.points;
-  const gainedMs = sliceBonusTime(game.flightTime);
-  game.remaining += gainedMs;
-  game.answersCut += 1;
-  root.querySelector('[data-apple-answers]').textContent = `정답 ${game.answersTotal - game.answersCut}개`;
-  game.correct += 1;
-  if (reward.critical) game.golden += 1;
-  game.longest = Math.max(game.longest, game.combo);
-  node.style.setProperty('--blade-angle', `${angle}deg`);
-  node.classList.add('apple-fruit--split');
-  node.disabled = true;
-  node.style.setProperty('--apple-cut-color', sliceBladeColor(game.combo));
-  if (game.combo > 10) node.insertAdjacentHTML('beforeend', '<i class="apple-fire-sparks" aria-hidden="true"></i>');
-  playEffect('slice');
-  if (reward.critical) {
-    node.classList.add('apple-fruit--gold');
-    node.insertAdjacentHTML('beforeend', '<i class="apple-gold-rays" aria-hidden="true"></i>');
-    specialEffect('record');
-  }
-  if (game.includeListening) speakText(fruit.word);
-  updateAppleHud(`${reward.critical ? '골든! · ' : ''}+${reward.points}점 · +${gainedMs / 1000}초 · ${fruit.word}`);
-  if (game.answersCut === game.answersTotal) resolveAppleRound(130);
-}
-
-root.addEventListener('pointerdown', (event) => {
-  const field = event.target.closest('.apple-field');
-  if (!field || screen !== 'duel' || apples.phase !== 'playing' || apples.resolved || !event.isPrimary || event.button !== 0) return;
-  suppressAppleClickUntil = 0;
-  const point = { x: event.clientX, y: event.clientY };
-  appleGesture = { id: event.pointerId, field, previous: point, origin: point, trail: [point] };
-});
-window.addEventListener('pointermove', (event) => {
-  const gesture = appleGesture;
-  if (!gesture || gesture.id !== event.pointerId || !gesture.field.isConnected) return;
-  const point = { x: event.clientX, y: event.clientY };
-  if (!gesture.started && Math.hypot(point.x - gesture.origin.x, point.y - gesture.origin.y) < 10) return;
-  gesture.started = true;
-  suppressAppleClickUntil = performance.now() + 380;
-  gesture.trail.push(point);
-  if (gesture.trail.length > 6) gesture.trail.shift();
-  const bounds = gesture.field.getBoundingClientRect();
-  const line = gesture.field.querySelector('.apple-trail polyline');
-  line.setAttribute('points', gesture.trail.map(({ x, y }) => `${x - bounds.left},${y - bounds.top}`).join(' '));
-  const tip = gesture.field.querySelector('.apple-blade-tip');
-  tip.hidden = false;
-  tip.style.left = `${point.x - bounds.left}px`;
-  tip.style.top = `${point.y - bounds.top}px`;
-  if (!apples.resolved && !apples.dullUntil) {
-    const hits = [...gesture.field.querySelectorAll('[data-apple-index]:not(:disabled, [hidden])')]
-      .map((node) => ({ index: Number(node.dataset.appleIndex), at: appleTargetHit(gesture.previous, point, node, bounds) }))
-      .filter(({ at }) => at !== null).sort((a, b) => a.at - b.at);
-    if (hits.length) {
-      const angle = Math.atan2(point.y - gesture.previous.y, point.x - gesture.previous.x) * 180 / Math.PI;
-      for (const hit of hits) {
-        if (apples.resolved || apples.dullUntil) break;
-        cutApple(hit.index, angle);
-      }
-    }
-  }
-  gesture.previous = point;
-});
-function endAppleGesture(event) {
-  if (appleGesture?.id !== event.pointerId) return;
-  appleGesture.field.querySelector('.apple-trail polyline')?.removeAttribute('points');
-  appleGesture.field.querySelector('.apple-blade-tip').hidden = true;
-  appleGesture = null;
-}
-window.addEventListener('pointerup', endAppleGesture);
-window.addEventListener('pointercancel', endAppleGesture);
-
-function stopTyping() {
-  cancelAnimationFrame(typingFrame);
-  typingFrame = 0;
-  root.classList.remove('typing-time-stop');
-  for (const shot of typing?.shots || []) {
-    if (shot.animation) shot.animation.cancel();
-    else shot.cancel();
-  }
-}
-
-function openTyping(difficulty = 'normal') {
-  const words = learnedGamePool();
-  if (words.length < 3) return;
-  stopTyping();
-  typing = { words, difficulty, startingBest: bestScore(state, 'typing'), shots: [], round: 1, hp: 100, maxHp: 100, coins: 0, score: 0, phase: 'ready', enemies: [], spawned: 0, spawnClock: 0, stats: { sight: 0, power: 0, vitality: 0 }, augments: [], offers: [], nextId: 0, message: '떨어지는 단어를 입력해 막으세요.' };
-  screen = 'typing';
-  render({ resetScroll: true });
-}
-
-function typingEnemyMarkup(enemy) {
-  if (enemy.item) return `<div class="typing-enemy typing-item" aria-label="${enemy.item.label}: ${escapeHtml(enemy.word)}" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%">${pixelSprite(enemy.item.id)}<strong>${escapeHtml(enemy.word)}</strong></div>`;
-  return `<div class="typing-enemy ${enemy.shield ? 'typing-enemy--shield' : ''} ${enemy.boss ? 'typing-enemy--boss' : ''}" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%"><i class="typing-eyes" aria-hidden="true"></i><strong>${enemy.word}</strong><div class="typing-enemy-hp" aria-label="체력 ${enemy.hp}/${enemy.maxHp}"><i style="width:${enemy.hp / enemy.maxHp * 100}%"></i></div><small>${enemy.shield ? '▣ 방패 · ' : ''}${enemy.hp}/${enemy.maxHp}</small></div>`;
-}
-
-function typingAugmentPanel(game) {
-  return `<section class="typing-augment-panel" aria-labelledby="typing-augment-title">
-    <div><h2 id="typing-augment-title">증강 선택</h2><p>카드를 누른 뒤 한 번 더 눌러 확정하세요.</p></div>
-    <div class="typing-offers">${game.offers.map((offer, index) => `
-      <button class="button rarity--${offer.rarity}" aria-pressed="${game.selectedOffer === index}" data-action="typing-augment:${index}">
-        <span class="typing-offer-hint">다시 클릭해 선택!</span>
-        <span class="typing-offer-rarity">${offer.rarity}</span>
-        <strong>${offer.name}</strong><small>${offer.text}</small>
-      </button>`).join('')}</div>
-  </section>`;
-}
-
-function typingView() {
-  const game = typing;
-  const running = game.phase === 'playing';
-  const upgrades = [['sight', '동체시력', '낙하 속도↓'], ['power', '공격력', '타격 +1'], ['vitality', '체력', '최대 HP +12']];
-  return `<div class="page typing-page${game.offers.length ? ' typing-page--offers' : ''}" data-phase="${game.phase}">
-    <div class="game-header"><div><p class="eyebrow">ROUND ${game.round} · ${game.score}점 · 최고 ${bestScore(state, 'typing')}점</p><h1>타자 게임</h1></div><button class="game-exit" data-nav="home">나가기</button></div>
-    <div class="typing-hud"><span>HP ${game.hp}/${game.maxHp}</span><div class="typing-hp"><i style="width:${game.hp / game.maxHp * 100}%"></i></div><span>● ${game.coins}</span></div>
-    ${game.offers.length ? typingAugmentPanel(game) : `<div class="typing-field" aria-label="떨어지는 영어 단어">${game.enemies.map(typingEnemyMarkup).join('')}<div class="typing-ground"></div></div>`}
-    ${running ? `<form class="typing-form"><input data-typing-input autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="떨어지는 영어 단어 입력" placeholder="영어 단어 입력"/><button class="button button--primary" type="submit">입력</button></form>` :
-      `<div class="typing-panel">${game.phase === 'ready' ? `
-        <div class="typing-rules"><strong>떨어지는 단어를 입력하세요</strong><span>가장 가까운 적에게 발사합니다.</span><span>적중하면 단어가 바뀝니다. 시간 정지 중에는 입력 즉시 바뀝니다.</span><span>10라운드마다 보스가 등장합니다.</span></div>
-        <div class="typing-levels">${Object.entries(typingLevels).map(([id, level]) => `<button class="button button--${game.difficulty === id ? 'primary' : 'secondary'}" aria-pressed="${game.difficulty === id}" data-action="typing-level:${id}">${level.label} <small>×${level.multiplier}</small></button>`).join('')}</div>
-        ${button('시작하기', 'typing-start')}` : `<p>${game.message}</p>${game.phase === 'over' ? gameOverActions('typing-restart', game.score, game.startingBest) :
-        `<div class="typing-shop"><div class="typing-upgrades">${upgrades.map(([key, name, desc]) => `
-          <button class="button button--secondary" data-action="typing-upgrade:${key}" ${game.coins < upgradeCost(game.stats[key]) ? 'disabled' : ''}>
-            <strong>${name} ${game.stats[key]}</strong><small>${desc} · ●${upgradeCost(game.stats[key])}</small></button>`).join('')}</div>
-          ${game.offers.length ? '' : button('다음 라운드', 'typing-next')}</div>`}`}</div>`}
-    ${running ? `<p class="game-message" role="status">${game.message}</p>` : ''}
-  </div>`;
-}
-
-function startTypingRound() {
-  typing.phase = 'playing';
-  typing.enemies = [];
-  typing.spawned = 0;
-  typing.spawnClock = 0;
-  typing.roundClock = 0;
-  typing.nextSummon = 8;
-  typing.nextItem = 6;
-  typing.stoppedUntil = 0;
-  typing.immuneUntil = 0;
-  typing.message = '단어를 입력하고 Enter를 누르세요.';
-  typingLast = performance.now();
-  render();
-  root.querySelector('[data-typing-input]')?.focus({ preventScroll: true });
-  typingFrame = requestAnimationFrame(tickTyping);
-}
-
-function finishTypingRound() {
-  stopTyping();
-  typing.phase = 'shop';
-  typing.message = `${typing.round}라운드 완료 · 코인으로 강화하세요.`;
-  typing.selectedOffer = -1;
-  typing.offers = typing.round % 3 === 0 ? rollAugments(Math.random, typing.augments) : [];
-  playEffect('finish');
-  if (typing.augments.includes('guard')) typing.hp = Math.min(typing.maxHp, typing.hp + 8);
-  render();
-}
-
-function typingImpact(node, defeated = false) {
-  if (!node) return;
-  const bounds = node.getBoundingClientRect();
-  const color = node.classList.contains('typing-enemy--shield') ? '#e5b34e' : '#75b9eb';
-  for (let index = 0; index < (defeated ? 10 : 5); index += 1) {
-    const spark = document.createElement('i');
-    spark.className = 'typing-spark';
-    spark.style.background = color;
-    spark.style.left = `${bounds.left + bounds.width / 2}px`;
-    spark.style.top = `${bounds.top + bounds.height / 2}px`;
-    document.body.append(spark);
-    const angle = index * Math.PI * 2 / (defeated ? 10 : 5);
-    spark.animate([{ transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(angle) * (defeated ? 38 : 22)}px, ${Math.sin(angle) * (defeated ? 38 : 22)}px) scale(.2)`, opacity: 0 }], { duration: defeated ? 410 : 250, easing: 'steps(6, end)' }).finished.finally(() => spark.remove());
-  }
-  if (defeated) node.animate([{ transform: 'translateX(-50%) scale(1)', opacity: 1 }, { transform: 'translateX(-50%) scale(1.2, .65)', opacity: 1, offset: .35 }, { transform: 'translateX(-50%) scale(.2)', opacity: 0 }], { duration: 260, easing: 'steps(5, end)', fill: 'forwards' }).finished.finally(() => node.remove());
-  else node.animate([{ transform: 'translateX(-50%) translateX(-5px)', backgroundColor: '#fff1b5' }, { transform: 'translateX(-50%) translateX(6px)' }, { transform: 'translateX(-50%)', backgroundColor: '#fff' }], { duration: 220, easing: 'steps(4, end)' });
-}
-
-const typingItems = [
-  { id: 'watch', label: '회중시계' },
-  { id: 'heal', label: '구급 상자' },
-  { id: 'bomb', label: '폭탄' },
-];
-
-function spawnTypingTarget({ boss = false, item = null, y = 0 } = {}) {
-  const level = typingLevels[typing.difficulty];
-  const healthRound = boss || typing.round % 10 !== 0 ? typing.round : typing.round - 1;
-  const hp = item ? 1 : Math.max(1, Math.round(enemyHealth(healthRound) * (boss ? 1 : level.health)));
-  const enemy = {
-    id: ++typing.nextId, word: nextTypingWord(''), x: boss ? 50 : 10 + randomInt(81),
-    y, hp, maxHp: hp, boss, item, pendingShots: 0, wordRevision: 0,
-    shield: !item && (typing.difficulty === 'extreme' ||
-      (!boss && typing.round >= 3 && Math.random() < Math.min(.32, .08 + typing.round * .018))),
-  };
-  typing.enemies.push(enemy);
-  root.querySelector('.typing-field')?.insertAdjacentHTML('beforeend', typingEnemyMarkup(enemy));
-  return enemy;
-}
-
-function typingDistance(a, b) {
-  const field = root.querySelector('.typing-field');
-  if (!field) return Infinity;
-  return Math.hypot((a.x - b.x) * field.clientWidth, (a.y - b.y) * field.clientHeight) / 100;
-}
-
-function resumeTypingShots() {
-  for (const shot of typing.shots) {
-    if (shot.launch) shot.launch();
-    else shot.animation.play();
-  }
-}
-
-function tickTyping(now) {
-  if (screen !== 'typing' || typing.phase !== 'playing') return stopTyping();
-  if (typing.stoppedUntil > now) {
-    typingLast = now;
-    typingFrame = requestAnimationFrame(tickTyping);
-    return;
-  }
-  if (typing.stoppedUntil) {
-    typing.stoppedUntil = 0;
-    root.classList.remove('typing-time-stop');
-    resumeTypingShots();
-    playEffect('finish');
-  }
-  const dt = Math.min(.05, (now - typingLast) / 1000);
-  typingLast = now;
-  typing.spawnClock += dt;
-  typing.roundClock += dt;
-  const level = typingLevels[typing.difficulty];
-  const interval = Math.max(.85, 2.1 - typing.round * .055) / level.speed;
-  if (typing.spawned < waveSize(typing.round) && typing.spawnClock >= interval) {
-    typing.spawnClock = 0;
-    const boss = typing.round % 10 === 0;
-    spawnTypingTarget({ boss });
-    typing.spawned += 1;
-    if (boss) specialEffect('boss');
-  }
-  const boss = typing.enemies.find((enemy) => enemy.boss);
-  if (boss && typing.roundClock >= typing.nextSummon) {
-    typing.nextSummon += 8;
-    if (typing.enemies.filter((enemy) => !enemy.item).length < 7) {
-      specialEffect('boss');
-      for (let index = 0; index < 2; index += 1) spawnTypingTarget({ y: Math.min(boss.y, 45) });
-    }
-  }
-  if (typing.roundClock >= typing.nextItem && typing.enemies.some((enemy) => !enemy.item)) {
-    typing.nextItem += 9 + randomInt(5);
-    if (!typing.enemies.some((enemy) => enemy.item)) spawnTypingTarget({ item: typingItems[randomInt(typingItems.length)] });
-  }
-  const seconds = fallSeconds(typing.round, typing.stats.sight) / level.speed * (typing.augments.includes('slow') ? 1.25 : 1);
-  for (const enemy of [...typing.enemies]) {
-    if (enemy.fireLeft > 0) {
-      enemy.fireLeft -= dt;
-      enemy.fireTick -= dt;
-      if (enemy.fireTick <= 0) {
-        enemy.fireTick += 1;
-        applyTypingDamage(enemy, 1, true, null, true, false);
-        if (!typing.enemies.includes(enemy)) continue;
-      }
-    }
-    enemy.freezeLeft = Math.max(0, (enemy.freezeLeft || 0) - dt);
-    if (enemy.freezeLeft <= 0) enemy.y = Math.min(93, enemy.y + dt * 100 / (seconds * (enemy.boss ? 5 : 1)));
-    const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
-    if (node) {
-      node.style.top = `${enemy.y}%`;
-      node.classList.toggle('typing-enemy--frozen', enemy.freezeLeft > 0);
-      node.classList.toggle('typing-enemy--burning', enemy.fireLeft > 0);
-    }
-    if (enemy.y >= 93 && !enemy.pendingShots) {
-      typing.enemies = typing.enemies.filter((entry) => entry !== enemy);
-      node?.remove();
-      if (enemy.item || now < typing.immuneUntil) continue;
-      typing.immuneUntil = now + 1000;
-      playEffect('hit');
-      typing.hp = Math.max(0, typing.hp - missDamage(typing.round, typing.stats.vitality));
-      typing.message = `${enemy.word} 단어를 놓쳐 체력이 줄었어요.`;
-      const field = root.querySelector('.typing-field');
-      field?.animate([{ boxShadow: 'inset 0 0 0 8px #d59091' }, { boxShadow: 'inset 0 0 0 0 transparent' }], { duration: 290, easing: 'steps(4, end)' });
-      if (!typing.hp) { typing.phase = 'over'; typing.message = `${typing.round}라운드 · ${typing.score}점`; saveBest('typing', typing.score); stopTyping(); render(); specialEffect(typing.score > typing.startingBest ? 'record' : 'over'); return; }
-      root.querySelector('.typing-hud > span')?.replaceChildren(`HP ${typing.hp}/${typing.maxHp}`);
-      const bar = root.querySelector('.typing-hp i');
-      if (bar) bar.style.width = `${typing.hp / typing.maxHp * 100}%`;
-      const status = root.querySelector('.typing-page > .game-message');
-      if (status) status.textContent = typing.message;
-    }
-  }
-  if (typing.spawned >= waveSize(typing.round) && !typing.enemies.some((enemy) => !enemy.item)) return finishTypingRound();
-  typingFrame = requestAnimationFrame(tickTyping);
-}
-
-function nextTypingWord(previous) {
-  const pool = typing.words.filter((item) => item.word.toLowerCase() !== previous);
-  return (pool.length ? pool : typing.words)[randomInt((pool.length ? pool : typing.words).length)].word.toLowerCase();
-}
-
-function updateTypingEnemy(enemy) {
-  const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
-  if (!node) return;
-  node.classList.toggle('typing-enemy--shield', enemy.shield);
-  node.querySelector('small').textContent = `${enemy.shield ? '▣ 방패 · ' : ''}${enemy.hp}/${enemy.maxHp}`;
-  node.querySelector('.typing-enemy-hp i').style.width = `${enemy.hp / enemy.maxHp * 100}%`;
-}
-
-function rotateTypingWord(enemy, node) {
-  enemy.word = nextTypingWord(enemy.word);
-  enemy.wordRevision += 1;
-  node?.querySelector('strong')?.replaceChildren(enemy.word);
-}
-
-function typingProjectile(from, to, small = false) {
-  if (!from || !to) return Promise.resolve();
-  const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
-  const dot = document.createElement('i');
-  dot.className = `typing-projectile ${small ? 'typing-projectile--small' : ''}`;
-  dot.style.left = `${a.left + a.width / 2}px`;
-  dot.style.top = `${a.top + a.height / 2}px`;
-  document.body.append(dot);
-  const game = typing;
-  return new Promise((resolve) => {
-    const shot = {};
-    const clean = () => {
-      dot.remove();
-      game.shots = game.shots.filter((entry) => entry !== shot);
-      resolve();
-    };
-    shot.cancel = clean;
-    shot.launch = () => {
-      dot.classList.remove('typing-projectile--queued');
-      shot.launch = null;
-      shot.animation = dot.animate([{ transform: 'translate(0, 0)' }, {
-        transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px)`,
-      }], { duration: small ? 160 : 210, easing: 'linear' });
-      shot.animation.finished.then(clean, clean);
-    };
-    game.shots.push(shot);
-    if (game.stoppedUntil) dot.classList.add('typing-projectile--queued');
-    else shot.launch();
-  });
-}
-
-function applyTypingDamage(enemy, damage, bypassShield, source, chain = false, elemental = true) {
-  if (typing.phase !== 'playing' || !typing.enemies.includes(enemy) || enemy.item) return;
-  const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
-  const result = hitEnemy(enemy, damage, bypassShield);
-  if (elemental && !result.shieldBroken && !result.defeated) {
-    if (typing.augments.includes('fire')) {
-      if (!(enemy.fireLeft > 0)) enemy.fireTick = 1;
-      enemy.fireLeft = 3.01;
-    }
-    if (typing.augments.includes('ice')) enemy.freezeLeft = enemy.boss ? .5 : 2;
-  }
-  if (!chain) playEffect(result.defeated ? 'correct' : 'hit');
-  if (result.defeated) {
-    typing.enemies = typing.enemies.filter((entry) => entry !== enemy);
-    typing.score += typingPoints(typing.difficulty, enemy.boss);
-    saveBest('typing', typing.score);
-    const scoreLabel = root.querySelector('.typing-page .game-header .eyebrow');
-    if (scoreLabel) scoreLabel.textContent = `ROUND ${typing.round} · ${typing.score}점 · 최고 ${bestScore(state, 'typing')}점`;
-    typing.coins += (enemy.boss ? 15 : 2) + Number(typing.augments.includes('bounty')) + 3 * Number(typing.augments.includes('fortune'));
-    typing.hp = Math.min(typing.maxHp, typing.hp + 2 * Number(typing.augments.includes('renew')));
-    typingImpact(node, true);
-  } else {
-    updateTypingEnemy(enemy);
-    typingImpact(node);
-  }
-  if (elemental) enemy.pendingShots -= 1;
-  if (!chain && typing.augments.includes('splash')) {
-    const count = typing.augments.filter((id) => id === 'splash').length;
-    const field = root.querySelector('.typing-field');
-    const radius = (field?.clientWidth || 0) * (typing.augments.includes('wide') ? .44 : .27);
-    const nearby = typing.enemies.filter((other) => other !== enemy && !other.item && !other.pendingShots && typingDistance(other, enemy) <= radius)
-      .sort((a, b) => typingDistance(a, enemy) - typingDistance(b, enemy)).slice(0, count);
-    nearby.forEach((other) => {
-      other.pendingShots += 1;
-      typingProjectile(source || node, root.querySelector(`[data-enemy-id="${other.id}"]`), true).then(() => applyTypingDamage(other, Math.max(1, Math.floor(damage / 2)), false, null, true));
-    });
-  }
-  root.querySelector('.typing-hud > span:last-child').textContent = `● ${typing.coins}`;
-  root.querySelector('.typing-hud > span:first-child').textContent = `HP ${typing.hp}/${typing.maxHp}`;
-}
-
-function collectTypingItem(target) {
-  const game = typing;
-  game.enemies = game.enemies.filter((enemy) => enemy !== target);
-  root.querySelector(`[data-enemy-id="${target.id}"]`)?.remove();
-  specialEffect(target.item.id);
-  if (target.item.id === 'watch') {
-    const now = performance.now();
-    game.stoppedUntil = now + 8000;
-    if (game.immuneUntil > now) game.immuneUntil += 8000;
-    root.classList.add('typing-time-stop');
-    for (const shot of game.shots) shot.animation?.pause();
-  } else if (target.item.id === 'heal') {
-    game.hp = Math.min(game.maxHp, game.hp + Math.floor(game.maxHp / 2));
-    root.querySelector('.typing-hud > span').textContent = `HP ${game.hp}/${game.maxHp}`;
-    root.querySelector('.typing-hp i').style.width = `${game.hp / game.maxHp * 100}%`;
-  } else {
-    const radius = root.querySelector('.typing-field').clientWidth * .48;
-    game.enemies.filter((enemy) => !enemy.item && typingDistance(target, enemy) <= radius)
-      .forEach((enemy) => applyTypingDamage(enemy, game.round * 2, true, null, true, false));
-  }
-}
-
-function submitTyping(value) {
-  if (typing?.phase !== 'playing') return;
-  const word = value.trim().toLowerCase();
-  const frozen = Boolean(typing.stoppedUntil);
-  const enemy = typing.enemies.filter((entry) => entry.word === word && (frozen || !entry.pendingShots)).sort((a, b) => b.y - a.y)[0];
-  const input = root.querySelector('[data-typing-input]');
-  if (input) input.value = '';
-  if (!enemy) { playEffect('retry'); typing.message = '화면에 있는 단어를 입력하세요.'; root.querySelector('.typing-page > .game-message').textContent = typing.message; return; }
-  if (enemy.item) { collectTypingItem(enemy); return; }
-  const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
-  const wordRevision = enemy.wordRevision;
-  if (frozen) rotateTypingWord(enemy, node);
-  enemy.pendingShots += 1;
-  playEffect('place');
-  const game = typing;
-  typingProjectile(input, node).then(() => {
-    if (typing !== game || screen !== 'typing' || game.phase !== 'playing') return;
-    applyTypingDamage(enemy, 1 + typing.stats.power + 3 * typing.augments.filter((id) => id === 'double').length, typing.augments.includes('pierce'), node);
-    if (!frozen && enemy.wordRevision === wordRevision && game.enemies.includes(enemy)) {
-      rotateTypingWord(enemy, node);
-    }
-  });
-  typing.message = '';
-  root.querySelector('.typing-page > .game-message').textContent = '';
-  input?.focus({ preventScroll: true });
-}
-
-const specialColors = {
-  watch: '#b4c5d4', heal: '#83d9ae', bomb: '#ffd186', loot: '#b7a3ff',
-  boss: '#8e93ef', record: '#ffe27f', over: '#a2c5f0',
-  lesson: '#90d3ff', review: '#aadebe', talk: '#bbabff', goodbye: '#a8c3e4',
-};
-
-function specialEffect(kind, sound = kind) {
-  playEffect(sound);
-  const flash = document.createElement('div');
-  flash.className = 'special-flash';
-  flash.setAttribute('aria-hidden', 'true');
-  flash.style.setProperty('--flash', specialColors[kind]);
-  document.body.append(flash);
-  flash.addEventListener('animationend', () => flash.remove(), { once: true });
-  setTimeout(() => flash.remove(), 800);
-}
-
-const preferredTheme = matchMedia('(prefers-color-scheme: dark)');
-document.documentElement.dataset.theme = preferredTheme.matches ? 'dark' : 'light';
-preferredTheme.addEventListener('change', (event) => {
-  document.documentElement.dataset.theme = event.matches ? 'dark' : 'light';
-});
-
-const slimeReactionTimers = new WeakMap();
-const slimeFireDuration = 4400;
-
-function stokeSlimeFire(sprite, reaction, now) {
-  const remaining = (reaction.fireLevel ?? 0) * Math.max(0, 1 - (now - (reaction.fireAt ?? now)) / slimeFireDuration);
-  if (!remaining && reaction.streak !== 100) return;
-
-  if (!reaction.flame) {
-    const flame = document.createElement('span');
-    flame.className = 'slime-fire';
-    flame.setAttribute('aria-hidden', 'true');
-    flame.innerHTML = '<i></i><i></i><i></i>';
-    document.body.append(flame);
-    reaction.flame = flame;
-    const follow = () => {
-      if (!sprite.isConnected || reaction.flame !== flame) {
-        flame.remove();
-        return;
-      }
-      const bounds = sprite.getBoundingClientRect();
-      flame.style.left = `${bounds.left + bounds.width * .05}px`;
-      flame.style.top = `${bounds.top - bounds.height * .24}px`;
-      flame.style.width = `${bounds.width * .9}px`;
-      flame.style.height = `${bounds.height * .57}px`;
-      reaction.flameFrame = requestAnimationFrame(follow);
-    };
-    follow();
-  }
-
-  const flame = reaction.flame;
-  reaction.fireAt = now;
-  reaction.fireLevel = remaining ? Math.min(1, remaining + .13) : .4;
-  reaction.fireAnimation?.cancel();
-  const level = reaction.fireLevel;
-  reaction.fireAnimation = flame.animate([
-    { opacity: .55 + level * .45, scale: `${.6 + level * .55} ${.45 + level * .85}` },
-    { opacity: 0, scale: '.55 .12' },
-  ], { duration: slimeFireDuration, fill: 'forwards' });
-  reaction.fireAnimation.onfinish = () => {
-    cancelAnimationFrame(reaction.flameFrame);
-    flame.remove();
-    reaction.flame = null;
-    reaction.fireLevel = 0;
-    reaction.fireAnimation = null;
-  };
-}
-
-function reactToSlime(sprite) {
-  const now = performance.now();
-  const reaction = slimeReactionTimers.get(sprite) || { count: 0, streak: 0, lastTap: -Infinity };
-  reaction.count = now - reaction.lastTap < 650 ? reaction.count + 1 : 1;
-  reaction.streak = now - reaction.lastTap < 1000 ? reaction.streak + 1 : 1;
-  reaction.lastTap = now;
-  clearTimeout(reaction.faceTimer);
-  clearTimeout(reaction.tintTimer);
-  slimeReactionTimers.set(sprite, reaction);
-  sprite.classList.remove('slime-tint-returning');
-  sprite.classList.add('slime-delighted');
-  sprite.animate([
-    { translate: '0 0' },
-    { translate: '0 -9px' },
-    { translate: '0 0' },
-  ], { duration: 300, easing: 'ease-out' });
-  reaction.faceTimer = setTimeout(() => sprite.classList.remove('slime-delighted'), 320);
-  if (reaction.count >= 6) {
-    const page = document.documentElement;
-    page.dataset.theme = page.dataset.theme === 'dark' ? 'light' : 'dark';
-    reaction.count = 0;
-  }
-  sprite.style.setProperty('--slime-tint', `${reaction.count > 1 ? reaction.count * 12 : 0}deg`);
-  reaction.tintTimer = setTimeout(() => {
-    sprite.classList.add('slime-tint-returning');
-    sprite.style.setProperty('--slime-tint', '0deg');
-    reaction.count = 0;
-  }, 650);
-  stokeSlimeFire(sprite, reaction, now);
-}
-
-function showLaunch() {
-  if (new URLSearchParams(location.search).has('resume') ||
-      document.querySelector('.launch-overlay')) return;
-
-  const overlay = document.createElement('div');
-  overlay.className = 'launch-overlay';
-  overlay.setAttribute('aria-hidden', 'true');
-  const letters = [...'smalltalk'].map((letter, index) =>
-    `<span class="launch-letter" style="--letter-index:${index}"><span>${letter}</span></span>`).join('');
-  overlay.innerHTML = `<i></i><i></i><div class="launch-lockup">${pixelSprite('mascot')}<strong>${letters}</strong><span class="launch-sparks"></span></div>`;
-  const panel = overlay.firstElementChild;
-  let paintFrame;
-  let cleanupTimer;
-  overlay.classList.add('launch-overlay--paused');
-  const finish = () => {
-    clearTimeout(cleanupTimer);
-    document.removeEventListener('visibilitychange', updateVisibility);
-    cancelAnimationFrame(paintFrame);
-    overlay.remove();
-  };
-  const updateVisibility = () => {
-    cancelAnimationFrame(paintFrame);
-    clearTimeout(cleanupTimer);
-    if (document.hidden) {
-      overlay.classList.add('launch-overlay--paused');
-    } else {
-      paintFrame = requestAnimationFrame(() => {
-        paintFrame = requestAnimationFrame(() => {
-          if (!document.hidden) {
-            overlay.classList.remove('launch-overlay--paused');
-            cleanupTimer = setTimeout(finish, 3200);
-          }
-        });
-      });
-    }
-  };
-  document.addEventListener('visibilitychange', updateVisibility);
-  const cues = {
-    'launch-liftoff': 'launch',
-    'launch-sparks': 'place',
-    'launch-letter-rise': 'letter',
-    'launch-reunion': 'chime',
-    'launch-panel-left': 'place',
-  };
-  for (const kind of new Set(Object.values(cues))) effectPlayer(kind);
-  overlay.addEventListener('animationstart', ({ animationName }) => {
-    const cue = cues[animationName];
-    if (cue && !document.hidden) playEffect(cue);
-  });
-  panel.addEventListener('animationend', finish, { once: true });
-  document.body.append(overlay);
-  updateVisibility();
-}
-
-function effectPlayer(kind) {
-  let player = effectPlayers.get(kind);
-  if (!player) {
-    player = new Audio();
-    player.preload = 'auto';
-    player.src = new URL(`./audio/fx-${kind}.wav`, import.meta.url);
-    effectPlayers.set(kind, player);
-  }
-  return player;
-}
-
-function playEffect(kind) {
-  const player = effectPlayer(kind);
-  player.currentTime = 0;
-  player.play().catch(() => {
-    // A later tap can unlock media if the browser blocks playback.
-  });
 }
 
 function review() {
@@ -1877,7 +639,7 @@ function settings() {
 }
 
 function paint() {
-  const views = { onboarding, home, learn, quick: quickCheck, smalltalk: smallTalk, smalltalkquiz: talkQuizView, conversation: conversationView, review, stats, settings, duel: appleView, result: resultView, typing: typingView };
+  const views = { onboarding, home, learn, quick: quickCheck, smalltalk: smallTalk, smalltalkquiz: talkQuizView, conversation: conversation.view, review, stats, settings, duel: orchard.view, result: resultView, typing: typingGame.view };
   const isOnboarding = screen === 'onboarding';
   const isImmersive = ['learn', 'quick', 'duel', 'result', 'typing', 'smalltalkquiz', 'conversation'].includes(screen);
   const activeStage = screen === 'learn' ? learningSession?.stage || '' : screen;
@@ -1887,37 +649,6 @@ function paint() {
   if (screen === 'home') absorbPendingXp();
   if (screen === 'learn' && learningSession?.stage === 'search') updateTimerUI();
 
-}
-
-const fittedTextRules = [
-  ['.page-intro h1', 24, 2],
-  ['.game-header h1', 18, 2],
-  ['.preview-word-card h2', 28, 1],
-  ['.match-tile strong', 14, 1],
-  ['.sentence-prompt h2', 16, 3],
-  ['.talk-sentence', 22, 2],
-  ['.quick-word', 28, 1],
-];
-
-function fitVisibleText() {
-  fittedTextRules.forEach(([selector, minimum, maxLines]) => {
-    root.querySelectorAll(selector).forEach((element) => {
-      element.style.fontSize = '';
-      const initial = Number.parseFloat(getComputedStyle(element).fontSize);
-      let size = initial;
-      const isTooLarge = () => {
-        const style = getComputedStyle(element);
-        const lineHeight = Number.parseFloat(style.lineHeight) || size * 1.25;
-        const heightTolerance = Math.max(6, size * .12);
-        return element.scrollWidth > element.clientWidth + 1
-          || element.scrollHeight > lineHeight * maxLines + heightTolerance;
-      };
-      while (size > minimum && isTooLarge()) {
-        size -= 1;
-        element.style.fontSize = `${size}px`;
-      }
-    });
-  });
 }
 
 function currentViewKey() {
@@ -1930,93 +661,6 @@ function currentViewKey() {
   }
   if (screen === 'quick' && quickSession) return `${screen}:${quickSession.index}`;
   return screen;
-}
-
-const motionSelector = [
-  '[data-motion-key]', '[data-match-side][data-id]', '[data-token]', '[data-nav]', '[data-action]',
-  '[data-quick-answer]', '.choice', '.card', '.stage-track > span', '.target-list > span',
-  '.game-message', '.preview-word-card h2', '.preview-meaning', '.xp strong', '.stats-grid strong',
-  '.game-header', '.match-column', '.sentence-zone', '.sentence-bank', '.search-toolbar > div',
-  '.talk-detail > div', '.review-actions', '.quest-score', '.routine > span', '.preview-word-card', '.feedback',
-].join(',');
-
-function motionBaseKey(element) {
-  if (element.dataset.motionKey) return element.dataset.motionKey;
-  if (element.dataset.matchSide) return `match:${element.dataset.matchSide}:${element.dataset.id}`;
-  if (element.dataset.token) return `token:${element.dataset.token}`;
-  if (element.dataset.nav) return `nav:${element.dataset.nav}`;
-  if (element.dataset.action) return `action:${element.dataset.action}`;
-  if (element.dataset.quickAnswer !== undefined) return `quick:${element.dataset.quickAnswer}`;
-  if (element.matches('.stage-track > span')) return `stage:${element.textContent.trim()}`;
-  if (element.matches('.target-list > span')) return `target:${element.querySelector('b')?.textContent || element.textContent}`;
-  if (element.matches('.game-message')) return 'game-message';
-  if (element.matches('.preview-word-card h2')) return 'preview-word';
-  if (element.matches('.preview-meaning')) return 'preview-meaning';
-  if (element.matches('.xp strong')) return 'xp-value';
-  if (element.matches('.stats-grid strong')) return `stat:${element.parentElement?.textContent || ''}`;
-  if (element.matches('.choice')) return `choice:${element.dataset.value || element.textContent.trim()}`;
-  if (element.matches('.card')) return `card:${[...element.classList].sort().join('.')}`;
-  return element.tagName.toLowerCase();
-}
-
-function motionNodes() {
-  const counts = new Map();
-  return [...root.querySelectorAll(motionSelector)].slice(0, 90).map((element) => {
-    const base = motionBaseKey(element);
-    const count = counts.get(base) || 0;
-    counts.set(base, count + 1);
-    return { element, key: `${base}:${count}` };
-  });
-}
-
-function captureMotionLayout() {
-  const layout = new Map();
-  motionNodes().forEach(({ element, key }) => {
-    const rect = element.getBoundingClientRect();
-    layout.set(key, {
-      rect, text: element.textContent.trim(), className: element.className,
-    });
-  });
-  return layout;
-}
-
-function animateFluidLayout(previous) {
-  motionNodes().forEach(({ element, key }, index) => {
-    const before = previous.get(key);
-    const after = element.getBoundingClientRect();
-    if (!after.width || !after.height) return;
-    const options = { duration: 180, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'backwards' };
-
-    if (!before) {
-      element.animate([
-        { opacity: 0, transform: 'translateY(4px)' },
-        { opacity: 1, transform: 'none' },
-      ], { ...options, delay: Math.min(index * 5, 20) });
-      return;
-    }
-
-    if (element.matches('[data-match-side], [data-quick-answer]')) {
-      const wasSelected = /(?:^|\s)(?:selected|choice--selected)(?:\s|$)/.test(before.className);
-      if (wasSelected && !element.matches('.matched, .try-again, .choice--correct, .choice--try')) return;
-    }
-
-    const dx = before.rect.left - after.left;
-    const dy = before.rect.top - after.top;
-    const moved = Math.abs(dx) > .5 || Math.abs(dy) > .5;
-    const changed = before.text !== element.textContent.trim() || before.className !== element.className;
-
-    if (moved) {
-      element.animate([
-        { transform: `translate(${dx}px, ${dy}px)` },
-        { transform: 'none' },
-      ], options);
-    } else if (changed) {
-      element.animate([
-        { opacity: .7 },
-        { opacity: 1 },
-      ], { ...options, duration: 160 });
-    }
-  });
 }
 
 function render({ resetScroll = false } = {}) {
@@ -2065,82 +709,6 @@ function render({ resetScroll = false } = {}) {
   });
 }
 window.addEventListener('resize', drawMatchLines);
-
-let volumeCheckSequence = 0;
-let volumeCheckScreen = '';
-let volumeNoticeTimer = 0;
-
-window.receiveSmalltalkVolume = (sequence, silent) => {
-  if (sequence !== volumeCheckSequence || screen !== volumeCheckScreen || !silent) return;
-  clearTimeout(volumeNoticeTimer);
-  document.querySelector('.volume-hint')?.remove();
-  const hint = document.createElement('div');
-  hint.className = 'volume-hint';
-  hint.setAttribute('role', 'status');
-  hint.innerHTML = `${pixelSprite('surprised')}<strong>소리를 키워주세요!</strong>`;
-  document.body.append(hint);
-  volumeNoticeTimer = setTimeout(() => hint.remove(), 2300);
-};
-
-function speakText(text, spans = [], { manual = false } = {}) {
-  if (manual && window.SmalltalkVolume) {
-    volumeCheckScreen = screen;
-    window.SmalltalkVolume.postMessage(String(++volumeCheckSequence));
-  }
-  stopSpeech();
-  const clip = speechClips[text] || speechClips[text.toLowerCase()];
-  if (!clip) {
-    const synthesis = window.speechSynthesis;
-    const voice = synthesis?.getVoices().find((option) => /^en(?:-|_)/i.test(option.lang));
-    if (!synthesis) {
-      const status = root.querySelector('.conversation-status');
-      if (status) status.textContent = '이 기기에서 영어 음성을 재생할 수 없어요.';
-      return;
-    }
-    const utterance = new SpeechSynthesisUtterance(text);
-    if (voice) utterance.voice = voice;
-    utterance.lang = voice?.lang || 'en-US';
-    utterance.rate = .85;
-    synthesis.speak(utterance);
-    return;
-  }
-  const [file, cues] = clip;
-  const audio = new Audio(new URL(`./audio/${file}?v=3`, import.meta.url));
-  speechAudio = audio;
-  const highlight = () => {
-    if (speechAudio !== audio || audio.paused) return;
-    const index = cues.findLastIndex((time) => time <= audio.currentTime);
-    spans.forEach((span, position) => span.classList.toggle('spoken-active', position === index));
-    speechFrame = requestAnimationFrame(highlight);
-  };
-  audio.addEventListener('playing', highlight, { once: true });
-  audio.addEventListener('ended', () => { if (speechAudio === audio) stopSpeech(); });
-  audio.play().catch(() => {
-    if (speechAudio !== audio) return;
-    stopSpeech();
-    if (screen === 'duel') {
-      const feedback = root.querySelector('[data-apple-feedback]');
-      if (feedback && !apples.resolved) feedback.textContent = '발음이 들리지 않으면 뜻 보기로 확인하세요.';
-      return;
-    }
-    notice = '발음 파일을 재생하지 못했어요. 다시 눌러 주세요.';
-    render();
-  });
-}
-
-function showWordMeaning(target) {
-  speakText(target.dataset.dictionaryWord, [], { manual: true });
-  root.querySelector('.word-gloss')?.remove();
-  const gloss = document.createElement('div');
-  gloss.className = 'word-gloss';
-  gloss.setAttribute('role', 'status');
-  gloss.textContent = `${target.dataset.dictionaryWord}${target.dataset.meaning ? ` · ${target.dataset.meaning}` : ''}`;
-  const rect = target.getBoundingClientRect();
-  gloss.style.top = `${Math.max(8, rect.top - 8)}px`;
-  gloss.style.left = `${Math.max(105, Math.min(innerWidth - 105, rect.left + rect.width / 2))}px`;
-  root.append(gloss);
-  setTimeout(() => gloss.remove(), 3200);
-}
 
 function recordLearningAnswer(id, result) {
   if (result === 'incorrect') playEffect('retry');
@@ -2241,15 +809,6 @@ function showDropPreview(zone, event) {
   zone.classList.add('drop-active');
 }
 
-function straightPath(start, end, size) {
-  const sr = Math.floor(start / size), sc = start % size, er = Math.floor(end / size), ec = end % size;
-  const rowDiff = er - sr, colDiff = ec - sc;
-  if (rowDiff && colDiff && Math.abs(rowDiff) !== Math.abs(colDiff)) return [start];
-  const dr = Math.sign(rowDiff), dc = Math.sign(colDiff);
-  const length = Math.max(Math.abs(rowDiff), Math.abs(colDiff)) + 1;
-  return Array.from({ length }, (_, index) => (sr + dr * index) * size + sc + dc * index);
-}
-
 function paintDragPath(path) {
   root.querySelectorAll('.letter-grid button.selecting').forEach((cell) => cell.classList.remove('selecting'));
   path.forEach((index) => root.querySelector(`[data-grid-index="${index}"]`)?.classList.add('selecting'));
@@ -2325,15 +884,7 @@ root.addEventListener('click', (event) => {
   }
   const target = event.target.closest('button');
   if (!target) return;
-  if (target.dataset.appleIndex !== undefined) {
-    const point = { x: event.clientX, y: event.clientY };
-    const field = target.closest('.apple-field');
-    if (event.detail === 0 || (performance.now() >= suppressAppleClickUntil
-      && appleTargetHit(point, point, target, field.getBoundingClientRect()) !== null)) {
-      cutApple(Number(target.dataset.appleIndex));
-    }
-    return;
-  }
+  if (target.dataset.appleIndex !== undefined) return orchard.click(event, target);
   if (target.dataset.gridIndex !== undefined) return;
   if (target.dataset.dictionaryWord) return showWordMeaning(target);
   if (target.dataset.nav) return navigate(target.dataset.nav);
@@ -2362,38 +913,7 @@ root.addEventListener('click', (event) => {
     learningSession.stage = 'preview';
     return render({ resetScroll: true });
   }
-  if (action === 'talk-conversation') return openConversation();
-  if (action === 'conversation-draw') return drawConversationTopic();
-  if (action === 'conversation-start' || action === 'conversation-continue') {
-    const game = state.conversationGame;
-    if (action === 'conversation-start' && game?.phase === 'picked') game.phase = 'active';
-    if (action === 'conversation-continue' && game?.phase === 'cleared') game.phase = 'free';
-    persist();
-    render();
-    const log = root.querySelector('.conversation-log');
-    if (log) log.scrollTop = log.scrollHeight;
-    return;
-  }
-  if (action === 'conversation-end') {
-    delete state.conversationGame;
-    conversationError = '';
-    persist();
-    navigate('smalltalk');
-    return specialEffect('goodbye');
-  }
-  if (action === 'conversation-retry') {
-    const input = root.querySelector('.conversation-form input');
-    const draft = input?.value.trim() || '';
-    if (draft) return requestConversation(draft);
-    input?.focus();
-    return;
-  }
-  if (action === 'conversation-mic') return recognizeConversation();
-  if (action === 'conversation-play') {
-    const line = state.conversationGame?.turns[Number(target.dataset.line)];
-    if (line) return speakText(line.english, [], { manual: true });
-    return;
-  }
+  if (action === 'talk-conversation' || action.startsWith('conversation-')) return conversation.handleAction(action, target);
   if (action === 'talk-refresh') return rotateTalk();
   if (action === 'talk-quiz') return openTalkQuiz();
   if (action === 'talk-done') return navigate('smalltalk');
@@ -2409,53 +929,9 @@ root.addEventListener('click', (event) => {
     return render();
   }
   if (['arcade-typing', 'arcade-duel', 'arcade-search'].includes(action) && !state.sessions.some((session) => session.mode === 'new')) return;
-  if (action === 'arcade-typing') return openTyping();
-  if (action.startsWith('typing-level:') && typing.phase === 'ready') {
-    typing.difficulty = action.split(':')[1];
-    return render();
-  }
-  if (action === 'typing-start') return startTypingRound();
-  if (action === 'typing-restart') { openTyping(typing.difficulty); return startTypingRound(); }
-  if (action === 'typing-next') { typing.round += 1; return startTypingRound(); }
-  if (action.startsWith('typing-upgrade:')) {
-    const key = action.split(':')[1];
-    if (!['sight', 'power', 'vitality'].includes(key)) return;
-    const cost = upgradeCost(typing.stats[key]);
-    if (typing.coins < cost) return;
-    typing.coins -= cost;
-    typing.stats[key] += 1;
-    if (key === 'vitality') { typing.maxHp += 12; typing.hp += 12; }
-    return render();
-  }
-  if (action.startsWith('typing-augment:')) {
-    const index = Number(action.split(':')[1]);
-    const offer = typing.offers[index];
-    if (!offer) return;
-    if (typing.selectedOffer !== index) {
-      typing.selectedOffer = index;
-      root.querySelectorAll('[data-action^="typing-augment:"]').forEach((card, position) =>
-        card.setAttribute('aria-pressed', String(position === index)));
-      return;
-    }
-    typing.augments.push(offer.id);
-    specialEffect('loot');
-    typing.offers = [];
-    return render();
-  }
+  if (action === 'arcade-typing' || action.startsWith('typing-')) return typingGame.handleAction(action);
   if (action === 'result-home') return goHome(`단어 ${resultWordCount}개를 학습했어요!`);
-  if (action === 'arcade-duel') return openAppleGame();
-  if (action.startsWith('apple-mode:') && apples?.phase === 'idle') {
-    apples.includeListening = action === 'apple-mode:true';
-    return render();
-  }
-  if (action === 'duel-start' && apples?.phase === 'idle') return launchAppleRound();
-  if (action === 'duel-restart') return openAppleGame(apples.includeListening);
-  if (action === 'apple-review' && apples?.phase === 'ended') return startQuickCheck([...apples.reviewIds].slice(0, 3), true);
-  if (action === 'apple-speak') return speakText(apples.target.word, [], { manual: true });
-  if (action === 'apple-reveal') {
-    root.querySelector('[data-apple-meaning]').textContent = apples.target.meaning;
-    return;
-  }
+  if (['arcade-duel', 'duel-start', 'duel-restart'].includes(action) || action.startsWith('apple-')) return orchard.handleAction(action);
   if (action === 'onboarding-next') { onboardingStep += 1; return render(); }
   if (action === 'onboarding-back') { onboardingStep = Math.max(0, onboardingStep - 1); return render(); }
   if (action === 'onboarding-finish') {
@@ -2587,11 +1063,11 @@ root.addEventListener('click', (event) => {
 root.addEventListener('submit', (event) => {
   if (event.target.matches('.conversation-form')) {
     event.preventDefault();
-    return submitConversation(event.target.querySelector('input').value);
+    return conversation.submit(event.target.querySelector('input').value);
   }
   if (!event.target.matches('.typing-form')) return;
   event.preventDefault();
-  submitTyping(event.target.querySelector('input')?.value || '');
+  typingGame.submit(event.target.querySelector('input')?.value || '');
 });
 
 root.addEventListener('change', (event) => {
@@ -2794,6 +1270,22 @@ window.addEventListener('keydown', (event) => {
   const control = nextActions.map((action) => root.querySelector(`[data-action="${action}"]:not(:disabled)`)).find(Boolean);
   if (control) { event.preventDefault(); control.click(); }
 });
+
+const getState = () => state;
+const getScreen = () => screen;
+const setScreen = (next) => { screen = next; };
+const { fitVisibleText, motionNodes, captureMotionLayout, animateFluidLayout } = createLayoutMotion(root);
+const { stopSpeech, speakText, showWordMeaning } = createSpeech({
+  root, getScreen, showAppleSpeechError: () => orchard.showSpeechError(),
+  showPlaybackError: () => { notice = '발음 파일을 재생하지 못했어요. 다시 눌러 주세요.'; render(); },
+});
+const conversation = createConversation({ root, getState, getScreen, render, navigate, persist, speakText, clickableSentence });
+const orchard = createOrchard({
+  root, getState, getScreen, setScreen, render, validIds, byId, speakText, saveBest, startQuickCheck,
+  recordMistake: (id) => { state = applyGradedResult(state, id, 'incorrect', new Date(), { reward: false }); persist(); },
+});
+const typingGame = createTypingArcade({ root, getState, getScreen, setScreen, render, learnedGamePool, saveBest });
+initializeTheme();
 
 render();
 showLaunch();
