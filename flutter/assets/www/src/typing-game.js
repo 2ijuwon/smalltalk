@@ -29,7 +29,7 @@ export const enemyHealth = (round, random = Math.random) => {
   const base = 1 + Math.floor((round - 1) / 2);
   const variance = Math.max(1, Math.floor((round - 1) / 3) + 1);
   const normal = Math.max(1, base + Math.floor(random() * (variance * 2 + 1)) - variance);
-  return round % 10 === 0 ? normal * 50 : normal;
+  return round % 10 === 0 ? normal * 45 : normal;
 };
 export const hitEnemy = (enemy, damage, bypassShield = false) => {
   if (enemy.shield && !bypassShield) { enemy.shield = false; return { shieldBroken: true, damage: 0, defeated: false }; }
