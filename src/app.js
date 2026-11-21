@@ -992,7 +992,7 @@ function appleView() {
     </div>
     ${active ? `<div class="apple-round-footer"><p class="apple-feedback" role="status" data-apple-feedback>${game.feedback || (round === 1 ? '사과를 긋거나 눌러 베기' : '')}</p><div class="apple-combo" data-apple-combo>${appleComboMarkup(game.combo)}</div></div>`
     : game.phase === 'ended' ? `${game.reviewIds.size ? button('헷갈린 단어 다시 보기', 'apple-review', 'quiet') : ''}${gameOverActions('duel-restart', game.score, game.startingBest)}`
-    : `<p class="apple-rules">60초 · 기회 3번 · 정답마다 +5초 · 시간이 지나면 +3초 → +2초</p>
+    : `<p class="apple-rules">60초 · 기회 3번 · 정답 시간 보너스 +5 → +3 → +2 → +1초</p>
       <div class="apple-modes" role="group" aria-label="문제 유형">${[[false, '뜻만'], [true, '듣기 포함']].map(([listen, label]) => `<button type="button" class="button button--${game.includeListening === listen ? 'primary' : 'secondary'}" aria-pressed="${game.includeListening === listen}" data-action="apple-mode:${listen}">${label}</button>`).join('')}</div>
       ${button('시작하기', 'duel-start')}`}
   </div>`;

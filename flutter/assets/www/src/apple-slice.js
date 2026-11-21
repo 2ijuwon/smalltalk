@@ -1,5 +1,10 @@
 export const sliceDuration = 60_000;
-export const sliceBonusTime = (elapsedMs) => elapsedMs < 60_000 ? 5000 : elapsedMs < 120_000 ? 3000 : 2000;
+export function sliceBonusTime(elapsedMs) {
+  if (elapsedMs < 60_000) return 5000;
+  if (elapsedMs < 120_000) return 3000;
+  if (elapsedMs < 180_000) return 2000;
+  return 1000;
+}
 
 export function sliceAnswerCount(elapsedMs, roll) {
   if (elapsedMs >= 120_000) return roll < .18 ? 3 : roll < .65 ? 2 : 1;

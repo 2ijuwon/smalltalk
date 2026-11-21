@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sliceAnswerCount, sliceBodyHit, sliceBonusTime, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
 
-test('시간 보상은 플레이 경과 1분과 2분에 줄어들고 이후에는 2초다', () => {
+test('시간 보상은 플레이 경과 1분, 2분, 3분에 줄고 이후에는 1초다', () => {
   assert.equal(sliceDuration, 60_000);
-  assert.deepEqual([0, 59_999, 60_000, 119_999, 120_000, 999_999].map(sliceBonusTime), [5000, 5000, 3000, 3000, 2000, 2000]);
+  const boundaries = [0, 59_999, 60_000, 119_999, 120_000, 179_999, 180_000, 999_999];
+  assert.deepEqual(boundaries.map(sliceBonusTime), [5000, 5000, 3000, 3000, 2000, 2000, 1000, 1000]);
 });
 
 test('시간이 지날수록 복수 정답이 자주 나오고 2분부터는 세 개도 나온다', () => {
