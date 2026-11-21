@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceBodyHit, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+import { sliceAnswerCount, sliceBodyHit, sliceBonusTime, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+
+test('시간 보상은 플레이 경과 1분과 2분에 줄어들고 이후에는 2초다', () => {
+  assert.equal(sliceDuration, 60_000);
+  assert.deepEqual([0, 59_999, 60_000, 119_999, 120_000, 999_999].map(sliceBonusTime), [5000, 5000, 3000, 3000, 2000, 2000]);
+});
+
+test('시간이 지날수록 복수 정답이 자주 나오고 2분부터는 세 개도 나온다', () => {
+  assert.deepEqual([0, 60_000, 120_000].map(time => sliceAnswerCount(time, .15)), [2, 2, 3]);
+  assert.deepEqual([0, 60_000, 120_000].map(time => sliceAnswerCount(time, .3)), [1, 2, 2]);
+  assert.deepEqual([0, 60_000, 120_000].map(time => sliceAnswerCount(time, .55)), [1, 1, 2]);
+});
 
 test('몸통 판정은 모서리와 화면 밖을 제외하고 스와이프의 첫 접점을 반환한다', () => {
   const body = { left: 10, top: 10, right: 30, bottom: 30 };
@@ -28,9 +39,9 @@ test('정답 단어가 적힌 폭탄은 폭발하고 같은 단어가 적힌 사
   assert.equal(sliceOutcome({ id: 'apples', word: 'apples', meaning: target.meaning }, target), 'wrong');
 });
 
-test('세 번째 연속 정답은 금빛 베기 점수와 시간을 준다', () => {
-  assert.deepEqual(sliceReward(2), { critical: false, points: 125, extraMs: 0 });
-  assert.deepEqual(sliceReward(3), { critical: true, points: 300, extraMs: 3000 });
+test('세 번째 연속 정답은 금빛 베기 점수를 준다', () => {
+  assert.deepEqual(sliceReward(2), { critical: false, points: 125 });
+  assert.deepEqual(sliceReward(3), { critical: true, points: 300 });
   assert.equal(sliceReward(6).critical, true);
   assert.ok(sliceFlight(8) < sliceFlight(1));
   assert.equal(sliceFlight(200), sliceFlight(201));

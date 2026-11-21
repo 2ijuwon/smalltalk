@@ -1,5 +1,11 @@
-export const sliceDuration = 45_000;
-export const sliceBonusLimit = 15_000;
+export const sliceDuration = 60_000;
+export const sliceBonusTime = (elapsedMs) => elapsedMs < 60_000 ? 5000 : elapsedMs < 120_000 ? 3000 : 2000;
+
+export function sliceAnswerCount(elapsedMs, roll) {
+  if (elapsedMs >= 120_000) return roll < .18 ? 3 : roll < .65 ? 2 : 1;
+  if (elapsedMs >= 60_000) return roll < .4 ? 2 : 1;
+  return roll < .18 ? 2 : 1;
+}
 export const sliceFlight = (round) => Math.max(2100, 3600 - (round - 1) * 105);
 
 const sliceLanes = [50, 18, 82, 50, 18];
@@ -45,7 +51,7 @@ export function sliceBodyHit(from, to, rect, field) {
 
 export function sliceReward(combo) {
   const critical = combo > 0 && combo % 3 === 0;
-  return { critical, points: 100 + Math.min(combo - 1, 8) * 25 + (critical ? 150 : 0), extraMs: critical ? 3000 : 0 };
+  return { critical, points: 100 + Math.min(combo - 1, 8) * 25 + (critical ? 150 : 0) };
 }
 
 // Return where the swipe enters the rectangle, so the nearest apple wins.
