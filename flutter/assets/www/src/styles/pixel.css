@@ -1278,7 +1278,17 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   user-select: none;
   container-type: inline-size;
 }
-.apple-display .pixel-sprite { width: 96px; height: 96px; --sprite-scale: 6; }
+.apple-demo { display: flex; justify-content: center; align-items: end; gap: clamp(18px, 8vw, 54px); text-align: center; }
+.apple-demo figure { display: grid; justify-items: center; gap: 8px; margin: 0; font-size: .88rem; font-weight: 750; }
+.apple-demo .apple-fruit { position: relative; inset: auto; translate: none; width: 56px; height: 48px; cursor: inherit; }
+.apple-demo .pixel-sprite { width: 48px; height: 48px; --sprite-scale: 3; }
+.apple-result-summary { display: grid; gap: 8px; padding: 12px; text-align: center; }
+.apple-round-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 43px; }
+.apple-round-footer .apple-feedback { text-align: start; }
+.apple-combo { display: grid; justify-items: end; flex-shrink: 0; line-height: 1.15; }
+.apple-combo span { color: #946211; letter-spacing: .12em; }
+.apple-combo small { font-size: .75rem; white-space: nowrap; }
+[data-theme="dark"] .apple-combo span { color: #ffd477; }
 .apple-trail { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; }
 .apple-trail polyline { stroke: #fff8bc; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px #b47716); }
 .apple-fruit {
@@ -1376,11 +1386,11 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
 .apple-fruit--split { opacity: 1; z-index: 5; pointer-events: none; }
 .apple-fruit--split :is(.apple-fruit__word), .apple-fruit--split::before { opacity: 0; }
 .apple-fruit--split .apple-fruit__left {
-  animation: apple-half .58s ease-out both;
+  animation: apple-half .41s ease-out both;
   --half-x: -34px; --half-rotate: -21deg;
 }
 .apple-fruit--split .apple-fruit__right {
-  animation: apple-half .58s ease-out both;
+  animation: apple-half .41s ease-out both;
   --half-x: 34px; --half-rotate: 21deg;
 }
 .apple-fruit--split::after {
@@ -1394,7 +1404,7 @@ body:has(.typing-time-stop) { filter: grayscale(1); }
   animation: apple-blade .33s ease-out both;
 }
 .apple-fruit--gold { --apple-skin: #e4ac39; --apple-rim: #ac651a; }
-.apple-fruit--gold :is(.apple-fruit__left, .apple-fruit__right) { animation-duration: .86s; filter: drop-shadow(0 0 12px #ffe17e); }
+.apple-fruit--gold :is(.apple-fruit__left, .apple-fruit__right) { animation-duration: .59s; filter: drop-shadow(0 0 12px #ffe17e); }
 .apple-fruit--gold .apple-fruit__left { --half-x: -57px; --half-rotate: -48deg; }
 .apple-fruit--gold .apple-fruit__right { --half-x: 57px; --half-rotate: 48deg; }
 .apple-fruit--gold::after { height: 7px; width: 170%; background: #ffdb5e; animation-duration: .49s; }

@@ -1,7 +1,7 @@
 import { speechClips } from './speech-clips.js';
 import { commonMeanings } from './slime-dialogue.js';
 import { difficultyLabels, itemsForMajor, majorLabels, smallTalks, stageCount, stageWords, vocabulary } from './data.js';
-import { sliceDuration, sliceFlight, sliceOutcome, sliceReward, swipeHit } from './apple-slice.js';
+import { sliceBonusLimit, sliceDuration, sliceFlight, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
 import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
 import {
   applyGradedResult, applyLearningBatch, getStats, getTodayStats, loadState, saveState,
@@ -338,11 +338,15 @@ function home() {
   const learned = validIds(getLearnedIds(state)).map(byId);
   const canPlay = hasLesson && learned.length >= 3;
   const canSlice = canPlay && new Set(learned.map(({ word }) => word.toLowerCase())).size >= 3;
+  const reviewFirst = (count >= 5 || stage > stageCount) && learned.length > 0;
+  const questAction = reviewFirst
+    ? `<div class="dashboard-grid">${button('다시 볼 단어', 'review-game')}${stage <= stageCount ? button('다음 레슨', 'start-new', 'secondary') : ''}</div>`
+    : button('학습 시작', 'start-new', 'primary', stage > stageCount);
   return `<div class="page home-page">
     <section class="home-hero">${pixelSprite('mascot')}<div><p class="eyebrow">${majorLabels[major]}</p><h1>오늘의 학습</h1></div>
       <div class="daily-count"><strong>${count}<small> / 5</small></strong><div class="pixel-meter" aria-label="오늘 5단어 중 ${count}개">${Array.from({ length: 5 }, (_, i) => `<i class="${i < count ? 'filled' : ''}"></i>`).join('')}</div></div></section>
     <section class="card quest"><div class="quest-title"><div><p class="eyebrow">다음 목표 · ${Math.min(stage, stageCount)}/${stageCount}</p><h2>${stage > stageCount ? '학습 완료' : `레슨 ${String(stage).padStart(2, '0')}`}</h2></div>${pixelSprite('book')}</div>
-      ${progress(stage - 1, stageCount, '레벨 진행')}${button('학습 시작', 'start-new', 'primary', stage > stageCount)}</section>
+      ${progress(stage - 1, stageCount, '레벨 진행')}${questAction}</section>
     <section class="card practice-panel"><h2>연습</h2><div class="dashboard-grid">${button('빠른 확인', 'start-quick', 'secondary', stage === 1 && !validIds(state.lastBatchIds).length)}<button class="button button--secondary" data-nav="review">복습</button></div></section>
     <section class="card game-links"><h2>게임</h2><div class="dashboard-grid">${button(`${pixelSprite('search')}단어 찾기<small>최고 ${bestScore(state, 'search')}점</small>`, 'arcade-search', 'secondary', !canPlay)}${button(`${pixelSprite('duel')}사과 베기<small>최고 ${bestScore(state, 'slice')}점</small>`, 'arcade-duel', 'secondary', !canSlice)}${button(`<span class="game-emoji" aria-hidden="true">⌨</span>타자 게임<small>최고 ${bestScore(state, 'typing')}점</small>`, 'arcade-typing', 'secondary', !canPlay)}</div>${canPlay ? '' : hasLesson ? '<p>단어를 3개 이상 배우면 게임을 할 수 있어요.</p>' : '<p>첫 학습을 마치면 게임을 할 수 있어요.</p>'}</section>
   </div>`;
@@ -787,7 +791,7 @@ function conversationView() {
     <div class="conversation-log" role="log">${conversation.map(({ english, korean, user }, index) => `<article class="conversation-line${user ? ' conversation-line--user' : ''}">${user ? '' : pixelSprite('mascot')}<div><p lang="en">${clickableSentence(english)}</p>${korean ? `<small>${escapeHtml(korean)}</small>` : ''}</div>${user ? '' : `<button type="button" class="listen-button" data-action="conversation-play" data-line="${index}" aria-label="문장 발음 듣기">▶</button>`}</article>`).join('')}</div>
     <form class="conversation-form"><input aria-label="영어로 대화하기" placeholder="영어로 입력" maxlength="200" value="${escapeHtml(conversationDraft)}" ${conversationRequest || !conversation.length ? 'disabled' : ''} required><button type="submit" class="button button--primary" ${conversationRequest || !conversation.length ? 'disabled' : ''}>보내기</button><button type="button" class="button button--secondary" data-action="conversation-mic" ${conversationRequest || !conversation.length ? 'disabled' : ''}>말하기</button></form>
     <p class="game-message conversation-status" role="status">${conversationRequest ? '슬라임이 생각 중이에요…' : escapeHtml(conversationError)}</p>
-    ${!conversation.length && conversationError ? button('다시 연결', 'conversation-retry', 'secondary') : ''}
+    ${conversationError ? button(conversation.length ? '다시 보내기' : '다시 연결', 'conversation-retry', 'secondary') : ''}
   </div>`;
 }
 
@@ -902,6 +906,11 @@ function appleTargetMarkup(fruit, index) {
   return `<button class="apple-fruit${fruit.bomb ? ' apple-fruit--bomb' : ''}" data-apple-index="${index}" type="button" aria-label="${fruit.bomb ? '폭탄' : '사과'} · ${escapeHtml(fruit.word)}" style="--apple-x:${fruit.lane}%;--apple-y:110%">${shape}<span class="apple-fruit__word">${escapeHtml(fruit.word)}</span></button>`;
 }
 
+function appleComboMarkup(combo) {
+  const progress = combo > 0 ? (combo - 1) % 3 + 1 : 0;
+  return `<span aria-hidden="true">${'◆'.repeat(progress)}${'◇'.repeat(3 - progress)}</span><small>${progress === 2 ? '다음 정답 골든' : `${combo}연속`}</small>`;
+}
+
 function appleView() {
   const game = apples;
   const active = game.phase === 'playing';
@@ -916,11 +925,11 @@ function appleView() {
     </div>
     <div class="apple-field" aria-label="날아오르는 사과와 폭탄">
       ${active ? `<svg class="apple-trail" aria-hidden="true"><polyline fill="none" /></svg>${game.fruit.map(appleTargetMarkup).join('')}`
-      : `<span class="apple-display" aria-hidden="true">${pixelSprite('duel')}</span>`}
+      : game.phase === 'ended' ? `<div class="apple-result-summary"><strong>정답 ${game.correct}개 · 골든 ${game.golden}회</strong>${game.reviewIds.size ? `<span>다시 볼 단어 · ${[...game.reviewIds].slice(0, 3).map((id) => escapeHtml(byId(id).word)).join(' · ')}</span>` : ''}</div>` : `<div class="apple-demo"><figure><span class="apple-fruit" aria-hidden="true"><span class="apple-fruit__left"></span><span class="apple-fruit__right"></span></span><figcaption>사과는 베기</figcaption></figure><figure>${pixelSprite('bomb')}<figcaption>폭탄은 피하기</figcaption></figure></div>`}
     </div>
-    ${active ? `<p class="apple-feedback" role="status" data-apple-feedback>${game.feedback || `${round}번째 · ${game.combo}연속`}</p>`
-    : game.phase === 'ended' ? gameOverActions('duel-restart', game.score, game.startingBest)
-    : `<p class="apple-rules">45초 · 기회 3번 · 3연속 정답 시 골든 슬래시</p>
+    ${active ? `<div class="apple-round-footer"><p class="apple-feedback" role="status" data-apple-feedback>${game.feedback || (round === 1 ? '사과를 긋거나 눌러 베기' : '')}</p><div class="apple-combo" data-apple-combo>${appleComboMarkup(game.combo)}</div></div>`
+    : game.phase === 'ended' ? `${game.reviewIds.size ? button('헷갈린 단어 다시 보기', 'apple-review', 'quiet') : ''}${gameOverActions('duel-restart', game.score, game.startingBest)}`
+    : `<p class="apple-rules">45초 · 기회 3번 · 3연속 정답 시 골든</p>
       <div class="apple-modes" role="group" aria-label="문제 유형">${[[false, '뜻만'], [true, '듣기 포함']].map(([listen, label]) => `<button type="button" class="button button--${game.includeListening === listen ? 'primary' : 'secondary'}" aria-pressed="${game.includeListening === listen}" data-action="apple-mode:${listen}">${label}</button>`).join('')}</div>
       ${button('시작하기', 'duel-start')}`}
   </div>`;
@@ -930,7 +939,7 @@ function openAppleGame(includeListening = false) {
   stopAppleGame();
   const pool = [...new Map(shuffle(validIds(getLearnedIds(state)).map(byId)).map((item) => [item.word.toLowerCase(), item])).values()].slice(0, 5);
   if (pool.length < 3) return;
-  apples = { pool, bag: [], phase: 'idle', includeListening, round: 0, score: 0, remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
+  apples = { pool, bag: [], phase: 'idle', includeListening, round: 0, score: 0, correct: 0, golden: 0, bonusMs: 0, reviewIds: new Set(), remaining: sliceDuration, combo: 0, longest: 0, hearts: 3, startingBest: bestScore(state, 'slice') };
   screen = 'duel';
   render({ resetScroll: true });
 }
@@ -957,8 +966,9 @@ function launchAppleRound() {
   game.phase = 'playing';
   game.feedback = '';
   game.resolved = false;
+  game.penalized = false;
   const distractors = shuffle(game.pool.filter((item) => item !== game.target && (game.listen || item.meaning !== game.target.meaning)));
-  const addBomb = game.round % 3 === 0 || distractors.length < 2;
+  const addBomb = game.round % 3 === 0 || (game.round >= 6 && game.round % 2 === 0) || distractors.length < 2;
   const targets = [game.target, ...distractors.slice(0, addBomb ? 1 : 2)];
   if (addBomb) targets.push({ ...game.target, bomb: true });
   game.fruit = shuffle(targets).map((item, index) => ({ ...item, lane: 50 + (index - (targets.length - 1) / 2) * 32, spent: false }));
@@ -967,6 +977,7 @@ function launchAppleRound() {
   const nodes = [...root.querySelectorAll('.apple-fruit')];
   const clock = root.querySelector('[data-apple-clock]');
   const duration = sliceFlight(game.round);
+  let lead = game.listen ? 480 : 80;
   let elapsed = 0;
   let previous = performance.now();
   const tick = (now) => {
@@ -974,6 +985,11 @@ function launchAppleRound() {
     const delta = Math.min(50, Math.max(0, now - previous));
     previous = now;
     if (document.hidden) { appleFrame = requestAnimationFrame(tick); return; }
+    if (lead > 0) {
+      lead -= delta;
+      appleFrame = requestAnimationFrame(tick);
+      return;
+    }
     game.remaining = Math.max(0, game.remaining - delta);
     elapsed += delta;
     const seconds = `${Math.ceil(game.remaining / 1000)}초`;
@@ -982,10 +998,10 @@ function launchAppleRound() {
     if (elapsed >= duration) return missAppleRound();
     const progress = elapsed / duration;
     nodes.forEach((node, index) => {
-      const offset = index * .038;
-      const flight = Math.max(0, Math.min(1, (progress - offset) / (1 - offset)));
-      node.style.setProperty('--apple-y', `${110 - 93 * 4 * flight * (1 - flight)}%`);
-      node.style.setProperty('--apple-x', `${game.fruit[index].lane + Math.sin(flight * Math.PI * 2) * (index === 1 ? -5 : 4)}%`);
+      if (game.fruit[index].spent) return;
+      const position = slicePosition(game.round, index, nodes.length, progress);
+      node.style.setProperty('--apple-y', `${position.y}%`);
+      node.style.setProperty('--apple-x', `${position.x}%`);
     });
     appleFrame = requestAnimationFrame(tick);
   };
@@ -1005,6 +1021,7 @@ function updateAppleHud(message) {
   root.querySelector('[data-apple-feedback]').textContent = message;
   root.querySelector('[data-apple-score]').textContent = `${game.score}점`;
   root.querySelector('[data-apple-clock]').textContent = `${Math.ceil(game.remaining / 1000)}초`;
+  root.querySelector('[data-apple-combo]').innerHTML = appleComboMarkup(game.combo);
   const hearts = root.querySelector('[data-apple-hearts]');
   hearts.textContent = '♥'.repeat(game.hearts) + '♡'.repeat(3 - game.hearts);
   hearts.setAttribute('aria-label', `남은 기회 ${game.hearts}회`);
@@ -1017,12 +1034,12 @@ function resolveAppleRound(delay) {
 }
 
 function missAppleRound() {
-  apples.hearts -= 1;
+  if (!apples.penalized) apples.hearts -= 1;
   apples.combo = 0;
   playEffect('retry');
   if (apples.includeListening) speakText(apples.target.word);
   updateAppleHud(`놓쳤어요 · ${apples.target.word} = ${apples.target.meaning}`);
-  resolveAppleRound(820);
+  resolveAppleRound(520);
 }
 
 function cutApple(index, angle = -25) {
@@ -1037,12 +1054,18 @@ function cutApple(index, angle = -25) {
     node.disabled = true;
     game.combo = 0;
     game.hearts -= 1;
+    game.penalized = true;
     if (outcome === 'bomb') {
       node.classList.add('apple-fruit--exploded');
       node.insertAdjacentHTML('beforeend', '<i class="apple-bomb-burst" aria-hidden="true"></i>');
       specialEffect('bomb');
       updateAppleHud('폭탄 폭발! · 기회 −1');
     } else {
+      if (!game.reviewIds.has(game.target.id)) {
+        state = applyGradedResult(state, game.target.id, 'incorrect', new Date(), { reward: false });
+        persist();
+      }
+      game.reviewIds.add(game.target.id);
       node.classList.add('apple-fruit--wrong');
       playEffect('retry');
       updateAppleHud(`${fruit.word}는 ‘${fruit.meaning}’이에요.`);
@@ -1052,7 +1075,11 @@ function cutApple(index, angle = -25) {
   }
   const reward = sliceReward(++game.combo);
   game.score += reward.points;
-  game.remaining += reward.extraMs;
+  const gainedMs = Math.min(reward.extraMs, sliceBonusLimit - game.bonusMs);
+  game.bonusMs += gainedMs;
+  game.remaining += gainedMs;
+  game.correct += 1;
+  if (reward.critical) game.golden += 1;
   game.longest = Math.max(game.longest, game.combo);
   node.style.setProperty('--blade-angle', `${angle}deg`);
   node.classList.add('apple-fruit--split');
@@ -1063,13 +1090,14 @@ function cutApple(index, angle = -25) {
     specialEffect('record');
   } else playEffect('correct');
   if (game.includeListening) speakText(fruit.word);
-  updateAppleHud(`${reward.critical ? '골든 슬래시! +3초 · ' : ''}${fruit.word} = ${fruit.meaning} · ${game.combo}연속`);
-  resolveAppleRound(reward.critical ? 950 : 760);
+  updateAppleHud(`${reward.critical ? '골든! · ' : ''}+${reward.points}점${gainedMs ? ' · +3초' : ''} · ${fruit.word}`);
+  resolveAppleRound(reward.critical ? 620 : 430);
 }
 
 root.addEventListener('pointerdown', (event) => {
   const field = event.target.closest('.apple-field');
   if (!field || screen !== 'duel' || apples.phase !== 'playing' || apples.resolved || !event.isPrimary || event.button !== 0) return;
+  suppressAppleClickUntil = 0;
   const point = { x: event.clientX, y: event.clientY };
   appleGesture = { id: event.pointerId, field, previous: point, origin: point, trail: [point], cut: false };
 });
@@ -1087,7 +1115,15 @@ window.addEventListener('pointermove', (event) => {
   line.setAttribute('points', gesture.trail.map(({ x, y }) => `${x - bounds.left},${y - bounds.top}`).join(' '));
   if (!gesture.cut && !apples.resolved) {
     const hits = [...gesture.field.querySelectorAll('[data-apple-index]:not(:disabled)')]
-      .map((node) => ({ index: Number(node.dataset.appleIndex), at: swipeHit(gesture.previous, point, node.getBoundingClientRect()) }))
+      .map((node) => {
+        const rect = node.getBoundingClientRect();
+        const clip = {
+          left: Math.max(rect.left, bounds.left), top: Math.max(rect.top, bounds.top),
+          right: Math.min(rect.right, bounds.right), bottom: Math.min(rect.bottom, bounds.bottom),
+        };
+        const visible = clip.bottom - clip.top >= Math.min(22, rect.height / 2) && clip.right > clip.left;
+        return { index: Number(node.dataset.appleIndex), at: visible ? swipeHit(gesture.previous, point, clip) : null };
+      })
       .filter(({ at }) => at !== null).sort((a, b) => a.at - b.at);
     if (hits.length) {
       const angle = Math.atan2(point.y - gesture.previous.y, point.x - gesture.previous.x) * 180 / Math.PI;
@@ -2133,7 +2169,13 @@ root.addEventListener('click', (event) => {
     return render({ resetScroll: true });
   }
   if (action === 'talk-conversation') return openConversation();
-  if (action === 'conversation-retry') return requestConversation();
+  if (action === 'conversation-retry') {
+    const input = root.querySelector('.conversation-form input');
+    const draft = input?.value.trim() || '';
+    if (!conversation.length || draft) return requestConversation(draft);
+    input?.focus();
+    return;
+  }
   if (action === 'conversation-mic') return recognizeConversation();
   if (action === 'conversation-play') return speakText(conversation[Number(target.dataset.line)].english, [], { manual: true });
   if (action === 'talk-refresh') return rotateTalk();
@@ -2192,6 +2234,7 @@ root.addEventListener('click', (event) => {
   }
   if (action === 'duel-start' && apples?.phase === 'idle') return launchAppleRound();
   if (action === 'duel-restart') return openAppleGame(apples.includeListening);
+  if (action === 'apple-review' && apples?.phase === 'ended') return startQuickCheck([...apples.reviewIds].slice(0, 3), true);
   if (action === 'apple-speak') return speakText(apples.target.word, [], { manual: true });
   if (action === 'apple-reveal') {
     root.querySelector('[data-apple-meaning]').textContent = apples.target.meaning;

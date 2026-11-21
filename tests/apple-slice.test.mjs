@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceReward, sliceFlight, sliceOutcome, swipeHit } from '../src/apple-slice.js';
+import { sliceReward, sliceFlight, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+
+test('발사 순서는 번갈아 바뀌며 사과는 자기 레인 안에서 움직인다', () => {
+  assert.ok(slicePosition(3, 0, 3, .12).y < slicePosition(3, 2, 3, .12).y);
+  assert.ok(slicePosition(4, 2, 3, .12).y < slicePosition(4, 0, 3, .12).y);
+  for (const round of [1, 2, 3, 4, 6, 30]) {
+    for (const progress of [0, .1, .4, .75, 1]) {
+      const positions = [0, 1, 2].map(index => slicePosition(round, index, 3, progress));
+      assert.ok(positions[0].x >= 12 && positions[2].x <= 88);
+      assert.ok(positions[2].x - positions[1].x >= 24);
+      assert.ok(positions[1].x - positions[0].x >= 24);
+    }
+  }
+});
 
 test('정답 단어가 적힌 폭탄은 폭발하고 같은 단어가 적힌 사과만 정답이다', () => {
   const target = { id: 'apple', word: 'apple', meaning: '사과' };
