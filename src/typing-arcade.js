@@ -1,4 +1,4 @@
-import { upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
+import { bossChargeSeconds, bossChargeThreshold, bossEliteHealth, upgradeCost, waveSize, fallSeconds, missDamage, enemyHealth, hitEnemy, rollAugments, typingLevels, typingPoints } from './typing-game.js';
 import { bestScore } from './domain.js';
 import { button, escapeHtml, gameOverActions, pixelSprite, randomInt } from './ui.js';
 import { playEffect, specialEffect } from './effects.js';
@@ -29,7 +29,11 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
 
   function typingEnemyMarkup(enemy) {
     if (enemy.item) return `<div class="typing-enemy typing-item" aria-label="${enemy.item.label}: ${escapeHtml(enemy.word)}" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%">${pixelSprite(enemy.item.id)}<strong>${escapeHtml(enemy.word)}</strong></div>`;
-    return `<div class="typing-enemy ${enemy.shield ? 'typing-enemy--shield' : ''} ${enemy.boss ? 'typing-enemy--boss' : ''}" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%"><i class="typing-eyes" aria-hidden="true"></i><strong>${enemy.word}</strong><div class="typing-enemy-hp" aria-label="체력 ${enemy.hp}/${enemy.maxHp}"><i style="width:${enemy.hp / enemy.maxHp * 100}%"></i></div><small>${enemy.shield ? '▣ 방패 · ' : ''}${enemy.hp}/${enemy.maxHp}</small></div>`;
+    return `<div class="typing-enemy ${enemy.shield ? 'typing-enemy--shield' : ''} ${enemy.boss ? 'typing-enemy--boss' : ''} ${enemy.elite ? 'typing-enemy--elite' : ''}" data-enemy-id="${enemy.id}" style="--enemy-x:${enemy.x}%;top:${enemy.y}%"><i class="typing-eyes" aria-hidden="true"></i><strong>${enemy.word}</strong><div class="typing-enemy-hp" aria-label="체력 ${enemy.hp}/${enemy.maxHp}"><i style="width:${enemy.hp / enemy.maxHp * 100}%"></i></div><small>${typingEnemyHealthLabel(enemy)}</small>${enemy.boss ? '<span class="typing-boss-charge" hidden></span>' : ''}</div>`;
+  }
+
+  function typingEnemyHealthLabel(enemy) {
+    return `${enemy.elite ? '정예 · ' : ''}${enemy.shield ? '▣ 방패 · ' : ''}${enemy.hp}/${enemy.maxHp}`;
   }
 
   function typingAugmentPanel(game) {
@@ -117,13 +121,14 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
     { id: 'bomb', label: '폭탄' },
   ];
 
-  function spawnTypingTarget({ boss = false, item = null, y = 0 } = {}) {
+  function spawnTypingTarget({ boss = false, item = null, eliteHp = 0 } = {}) {
     const level = typingLevels[typing.difficulty];
     const healthRound = boss || typing.round % 10 !== 0 ? typing.round : typing.round - 1;
-    const hp = item ? 1 : Math.max(1, Math.round(enemyHealth(healthRound) * (boss ? 1 : level.health)));
+    const hp = item ? 1 : eliteHp || Math.max(1, Math.round(enemyHealth(healthRound) * (boss ? 1 : level.health)));
     const enemy = {
       id: ++typing.nextId, word: nextTypingWord(''), x: boss ? 50 : 10 + randomInt(81),
-      y, hp, maxHp: hp, boss, item, pendingShots: 0, wordRevision: 0,
+      y: 0, hp, maxHp: hp, boss, elite: eliteHp > 0, item, pendingShots: 0, wordRevision: 0,
+      chargesUsed: 0, chargeUntil: 0, nextChargeAt: 0,
       shield: !item && (typing.difficulty === 'extreme' ||
         (!boss && typing.round >= 3 && Math.random() < Math.min(.32, .08 + typing.round * .018))),
     };
@@ -143,6 +148,50 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
       if (shot.launch) shot.launch();
       else shot.animation.play();
     }
+  }
+
+  function clearBossCharge(boss, node) {
+    boss.chargeUntil = 0;
+    boss.nextChargeAt = typing.roundClock + .65;
+    typing.nextSummon = Math.max(typing.nextSummon, typing.roundClock + 2);
+    node?.classList.remove('typing-enemy--charging');
+    const countdown = node?.querySelector('.typing-boss-charge');
+    if (countdown) countdown.hidden = true;
+  }
+
+  function updateBossCharge(boss, node) {
+    const now = typing.roundClock;
+    if (boss.chargeUntil && boss.chargeUntil <= now) {
+      clearBossCharge(boss, node);
+      spawnTypingTarget({ eliteHp: bossEliteHealth(boss.hp) });
+      specialEffect('boss');
+      return;
+    }
+    if (!boss.chargeUntil && now >= boss.nextChargeAt && bossChargeThreshold(boss.hp, boss.maxHp, boss.chargesUsed)) {
+      boss.chargesUsed += 1;
+      boss.chargeUntil = now + bossChargeSeconds;
+      node?.classList.add('typing-enemy--charging');
+      playEffect('boss');
+    }
+    if (!boss.chargeUntil) return;
+    const countdown = node?.querySelector('.typing-boss-charge');
+    if (countdown) {
+      countdown.hidden = false;
+      const label = `기 모으는 중 · ${Math.ceil(boss.chargeUntil - now)}초`;
+      if (countdown.textContent !== label) countdown.textContent = label;
+    }
+  }
+
+  function interruptBossCharge(boss, node) {
+    clearBossCharge(boss, node);
+    const previousY = boss.y;
+    boss.y = Math.max(0, boss.y - 34);
+    if (node) {
+      node.style.top = `${boss.y}%`;
+      const distance = (previousY - boss.y) / 100 * (node.parentElement?.clientHeight || 0);
+      node.animate([{ translate: `0 ${distance}px` }, { translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.16, 1, .3, 1)' });
+    }
+    playEffect('correct');
   }
 
   function tickTyping(now) {
@@ -172,11 +221,12 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
       if (boss) specialEffect('boss');
     }
     const boss = typing.enemies.find((enemy) => enemy.boss);
-    if (boss && typing.roundClock >= typing.nextSummon) {
+    if (boss) updateBossCharge(boss, root.querySelector(`[data-enemy-id="${boss.id}"]`));
+    if (boss && !boss.chargeUntil && typing.roundClock >= typing.nextSummon) {
       typing.nextSummon += 8;
       if (typing.enemies.filter((enemy) => !enemy.item).length < 7) {
         specialEffect('boss');
-        for (let index = 0; index < 2; index += 1) spawnTypingTarget({ y: Math.min(boss.y, 45) });
+        for (let index = 0; index < 2; index += 1) spawnTypingTarget();
       }
     }
     if (typing.roundClock >= typing.nextItem && typing.enemies.some((enemy) => !enemy.item)) {
@@ -195,20 +245,20 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
         }
       }
       enemy.freezeLeft = Math.max(0, (enemy.freezeLeft || 0) - dt);
-      if (enemy.freezeLeft <= 0) enemy.y = Math.min(93, enemy.y + dt * 100 / (seconds * (enemy.boss ? 5 : 1)));
+      if (enemy.freezeLeft <= 0 && !enemy.chargeUntil) enemy.y = Math.min(93, enemy.y + dt * 100 / (seconds * (enemy.boss ? 5 : enemy.elite ? 1.2 : 1)));
       const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
       if (node) {
         node.style.top = `${enemy.y}%`;
         node.classList.toggle('typing-enemy--frozen', enemy.freezeLeft > 0);
         node.classList.toggle('typing-enemy--burning', enemy.fireLeft > 0);
       }
-      if (enemy.y >= 93 && !enemy.pendingShots) {
+      if (enemy.y >= 93 && !enemy.pendingShots && !enemy.chargeUntil) {
         typing.enemies = typing.enemies.filter((entry) => entry !== enemy);
         node?.remove();
         if (enemy.item || now < typing.immuneUntil) continue;
         typing.immuneUntil = now + 1000;
         playEffect('hit');
-        const damage = Math.min(typing.hp, missDamage(typing.round, typing.stats.vitality, enemy.shield));
+        const damage = Math.min(typing.hp, missDamage(enemy.hp, typing.stats.vitality, enemy.shield));
         typing.hp -= damage;
         typing.message = `${enemy.word} 놓침 · 체력 −${damage}${enemy.shield ? ' · 방패 추가 피해' : ''}`;
         const field = root.querySelector('.typing-field');
@@ -234,8 +284,10 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
     const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
     if (!node) return;
     node.classList.toggle('typing-enemy--shield', enemy.shield);
-    node.querySelector('small').textContent = `${enemy.shield ? '▣ 방패 · ' : ''}${enemy.hp}/${enemy.maxHp}`;
-    node.querySelector('.typing-enemy-hp i').style.width = `${enemy.hp / enemy.maxHp * 100}%`;
+    node.querySelector('small').textContent = typingEnemyHealthLabel(enemy);
+    const bar = node.querySelector('.typing-enemy-hp');
+    bar.setAttribute('aria-label', `체력 ${enemy.hp}/${enemy.maxHp}`);
+    bar.firstElementChild.style.width = `${enemy.hp / enemy.maxHp * 100}%`;
   }
 
   function rotateTypingWord(enemy, node) {
@@ -278,6 +330,7 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
   function applyTypingDamage(enemy, damage, bypassShield, source, chain = false, elemental = true) {
     if (typing.phase !== 'playing' || !typing.enemies.includes(enemy) || enemy.item) return;
     const node = root.querySelector(`[data-enemy-id="${enemy.id}"]`);
+    const interrupt = enemy.boss && enemy.chargeUntil > typing.roundClock && elemental;
     const result = hitEnemy(enemy, damage, bypassShield);
     if (elemental && !result.shieldBroken && !result.defeated) {
       if (typing.augments.includes('fire')) {
@@ -297,6 +350,8 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
       typing.hp = Math.min(typing.maxHp, typing.hp + 2 * Number(typing.augments.includes('renew')));
       typingImpact(node, true);
     } else {
+      if (interrupt) interruptBossCharge(enemy, node);
+      else if (enemy.boss) updateBossCharge(enemy, node);
       updateTypingEnemy(enemy);
       typingImpact(node);
     }
