@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceAnswerCount, sliceBodyHit, sliceBonusTime, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusTime, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+
+test('칼날은 파랑에서 10콤보에 금빛이 되고 이후 붉어진다', () => {
+  assert.equal(sliceBladeColor(0), 'rgb(74, 190, 255)');
+  assert.equal(sliceBladeColor(10), 'rgb(255, 204, 57)');
+  assert.equal(sliceBladeColor(18), 'rgb(255, 59, 39)');
+  assert.equal(sliceBladeColor(30), sliceBladeColor(18));
+});
 
 test('시간 보상은 플레이 경과 1분, 2분, 3분에 줄고 이후에는 1초다', () => {
   assert.equal(sliceDuration, 60_000);

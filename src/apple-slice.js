@@ -11,6 +11,12 @@ export function sliceAnswerCount(elapsedMs, roll) {
   if (elapsedMs >= 60_000) return roll < .4 ? 2 : 1;
   return roll < .18 ? 2 : 1;
 }
+
+export function sliceBladeColor(combo) {
+  const blue = [74, 190, 255], gold = [255, 204, 57], red = [255, 59, 39];
+  const [from, to, progress] = combo <= 10 ? [blue, gold, combo / 10] : [gold, red, Math.min(1, (combo - 10) / 8)];
+  return `rgb(${from.map((channel, index) => Math.round(channel + (to[index] - channel) * progress)).join(', ')})`;
+}
 export const sliceFlight = (round) => Math.max(2100, 3600 - (round - 1) * 105);
 
 const sliceLanes = [50, 18, 82, 50, 18];
