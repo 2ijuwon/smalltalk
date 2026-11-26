@@ -23,16 +23,21 @@ function pixelFlame(context) {
     if (tick === frame) return;
     frame = tick;
     const phase = seconds * 6;
+    const drift = Math.sin(phase * .64) > 0 ? 1 : -1;
     for (let y = 0; y < height - 1; y += 1) {
       for (let x = 1; x < width - 1; x += 1) {
         const below = (y + 1) * width + x;
-        const spread = (heat[below - 1] + heat[below + 1]) * .22 + heat[below] * .56;
-        next[y * width + x] = Math.max(0, spread - .34 - Math.random() * .8);
+        const spread = heat[below] * .78 + heat[below - drift] * .13 + heat[below + drift] * .05;
+        next[y * width + x] = Math.max(0, spread - .32 - Math.random() * .63);
       }
     }
+    const leftTongue = 9.4 + Math.sin(phase * .8) * 1.15;
+    const rightTongue = 13.5 + Math.sin(phase * 1.13 + 2) * 1.25;
     for (const [x, y] of pixelCrown) {
-      const pulse = .74 + .19 * Math.sin(phase + x * .74) + .07 * Math.random();
-      next[y * width + x] = intensity * 13 * pulse;
+      const leftPeak = Math.max(0, 1 - Math.abs(x - leftTongue) / 2.2);
+      const rightPeak = Math.max(0, 1 - Math.abs(x - rightTongue) / 2);
+      const pulse = 4.2 + leftPeak * (9 + 3 * Math.sin(phase)) + rightPeak * (8 + 3 * Math.sin(phase * 1.7));
+      next[y * width + x] = intensity * (pulse + Math.random() * 1.1);
     }
     [heat, next] = [next, heat];
     context.clearRect(0, 0, width, height);
@@ -43,6 +48,11 @@ function pixelFlame(context) {
         context.fillStyle = heatColors[Math.min(heatColors.length - 1, Math.floor(value / 1.5))];
         context.fillRect(x, y, 1, 1);
       }
+    }
+    const spark = (seconds * 1.64) % 1;
+    if (intensity > .53 && spark < .72) {
+      context.fillStyle = spark < .35 ? '#ffc45b' : '#ed552988';
+      context.fillRect(Math.round(rightTongue + 2 * spark), Math.round(8 - 5 * spark), 1, 1);
     }
   };
 }
