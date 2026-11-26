@@ -1,4 +1,4 @@
-import { stageCount, stageWords } from './data.js';
+import { foundationWordCount, lessonSize, stageCount, stageWords } from './data.js';
 
 export const STORAGE_KEY = 'small-talk-state-v1';
 export const REVIEW_INTERVALS = [0, 1, 3, 7, 14, 30];
@@ -15,7 +15,7 @@ export function wordSearchPoints(rules, points) {
 
 export const initialState = {
   version: 1, onboarded: false,
-  preferences: { major: 'computer', difficulty: 'basic', dailyGoal: 5, reminderTime: '20:00' },
+  preferences: { major: 'computer', difficulty: 'basic', dailyGoal: 5, reminderTime: '20:00', skin: 'modern' },
   events: [], reviews: [], favorites: [], lastBatchIds: [], sessions: [], xp: 0, pendingXp: 0,
   bestScores: { search: 0, duel: 0, slice: 0, typing: 0 },
 };
@@ -79,9 +79,11 @@ export function nextStage(state, major) {
   const sessions = state.sessions.filter((session) => session.mode === 'new' && session.curriculumMajor === major);
   for (let stage = 1; stage <= stageCount; stage += 1) {
     const ids = stageWords(major, stage);
+    const oldOffset = (stage - 1) * lessonSize - foundationWordCount;
+    const oldStage = oldOffset >= 0 && oldOffset % lessonSize === 0 ? oldOffset / lessonSize + 1 : 0;
     const done = sessions.some((session) => Array.isArray(session.itemIds)
       ? session.itemIds.length === ids.length && ids.every((id) => session.itemIds.includes(id))
-      : session.stage === stage);
+      : session.stage === oldStage);
     if (!done) return stage;
   }
   return stageCount + 1;

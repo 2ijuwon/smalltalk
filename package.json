@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "content": "node scripts/content.mjs",
+    "content:import": "node scripts/import-content.mjs",
     "prestart": "npm run content",
     "pretest": "npm run content",
     "start": "node scripts/serve.mjs",

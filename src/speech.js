@@ -35,7 +35,8 @@ export function createSpeech({ root, getScreen, showAppleSpeechError, showPlayba
       window.SmalltalkVolume.postMessage(String(++volumeCheckSequence));
     }
     stopSpeech();
-    const clip = speechClips[text] || speechClips[text.toLowerCase()];
+    const clipKey = Object.hasOwn(speechClips, text) ? text : text.toLowerCase();
+    const clip = Object.hasOwn(speechClips, clipKey) ? speechClips[clipKey] : null;
     if (!clip) {
       const synthesis = window.speechSynthesis;
       const voice = synthesis?.getVoices().find((option) => /^en(?:-|_)/i.test(option.lang));
@@ -48,6 +49,15 @@ export function createSpeech({ root, getScreen, showAppleSpeechError, showPlayba
       if (voice) utterance.voice = voice;
       utterance.lang = voice?.lang || 'en-US';
       utterance.rate = .85;
+      const offsets = Array.from(text.matchAll(/\S+/g), ({ index }) => index);
+      utterance.onboundary = ({ charIndex, name }) => {
+        if (name === 'sentence') return;
+        const active = offsets.findLastIndex((offset) => offset <= charIndex);
+        spans.forEach((span, index) => span.classList.toggle('spoken-active', index === active));
+      };
+      const clear = () => spans.forEach((span) => span.classList.remove('spoken-active'));
+      utterance.onend = clear;
+      utterance.onerror = clear;
       synthesis.speak(utterance);
       return;
     }
@@ -79,7 +89,7 @@ export function createSpeech({ root, getScreen, showAppleSpeechError, showPlayba
     const gloss = document.createElement('div');
     gloss.className = 'word-gloss';
     gloss.setAttribute('role', 'status');
-    gloss.textContent = `${target.dataset.dictionaryWord}${target.dataset.meaning ? ` · ${target.dataset.meaning}` : ''}`;
+    gloss.textContent = `${target.dataset.dictionaryWord} · ${target.dataset.meaning || '등록된 뜻이 없어요'}`;
     const rect = target.getBoundingClientRect();
     gloss.style.top = `${Math.max(8, rect.top - 8)}px`;
     gloss.style.left = `${Math.max(105, Math.min(innerWidth - 105, rect.left + rect.width / 2))}px`;

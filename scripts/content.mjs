@@ -1,7 +1,7 @@
 import { access, readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-const majors = ['computer', 'business', 'health', 'engineering', 'humanities'];
+const majors = ['common', 'computer', 'business', 'health', 'engineering', 'humanities'];
 const levels = ['basic', 'intermediate', 'advanced'];
 const source = (name) => new URL(`../content/${name}.json`, import.meta.url);
 const target = new URL('../src/content.generated.js', import.meta.url);
@@ -20,9 +20,10 @@ function requiredText(row, keys, label) {
   }
 }
 
-export async function generateContent({ checkAudio = false } = {}) {
-  const vocabulary = await readRows('vocabulary');
-  const smallTalk = await readRows('small-talk');
+export function validateContent(vocabulary, smallTalk) {
+  if (!Array.isArray(vocabulary) || !vocabulary.length || !Array.isArray(smallTalk) || !smallTalk.length) {
+    throw new Error('단어와 스몰토크 목록에 항목이 있어야 합니다.');
+  }
   const ids = new Set();
   const wordsByMajor = new Set();
   for (const [index, row] of vocabulary.entries()) {
@@ -48,6 +49,13 @@ export async function generateContent({ checkAudio = false } = {}) {
   for (const level of levels) {
     if (!talksByLevel[level].length) throw new Error(`small-talk.json: ${level} 문장이 하나 이상 필요합니다.`);
   }
+  return talksByLevel;
+}
+
+export async function generateContent({ checkAudio = false } = {}) {
+  const vocabulary = await readRows('vocabulary');
+  const smallTalk = await readRows('small-talk');
+  const talksByLevel = validateContent(vocabulary, smallTalk);
 
   if (checkAudio) {
     const { speechClips } = await import('../src/speech-clips.js');

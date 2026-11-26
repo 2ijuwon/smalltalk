@@ -20,9 +20,14 @@ const ready = new Promise((resolve, reject) => {
 
 try {
   await ready;
-  const response = await fetch(`http://127.0.0.1:${port}/`);
+  const base = `http://127.0.0.1:${port}`;
+  const response = await fetch(base);
   const html = await response.text();
-  if (!response.ok || !html.includes('<div id="app"></div>')) throw new Error('올바른 앱 HTML을 받지 못했습니다.');
+  if (!response.ok || !html.includes('<div id="app">') || !html.includes('src="./src/app.js"')) throw new Error('올바른 앱 HTML을 받지 못했습니다.');
+  const audio = await fetch(`${base}/src/audio/fx-shield.wav`);
+  if (!audio.ok || Buffer.from(await audio.arrayBuffer()).toString('ascii', 0, 4) !== 'RIFF') {
+    throw new Error('효과음 WAV를 받지 못했습니다.');
+  }
   console.log(`server smoke: ${response.status} ${response.headers.get('content-type')}`);
 } finally {
   child.kill();

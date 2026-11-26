@@ -55,7 +55,7 @@ export function createConversation({ root, getState, getScreen, render, navigate
     getState().lastConversationTopic = topic;
     getState().conversationGame = { topic, phase: 'picked', completed: 0, turns: [], draft: '', reason: '' };
     conversationError = '';
-    playEffect('loot');
+    playEffect('shuffle');
     persist();
     render();
   }
@@ -68,6 +68,7 @@ export function createConversation({ root, getState, getScreen, render, navigate
     conversationRequest = request;
     conversationError = '';
     game.draft = text;
+    playEffect('send');
     persist();
     render();
 
@@ -96,7 +97,7 @@ export function createConversation({ root, getState, getScreen, render, navigate
         if (game.phase === 'active' && ++game.completed === conversationGoal) {
           game.phase = 'cleared';
           specialEffect('lesson');
-        }
+        } else playEffect('reply');
       } else if (payload.valid === false && typeof payload.reason === 'string') {
         game.turns.push({ english: text, user: true });
         game.phase = 'failed';
@@ -140,11 +141,12 @@ export function createConversation({ root, getState, getScreen, render, navigate
       if (epoch !== conversationEpoch || getScreen() !== 'conversation') return;
       if (text) {
         const input = root.querySelector('.conversation-form input');
+        if (!input || !status?.isConnected) return;
         input.value = text.slice(0, 200);
         input.focus();
         status.textContent = '인식한 문장을 확인하고 보내세요.';
       } else {
-        status.textContent = '음성을 인식하지 못했어요. 영어를 직접 입력할 수 있어요.';
+        if (status?.isConnected) status.textContent = '음성을 인식하지 못했어요. 영어를 직접 입력할 수 있어요.';
       }
     };
     if (window.SmalltalkMic) {
@@ -192,7 +194,7 @@ export function createConversation({ root, getState, getScreen, render, navigate
     if (action === 'conversation-mic') return recognizeConversation();
     if (action === 'conversation-play') {
       const line = getState().conversationGame?.turns[Number(target.dataset.line)];
-      if (line) return speakText(line.english, [], { manual: true });
+      if (line) return speakText(line.english, [...target.closest('article').querySelectorAll('[data-spoken-start]')], { manual: true });
       return;
     }
   }

@@ -9,6 +9,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
   let appleWait = 0;
   let appleGesture = null;
   let suppressAppleClickUntil = 0;
+  let fuseStopTimer = 0;
 
   const orchardAppleArt = pixelSprite('orchardApple');
   const appleShape = `<span class="apple-shape" aria-hidden="true"><span class="apple-body"></span>${orchardAppleArt}<span class="apple-fruit__left">${orchardAppleArt}</span><span class="apple-fruit__right">${orchardAppleArt}</span></span>`;
@@ -66,7 +67,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
   }
 
   function stopAppleGame() {
-    setAppleFuse(false);
+    setAppleFuse(false, true);
     cancelAnimationFrame(appleFrame);
     clearTimeout(appleWait);
     appleFrame = appleWait = 0;
@@ -74,15 +75,18 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     suppressAppleClickUntil = 0;
   }
 
-  function setAppleFuse(audible) {
-    if (!apples || Boolean(apples.fuseAudible) === audible) return;
+  function setAppleFuse(audible, immediate = false) {
+    if (!apples || !immediate && Boolean(apples.fuseAudible) === audible) return;
     apples.fuseAudible = audible;
+    clearTimeout(fuseStopTimer);
     const player = effectPlayer('fuse');
     if (audible) {
       player.loop = true;
-      playEffect('fuse');
-    } else {
+      if (player.paused) player.play().catch(() => {});
+    } else if (immediate) {
       player.pause();
+    } else {
+      fuseStopTimer = setTimeout(() => player.pause(), 180);
     }
   }
 
@@ -90,6 +94,9 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     const body = node.querySelector('.apple-body');
     if (body) return body.getBoundingClientRect();
     const { left, top, width, height } = node.querySelector('.pixel-sprite').getBoundingClientRect();
+    if (document.documentElement.dataset.skin === 'modern') {
+      return { left: left + width * 2.3 / 16, right: left + width * 13.7 / 16, top: top + height * 3.5 / 16, bottom: top + height * 14.9 / 16 };
+    }
     return { left: left + width * 2 / 16, right: left + width, top: top + height * 4 / 16, bottom: top + height * 15 / 16 };
   }
 
@@ -175,7 +182,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       if (getScreen() !== 'duel' || apples !== game) return;
       const delta = Math.min(50, Math.max(0, now - previous));
       previous = now;
-      if (document.hidden) { setAppleFuse(false); appleFrame = requestAnimationFrame(tick); return; }
+      if (document.hidden) { if (game.fuseAudible) setAppleFuse(false, true); appleFrame = requestAnimationFrame(tick); return; }
       game.flightTime += delta;
       if (game.dullUntil && game.flightTime >= game.dullUntil) {
         game.dullUntil = 0;
@@ -278,6 +285,28 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     });
   }
 
+  function explodeBomb(node) {
+    node.classList.add('apple-fruit--exploded');
+    node.insertAdjacentHTML('beforeend', '<i class="apple-bomb-burst" aria-hidden="true"></i>' +
+      Array.from({ length: 12 }, (_, index) => {
+        const angle = index * Math.PI / 6;
+        const distance = index % 2 ? 29 : 46;
+        return `<i class="apple-bomb-spark" aria-hidden="true" style="--dx:${Math.cos(angle) * distance}px;--dy:${Math.sin(angle) * distance}px;--shade:${index % 3}"></i>`;
+      }).join(''));
+    const flash = document.createElement('div');
+    flash.className = 'apple-bomb-flash';
+    flash.setAttribute('aria-hidden', 'true');
+    document.body.append(flash);
+    flash.addEventListener('animationend', () => flash.remove(), { once: true });
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      root.querySelector('.apple-page')?.animate([
+        { translate: '0 0' }, { translate: '-3px 1px' }, { translate: '3px -1px' },
+        { translate: '-2px 0' }, { translate: '0 0' },
+      ], { duration: 210, easing: 'ease-out' });
+    }
+    playEffect('blast');
+  }
+
   function cutApple(index, from, to) {
     const game = apples;
     const fruit = game?.fruit?.[index];
@@ -288,7 +317,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       if (game.flightTime < (fruit.nextHitAt ?? 0)) return;
       fruit.nextHitAt = game.flightTime + 85;
       game.score += 100;
-      playEffect('slice');
+      playEffect('bonuscut');
       carveApple(node, from, to, 0);
       const stroke = document.createElement('i');
       stroke.className = 'apple-bonus-cut';
@@ -317,16 +346,14 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     if (outcome !== 'correct') {
       node.disabled = true;
       game.combo = 0;
-      game.dullUntil = game.flightTime + 1000;
-      game.hearts -= 1;
       game.penalized = true;
       if (outcome === 'bomb') {
-        node.classList.add('apple-fruit--exploded');
-        node.insertAdjacentHTML('beforeend', '<i class="apple-bomb-burst" aria-hidden="true"></i>');
-        setAppleFuse(false);
-        specialEffect('bomb', 'clang');
+        game.hearts -= 1;
+        game.dullUntil = game.flightTime + 1000;
+        explodeBomb(node);
         updateAppleHud('폭탄 · 칼 무뎌짐 1초');
       } else {
+        game.dullUntil = game.flightTime + 2000;
         const missed = game.questionTargets.find(target => !game.matchedTargets.has(target.id)) || game.target;
         if (!game.reviewIds.has(missed.id)) {
           recordMistake(missed.id);
@@ -334,7 +361,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
         game.reviewIds.add(missed.id);
         node.classList.add('apple-fruit--wrong');
         playEffect('retry');
-        updateAppleHud('오답 · 칼 무뎌짐 1초');
+        updateAppleHud('오답 · 2초 동안 베기 잠김');
       }
       if (!game.hearts) resolveAppleRound(680);
       return;
@@ -359,7 +386,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     if (reward.critical) {
       node.classList.add('apple-fruit--gold');
       node.insertAdjacentHTML('beforeend', '<i class="apple-gold-rays" aria-hidden="true"></i>');
-      specialEffect('record');
+      specialEffect('record', 'goldcut');
     }
     if (game.includeListening) speakText(fruit.word);
     updateAppleHud(`${reward.critical ? '골든! · ' : ''}+${reward.points}점 · +${gainedMs / 1000}초 · ${fruit.word}`);

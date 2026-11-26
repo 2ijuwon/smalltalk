@@ -1,6 +1,141 @@
 // Generated from content/*.json. Run npm run content to update.
 export const vocabulary = [
   {
+    "id": "common-go",
+    "word": "go",
+    "meaning": "가다",
+    "example": "I go home.",
+    "translation": "나는 집에 가요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-eat",
+    "word": "eat",
+    "meaning": "먹다",
+    "example": "I eat rice.",
+    "translation": "나는 밥을 먹어요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-cat",
+    "word": "cat",
+    "meaning": "고양이",
+    "example": "I see a cat.",
+    "translation": "고양이가 보여요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-book",
+    "word": "book",
+    "meaning": "책",
+    "example": "It is a book.",
+    "translation": "이건 책이에요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-water",
+    "word": "water",
+    "meaning": "물",
+    "example": "I drink water.",
+    "translation": "나는 물을 마셔요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-like",
+    "word": "like",
+    "meaning": "좋아하다",
+    "example": "I like music.",
+    "translation": "나는 음악을 좋아해요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-have",
+    "word": "have",
+    "meaning": "가지고 있다",
+    "example": "I have a pen.",
+    "translation": "나에게 펜이 있어요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-want",
+    "word": "want",
+    "meaning": "원하다",
+    "example": "I want tea.",
+    "translation": "나는 차를 마시고 싶어요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-open",
+    "word": "open",
+    "meaning": "열다",
+    "example": "Open the door.",
+    "translation": "문을 열어 주세요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-read",
+    "word": "read",
+    "meaning": "읽다",
+    "example": "I read books.",
+    "translation": "나는 책을 읽어요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-apple",
+    "word": "apple",
+    "meaning": "사과",
+    "example": "I eat an apple.",
+    "translation": "나는 사과를 먹어요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-friend",
+    "word": "friend",
+    "meaning": "친구",
+    "example": "You are my friend.",
+    "translation": "너는 내 친구야.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-learn",
+    "word": "learn",
+    "meaning": "배우다",
+    "example": "We learn English.",
+    "translation": "우리는 영어를 배워요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-class",
+    "word": "class",
+    "meaning": "수업",
+    "example": "I have a class today.",
+    "translation": "오늘 수업이 있어요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
+    "id": "common-work",
+    "word": "work",
+    "meaning": "일하다",
+    "example": "I work after class.",
+    "translation": "나는 수업이 끝나면 일해요.",
+    "major": "common",
+    "difficulty": "basic"
+  },
+  {
     "id": "computer-algorithm",
     "word": "algorithm",
     "meaning": "알고리즘",
@@ -454,6 +589,33 @@ export const vocabulary = [
 export const smallTalks = {
   "basic": [
     [
+      "Hi!",
+      "안녕하세요!",
+      "가볍게 인사할 때 써요."
+    ],
+    [
+      "Thank you.",
+      "고마워요.",
+      "도움을 받거나 고마움을 전할 때 써요."
+    ],
+    [
+      "I am ready.",
+      "준비됐어요.",
+      "이제 시작할 수 있다고 말할 때 써요."
+    ],
+    [
+      "I like it.",
+      "마음에 들어요.",
+      "물건이나 제안이 마음에 들 때 써요."
+    ],
+    [
+      "See you.",
+      "또 봐요.",
+      "헤어질 때 가볍게 인사해요."
+    ]
+  ],
+  "intermediate": [
+    [
       "Could you help me?",
       "도와주실 수 있나요?",
       "도움이 필요할 때 정중하게 말해요."
@@ -467,9 +629,7 @@ export const smallTalks = {
       "See you tomorrow.",
       "내일 봐요.",
       "헤어지면서 다음 만남을 약속할 때 써요."
-    ]
-  ],
-  "intermediate": [
+    ],
     [
       "Let me think about it.",
       "생각해 볼게요.",

@@ -71,13 +71,20 @@ def save(text, timed=False):
             wav.writeframesraw(pcm)
             elapsed += len(pcm) // 2
     if timed and len(cues) != len(text.split()):
-        raise ValueError(f"Unexpected word alignment: {text!r}: {cues}")
+        # Piper can join neighboring words during phonemization. Use the
+        # standalone word durations to apportion the merged interval.
+        weights = [
+            max(1, sum(len(chunk.audio_int16_bytes) // 2 for chunk in voice.synthesize(word)))
+            for word in text.split()
+        ]
+        elapsed_seconds = elapsed / voice.config.sample_rate
+        cues = [round(elapsed_seconds * sum(weights[:index]) / sum(weights), 4) for index in range(len(weights))]
     manifest[text] = [name, cues or [0]]
 
 for phrase in dict.fromkeys(phrases + examples):
     save(phrase, timed=phrase in talk)
 
-tokens = {word.lower() for phrase in phrases for word in re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", phrase)}
+tokens = {word.lower() for phrase in phrases + examples for word in re.findall(r"[A-Za-z]+(?:'[A-Za-z]+)?", phrase)}
 for word in sorted(set(words) | tokens):
     if word not in manifest:
         save(word)
@@ -130,9 +137,8 @@ def orchard_effect(name, seconds, sample_at):
 
 def fuse(time, noise):
     sparse = noise if abs(noise) > .71 else noise * .12
-    flicker = .44 + .24 * math.sin(math.tau * 13 * time) + .22 * math.sin(math.tau * 31 * time)
-    edge = min(1, time / .009, (1.1 - time) / .009)
-    return .21 * sparse * flicker * edge
+    flicker = .57 + .19 * math.sin(math.tau * 14 * time) + .20 * math.sin(math.tau * 32 * time)
+    return .25 * sparse * flicker
 
 
 def clang(time, noise):
@@ -154,6 +160,6 @@ def fruit_slice(time, noise):
     return scrape + wet
 
 
-orchard_effect("fuse", 1.1, fuse)
+orchard_effect("fuse", 1.5, fuse)
 orchard_effect("clang", .46, clang)
 orchard_effect("slice", .21, fruit_slice)

@@ -1,18 +1,48 @@
 [
   {
     "difficulty": "basic",
+    "english": "Hi!",
+    "korean": "안녕하세요!",
+    "context": "가볍게 인사할 때 써요."
+  },
+  {
+    "difficulty": "basic",
+    "english": "Thank you.",
+    "korean": "고마워요.",
+    "context": "도움을 받거나 고마움을 전할 때 써요."
+  },
+  {
+    "difficulty": "basic",
+    "english": "I am ready.",
+    "korean": "준비됐어요.",
+    "context": "이제 시작할 수 있다고 말할 때 써요."
+  },
+  {
+    "difficulty": "basic",
+    "english": "I like it.",
+    "korean": "마음에 들어요.",
+    "context": "물건이나 제안이 마음에 들 때 써요."
+  },
+  {
+    "difficulty": "basic",
+    "english": "See you.",
+    "korean": "또 봐요.",
+    "context": "헤어질 때 가볍게 인사해요."
+  },
+  {
+    "difficulty": "intermediate",
     "english": "Could you help me?",
     "korean": "도와주실 수 있나요?",
     "context": "도움이 필요할 때 정중하게 말해요."
   },
   {
-    "difficulty": "basic",
+    "difficulty": "intermediate",
     "english": "That sounds good.",
     "korean": "좋은 것 같아요.",
     "context": "상대방의 제안에 편하게 동의할 때 써요."
   },
   {
-    "difficulty": "basic",
+    "difficulty": "intermediate",
     "english": "See you tomorrow.",
     "korean": "내일 봐요.",
     "context": "헤어지면서 다음 만남을 약속할 때 써요."

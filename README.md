@@ -1,6 +1,6 @@
 # smalltalk
 
-전공 영어 단어를 픽셀 게임으로 배우는 앱입니다. 웹 화면은 HTML, CSS, JavaScript ES 모듈로 만들었으며 프레임워크나 빌드 도구를 사용하지 않습니다. `flutter/`는 같은 웹 화면을 Android WebView에 포함하는 앱입니다. 현재 백엔드는 없고 학습 기록과 게임 최고 점수는 기기에 저장됩니다.
+전공 영어 단어를 게임으로 배우는 앱입니다. 모던·픽셀 화면을 선택할 수 있습니다. 웹은 HTML, CSS, JavaScript ES 모듈로 구성되며 `flutter/`는 같은 화면을 Android WebView에 포함합니다. 학습 기록과 게임 최고 점수는 기기에 저장됩니다.
 
 ## 웹 실행
 
@@ -34,13 +34,13 @@ flutter analyze
 flutter test
 ```
 
-첫 학습을 완료하면 단어 찾기, 사과 베기, 타자 게임을 계속 이용할 수 있습니다. 각 게임의 최고 점수는 홈과 통계에 표시됩니다. Supabase 연동은 이후 작업입니다.
+첫 학습을 완료하면 단어 찾기, 사과 베기, 타자 게임을 계속 이용할 수 있습니다. 각 게임의 최고 점수는 홈과 통계에 표시됩니다.
 
 ## 웹 배포
 
 GitHub `2ijuwon/smalltalk`의 `main` 브랜치를 Vercel `smalltalk` 프로젝트에 연결했습니다. Vercel은 `npm run build`를 실행하고 `dist/`를 배포합니다. 이 빌드는 웹 파일과 로컬 폰트만 복사합니다. Flutter 소스는 배포하지 않습니다.
 
-Supabase `smalltalk` 프로젝트는 생성했습니다. 현재 앱의 학습 기록은 기기에 저장되며, Supabase 데이터베이스 동기화는 아직 연결하지 않았습니다.
+단어와 스몰토크는 Supabase의 릴리스 단위 목록을 가져와 배포할 수 있습니다. [DB 스키마와 가져오기 절차](docs/06-content-workflow.md#supabase에서-단어-받기)
 
 ## Pronunciation audio
 
@@ -55,6 +55,8 @@ python -m piper.download_voices --download-dir "$env:TEMP/smalltalk-voice" en_US
 python scripts/generate-speech.py
 .\flutter\scripts\sync-web.ps1
 ```
+
+상황별 효과음 WAV를 다시 생성하려면 `node scripts/generate-effects.mjs`를 실행합니다.
 
 ## 학습 자료와 프로젝트 요약
 

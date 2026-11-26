@@ -1,6 +1,6 @@
 import { buildWordGrid, straightPath } from './word-search.js';
-import { escapeHtml, shuffle, randomInt, pixelIcon, pixelSprite, brandMark, button, card, progress, gameOverActions } from './ui.js';
-import { initializeTheme, reactToSlime, showLaunch, playEffect, specialEffect } from './effects.js';
+import { escapeHtml, shuffle, randomInt, pixelIcon, pixelSprite, brandMark, button, card, progress, gameOverActions, themeSlime } from './ui.js';
+import { initializeTheme, toggleTheme, reactToSlime, showLaunch, playEffect, specialEffect } from './effects.js';
 import { createLayoutMotion } from './layout-motion.js';
 import { createSpeech } from './speech.js';
 import { createConversation } from './conversation.js';
@@ -30,6 +30,8 @@ let screen = state.onboarded ? 'home' : 'onboarding';
 let onboardingStep = 0;
 let draftMajor = state.preferences.major;
 let draftDifficulty = state.preferences.difficulty;
+let draftSkin = state.preferences.skin;
+const skinLabels = { modern: '모던', pixel: '픽셀' };
 let notice = loaded.error;
 let learningSession = null;
 let quickSession = null;
@@ -50,6 +52,9 @@ let celebrationSequence = 0;
 let renderedCelebrationId = 0;
 let lastPraise = '';
 let reviewPage = 0;
+const reviewWide = matchMedia('(min-width: 860px) and (min-height: 590px)');
+const reviewLarge = matchMedia('(min-width: 1260px) and (min-height: 680px)');
+let reviewPageSize = reviewLarge.matches ? 15 : reviewWide.matches ? 10 : 4;
 let talkQuiz = null;
 let talkChoice = { day: '', difficulty: '', index: -1, seen: [] };
 let talkPointer = null;
@@ -71,7 +76,7 @@ const byId = (id) => vocabularyById.get(id);
 const validIds = (ids) => [...new Set(ids)].filter((id) => byId(id));
 
 function triggerCelebration(detail, kind = '') {
-  playEffect('finish');
+  playEffect(kind === 'talk' ? 'phrase' : 'finish');
   const candidates = praiseMessages.filter((message) => message !== lastPraise);
   lastPraise = candidates[randomInt(candidates.length)];
   celebrationSequence += 1;
@@ -154,13 +159,14 @@ function absorbPendingXp() {
     xpClaimTimer = 0;
     if (screen !== 'home') return;
     state = { ...state, xp: state.xp + state.pendingXp, pendingXp: 0 };
+    playEffect('xp');
     persist();
     render();
   }, 1200);
 }
 
 function header() {
-  return `<header class="topbar"><button class="brand" data-nav="home" aria-label="smalltalk 홈">${brandMark()}<strong>smalltalk</strong></button><div class="xp"><span>XP</span><strong>${state.xp}</strong></div></header>`;
+  return `<header class="topbar"><button class="brand" data-nav="home" aria-label="smalltalk 홈">${brandMark()}<strong>smalltalk</strong></button><div class="topbar-tools"><div class="xp"><span>XP</span><strong>${state.xp}</strong></div>${themeSlime()}</div></header>`;
 }
 
 function nav() {
@@ -170,10 +176,24 @@ function nav() {
 
 function onboarding() {
   if (onboardingStep === 0) return `<div class="onboarding"><div class="splash"><div class="splash-scene" aria-hidden="true">${pixelSprite("mascot")}</div><div class="splash-copy"><h1>전공 영어</h1><p class="eyebrow">하루 5단어 · 약 5분</p><p>단어 뜻, 문장, 퍼즐로 학습합니다.</p></div>${button('시작하기', 'onboarding-next')}</div></div>`;
+  if (onboardingStep === 3) return `<div class="onboarding"><div class="selection skin-selection">
+    <button class="onboarding-back" data-action="onboarding-back">← 뒤로</button>
+    <div class="selection-intro"><p class="eyebrow">03 / 03 · 화면 스타일</p><h1>화면 스타일 선택</h1></div>
+    ${skinChoices(draftSkin, 'preview-skin')}
+    <section class="card skin-preview" aria-label="${skinLabels[draftSkin]} 미리보기">
+      <div>${pixelSprite('mascot')}<div><small>미리보기</small><h2>오늘의 학습</h2></div></div>
+      <div class="skin-preview-tiles" aria-hidden="true"><span>${pixelIcon('search')}단어 찾기</span><span>${pixelIcon('duel')}사과 베기</span><span>${pixelIcon('keyboard')}타자 게임</span></div>
+    </section>
+    <div class="skin-confirm"><small>설정에서 언제든 바꿀 수 있어요!</small>${button(`${skinLabels[draftSkin]} 선택하고 시작`, 'onboarding-finish')}</div>
+  </div></div>`;
   const isMajor = onboardingStep === 1;
   const values = isMajor ? Object.entries(majorLabels) : Object.entries(difficultyLabels);
   const selected = isMajor ? draftMajor : draftDifficulty;
-  return `<div class="onboarding"><div class="selection"><button class="onboarding-back" data-action="onboarding-back" aria-label="이전 단계로 돌아가기">← 뒤로</button><div class="selection-intro"><p class="eyebrow">${isMajor ? '01 / 02 · 전공' : '02 / 02 · 난이도'}</p><h1>${isMajor ? '전공 선택' : '난이도 선택'}</h1><p>${isMajor ? '전공에 맞는 단어를 추천해요.' : '처음에는 짧고 쉬운 단어부터 나와요.'}</p></div><div class="choices" role="radiogroup">${values.map(([value, label]) => `<button class="choice ${selected === value ? 'choice--selected' : ''}" data-select="${isMajor ? 'major' : 'difficulty'}" data-value="${value}" role="radio" aria-checked="${selected === value}"><span class="radio-dot"></span>${label}</button>`).join('')}</div>${button(isMajor ? '다음' : '학습 시작', isMajor ? 'onboarding-next' : 'onboarding-finish')}</div></div>`;
+  return `<div class="onboarding"><div class="selection"><button class="onboarding-back" data-action="onboarding-back" aria-label="이전 단계로 돌아가기">← 뒤로</button><div class="selection-intro"><p class="eyebrow">${isMajor ? '01 / 03 · 전공' : '02 / 03 · 난이도'}</p><h1>${isMajor ? '전공 선택' : '난이도 선택'}</h1><p>${isMajor ? '전공에 맞는 단어를 추천해요.' : '처음에는 짧고 쉬운 단어부터 나와요.'}</p></div><div class="choices" role="radiogroup">${values.map(([value, label]) => `<button class="choice ${selected === value ? 'choice--selected' : ''}" data-select="${isMajor ? 'major' : 'difficulty'}" data-value="${value}" role="radio" aria-checked="${selected === value}"><span class="radio-dot"></span>${label}</button>`).join('')}</div>${button('다음', 'onboarding-next')}</div></div>`;
+}
+
+function skinChoices(selected, action) {
+  return `<div class="skin-choices" role="group" aria-label="화면 스타일">${Object.entries(skinLabels).map(([value, label]) => `<button class="choice ${selected === value ? 'choice--selected' : ''}" type="button" data-action="${action}:${value}" aria-pressed="${selected === value}">${label}</button>`).join('')}</div>`;
 }
 
 function home() {
@@ -186,15 +206,20 @@ function home() {
   const canSlice = canPlay && new Set(learned.map(({ word }) => word.toLowerCase())).size >= 3;
   const reviewFirst = (count >= 5 || stage > stageCount) && learned.length > 0;
   const questAction = reviewFirst
-    ? `<div class="dashboard-grid">${button('다시 볼 단어', 'review-game')}${stage <= stageCount ? button('다음 레슨', 'start-new', 'secondary') : ''}</div>`
+    ? `<div class="dashboard-grid">${button('단어 복습', 'review-game')}${stage <= stageCount ? button('다음 레슨', 'start-new', 'secondary') : ''}</div>`
     : button('학습 시작', 'start-new', 'primary', stage > stageCount);
+  const games = [
+    ['search', '단어 찾기', pixelSprite('search'), 'arcade-search', canPlay],
+    ['slice', '사과 베기', pixelSprite('duel'), 'arcade-duel', canSlice],
+    ['typing', '타자 게임', pixelIcon('keyboard'), 'arcade-typing', canPlay],
+  ];
   return `<div class="page home-page">
-    <section class="home-hero">${pixelSprite('mascot')}<div><p class="eyebrow">${majorLabels[major]}</p><h1>오늘의 학습</h1></div>
+    <section class="home-hero">${pixelSprite('mascot')}<div><p class="eyebrow">${majorLabels[major]}</p><h1>오늘의 학습</h1><p>하루 5단어 · 약 5분</p></div>
       <div class="daily-count"><strong>${count}<small> / 5</small></strong><div class="pixel-meter" aria-label="오늘 5단어 중 ${count}개">${Array.from({ length: 5 }, (_, i) => `<i class="${i < count ? 'filled' : ''}"></i>`).join('')}</div></div></section>
     <section class="card quest"><div class="quest-title"><div><p class="eyebrow">다음 목표 · ${Math.min(stage, stageCount)}/${stageCount}</p><h2>${stage > stageCount ? '학습 완료' : `레슨 ${String(stage).padStart(2, '0')}`}</h2></div>${pixelSprite('book')}</div>
-      ${progress(stage - 1, stageCount, '레벨 진행')}${questAction}</section>
+      ${progress(stage - 1, stageCount, '완료한 레슨')}${questAction}</section>
     <section class="card practice-panel"><h2>연습</h2><div class="dashboard-grid">${button('빠른 확인', 'start-quick', 'secondary', stage === 1 && !validIds(state.lastBatchIds).length)}<button class="button button--secondary" data-nav="review">복습</button></div></section>
-    <section class="card game-links"><h2>게임</h2><div class="dashboard-grid">${button(`${pixelSprite('search')}단어 찾기<small>최고 ${bestScore(state, 'search')}점</small>`, 'arcade-search', 'secondary', !canPlay)}${button(`${pixelSprite('duel')}사과 베기<small>최고 ${bestScore(state, 'slice')}점</small>`, 'arcade-duel', 'secondary', !canSlice)}${button(`<span class="game-emoji" aria-hidden="true">⌨</span>타자 게임<small>최고 ${bestScore(state, 'typing')}점</small>`, 'arcade-typing', 'secondary', !canPlay)}</div>${canPlay ? '' : hasLesson ? '<p>단어를 3개 이상 배우면 게임을 할 수 있어요.</p>' : '<p>첫 학습을 마치면 게임을 할 수 있어요.</p>'}</section>
+    <section class="card game-links"><h2>게임</h2><div class="dashboard-grid">${games.map(([id, label, icon, action, unlocked]) => button(`<span class="game-tile-icon">${icon}</span><span>${label}</span><small>${unlocked ? `최고 ${bestScore(state, id).toLocaleString('ko-KR')}점` : '잠김'}</small>`, action, 'secondary', !unlocked)).join('')}</div>${!hasLesson ? '<p>첫 레슨을 마치면 게임을 할 수 있어요.</p>' : !canPlay ? '<p>단어를 3개 이상 배우면 게임을 할 수 있어요.</p>' : !canSlice ? '<p>사과 베기는 서로 다른 영어 단어 3개가 필요해요.</p>' : ''}</section>
   </div>`;
 }
 
@@ -222,6 +247,7 @@ function animateBossHit() {
   const status = avatar.closest('.boss-status');
   status?.classList.add('boss-status--hit');
   root.querySelector('.main')?.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(2px)' }, { transform: 'none' }], { duration: 300, easing: 'steps(4, end)' });
+  playEffect('lessonhit');
   window.setTimeout(() => avatar.classList.remove('boss-avatar--hit'), 530);
   window.setTimeout(() => status?.classList.remove('boss-status--hit'), 530);
 }
@@ -333,6 +359,7 @@ function prepareWordSearch() {
   learningSession.grid = buildWordGrid(targets, learningSession.searchRules);
   learningSession.targets = targets;
   learningSession.foundIds = [];
+  learningSession.justFoundId = null;
   learningSession.dragPath = [];
   learningSession.wrongPath = [];
   learningSession.remaining = 60;
@@ -367,6 +394,7 @@ function nextArcadeBoard() {
   session.spelling = targets.map((item) => ({ item, index: item.word.length, options: [] }));
   session.grid = buildWordGrid(targets, session.searchRules);
   session.foundIds = [];
+  session.justFoundId = null;
   session.dragPath = [];
   session.wrongPath = [];
   session.searchEnded = false;
@@ -413,7 +441,7 @@ function startSearchTimer() {
         learningSession.feedback = null;
         render();
       }
-      if (learningSession.elapsed >= 60 && learningSession.elapsed % 60 === 0 && learningSession.remaining > 0) startSearchPenalty(learningSession);
+      if (learningSession.elapsed >= 120 && learningSession.elapsed % 60 === 0 && learningSession.remaining > 0) startSearchPenalty(learningSession);
     }
     updateTimerUI();
     if (!learningSession.remaining) {
@@ -433,12 +461,15 @@ function wordSearchGame() {
   const session = learningSession;
   const arcade = session.mode === 'arcade';
   const header = arcade ? '<div class="game-header"><h1>단어 찾기</h1><button class="game-exit" data-nav="home">나가기</button></div>' : stageHeader(4, '단어 찾기', '');
-  if (!session.searchStarted) return `<div class="page game-page search-page">${header}<section class="card search-ready">${pixelSprite('search')}<h2>단어 찾기</h2><p>뜻에 맞는 영어 단어를 격자에서 찾으세요. 첫 글자부터 마지막 글자까지 가로, 세로 또는 대각선으로 끌면 돼요.</p><small>철자 고르기는 힌트예요. 바로 격자를 끌어도 돼요.</small><small>60초 · 단어마다 +10초${arcade ? ' · 세트마다 +20초' : ''}</small>${arcade ? `<small>1분마다 10초 방해 · 점수 ×${session.searchRules.multiplier}</small>` : ''}${button('시작하기', 'search-start')}</section></div>`;
+  if (!session.searchStarted) return `<div class="page game-page search-page">${header}<section class="card search-ready">${pixelSprite('search')}<h2>단어 찾기</h2><p>뜻에 맞는 영어 단어를 격자에서 찾으세요. 첫 글자부터 끝까지 가로, 세로 또는 대각선으로 끌면 돼요.</p>${arcade ? '' : '<small>철자 힌트를 풀거나 격자에서 바로 찾을 수 있어요.</small>'}<small>60초 · 단어마다 +10초${arcade ? ' · 세트마다 +20초' : ''}</small>${arcade ? `<small>2분부터 1분마다 장애물 · 점수 ×${session.searchRules.multiplier}</small>` : ''}${button('시작하기', 'search-start')}</section></div>`;
   const grid = session.grid;
   const foundCells = new Set(grid.placements.filter((placement) => session.foundIds.includes(placement.id)).flatMap((placement) => placement.indices));
-  const justFoundCells = new Set(grid.placements.find((placement) => placement.id === session.feedback?.targetId)?.indices || []);
-  const firstLetters = new Set(grid.placements.filter(({ id }) => !session.searchEnded && !session.foundIds.includes(id)
-    && session.spelling.some(({ item, index }) => item.id === id && index === item.word.length)).map(({ indices }) => indices[0]));
+  const justFoundCells = new Set(grid.placements.find((placement) => placement.id === session.justFoundId)?.indices || []);
+  session.justFoundId = null;
+  const unfound = grid.placements.filter(({ id }) => !session.searchEnded && !session.foundIds.includes(id));
+  const remainingStarts = new Set(unfound.map(({ indices }) => indices[0]));
+  const firstLetters = new Set(unfound.filter(({ id }) => session.spelling.some(({ item, index }) =>
+    item.id === id && index === item.word.length)).map(({ indices }) => indices[0]));
   const fogged = new Set(session.penalty?.type === 'fog' ? session.penalty.cells : []);
   const clues = session.spelling.map(({ item, index, options }, slot) => {
     const done = session.foundIds.includes(item.id);
@@ -448,7 +479,7 @@ function wordSearchGame() {
       `<div class="spell-choices" role="group" aria-label="${escapeHtml(item.meaning)} 철자 힌트"><small>${index + 1}번째</small>${options.map((letter) => button(letter, `spell:${slot}:${letter}`, 'secondary', session.searchEnded)).join('')}${spelling ? `<span class="spell-progress">${escapeHtml(spelling)}</span>` : ''}</div>`}</div>`;
   }).join('');
   const puzzle = `<div class="letter-grid letter-grid--drag" style="--grid-size:${grid.size}" role="grid" aria-label="단어 찾기 퍼즐">
-    ${grid.cells.map((letter, index) => `<button type="button" role="gridcell" data-grid-index="${index}" class="${foundCells.has(index) ? 'found' : ''} ${justFoundCells.has(index) ? 'just-found' : ''} ${session.wrongPath.includes(index) ? 'try-again' : ''} ${firstLetters.has(index) ? 'first-letter' : ''} ${fogged.has(index) && !foundCells.has(index) ? 'fogged' : ''}" aria-label="${letter}${firstLetters.has(index) ? ', 시작 글자' : ''}">${fogged.has(index) && !foundCells.has(index) ? '?' : letter}</button>`).join('')}</div>`;
+    ${grid.cells.map((letter, index) => `<button type="button" role="gridcell" data-grid-index="${index}" class="${foundCells.has(index) ? 'found' : ''} ${justFoundCells.has(index) ? 'just-found' : ''} ${session.wrongPath.includes(index) ? 'try-again' : ''} ${firstLetters.has(index) ? 'first-letter' : ''} ${remainingStarts.has(index) ? 'remaining-start' : ''} ${fogged.has(index) && !foundCells.has(index) ? 'fogged' : ''}" aria-label="${letter}${firstLetters.has(index) ? ', 시작 글자' : ''}">${fogged.has(index) && !foundCells.has(index) ? '?' : letter}</button>`).join('')}</div>`;
   return `<div class="page game-page search-page${arcade ? ' search-page--arcade' : ''}${session.penalty?.type === 'hint' ? ' search-page--no-hint' : ''}">${header}
     <div class="search-toolbar"><div><span>남은 시간</span><strong data-search-timer>${formatTime(session.remaining)}</strong></div><div><span>찾은 단어</span><strong>${session.foundIds.length}/${session.targets.length}</strong></div>${arcade ? `<div class="search-score"><span>${session.setsCleared + 1}세트 · ${session.score}점</span><strong>최고 ${bestScore(state, 'search')}점</strong>${session.penalty ? `<em data-search-penalty>${session.penalty.type === 'fog' ? '안개' : '힌트 숨김'} ${session.penalty.until - session.elapsed}초</em>` : ''}</div>` : ''}</div>
     <div class="search-workspace"><div class="spell-list">${clues}</div><div class="puzzle-space">${puzzle}</div></div>
@@ -457,10 +488,10 @@ function wordSearchGame() {
 }
 
 function learn() {
+  if (!learningSession) return `<div class="page">${card(`<h2>진행 중인 학습이 없어요</h2>${button('홈으로', 'go-home')}`, 'empty')}</div>`;
   if (learningSession.stage === 'intro') {
     return `<div class="page game-page boss-intro"><div class="game-header"><h1>보스 슬라임</h1><button class="game-exit" data-nav="home">나가기</button></div><div class="boss-intro-scene">${pixelSprite('boss')}<p>학습을 완료해 보스 슬라임을 물리치세요!</p></div>${button('시작하기', 'boss-intro-start')}</div>`;
   }
-  if (!learningSession) return `<div class="page">${card(`<h2>진행 중인 학습이 없어요</h2>${button('홈으로', 'go-home')}`, 'empty')}</div>`;
   if (learningSession.stage === 'preview') return previewGame();
   if (learningSession.stage === 'match') return matchingGame();
   if (learningSession.stage === 'sentence') return sentenceGame();
@@ -533,6 +564,7 @@ function rotateTalk() {
   const remaining = unseen.length ? unseen : alternatives;
   if (!remaining.length) return;
   stopSpeech();
+  playEffect('shuffle');
   const index = remaining[randomInt(remaining.length)];
   talkChoice = { ...talkChoice, index, seen: unseen.length ? [...talkChoice.seen, index] : [index] };
   state.talkRotation = talkChoice;
@@ -543,7 +575,7 @@ function rotateTalk() {
 function smallTalk() {
   const { entries, selected } = currentTalk();
   const spoken = clickableSentence(selected[0]);
-  return `<div class="page page--narrow"><div class="page-intro"><p class="eyebrow">TODAY'S SMALL TALK</p><h1>스몰토크</h1></div>${card(`<span class="talk-level">${difficultyLabels[state.preferences.difficulty].split(' · ')[0]}</span><div class="talk-sentence-row"><h2 class="talk-sentence">${spoken}</h2><button class="talk-refresh" data-action="talk-refresh" aria-label="다른 스몰토크 보기" title="다른 스몰토크" ${entries.length < 2 ? 'disabled' : ''}>${pixelIcon('refresh')}</button></div><button class="listen-button" data-action="speak-smalltalk">▶ 발음 듣기</button><div class="talk-detail"><div><span>뜻</span><p>${selected[1]}</p></div><div><span>언제 쓰나요?</span><p>${selected[2]}</p></div></div>`, 'small-talk-card')}${button('맞춰보기', 'talk-quiz')}${button('대화하기', 'talk-conversation', 'secondary')}</div>`;
+  return `<div class="page page--narrow"><div class="page-intro"><h1>오늘의 스몰토크</h1></div>${card(`<span class="talk-level">${difficultyLabels[state.preferences.difficulty].split(' · ')[0]}</span><div class="talk-sentence-row"><h2 class="talk-sentence" lang="en">${spoken}</h2><button class="talk-refresh" data-action="talk-refresh" aria-label="다른 스몰토크 보기" title="다른 스몰토크" ${entries.length < 2 ? 'disabled' : ''}>${pixelIcon('refresh')}</button></div><button class="listen-button" data-action="speak-smalltalk">▶ 발음 듣기</button><div class="talk-detail"><div><span>뜻</span><p>${escapeHtml(selected[1])}</p></div><div><span>언제 쓰나요?</span><p>${escapeHtml(selected[2])}</p></div></div>`, 'small-talk-card')}<div class="smalltalk-actions">${button('문장 맞춰보기', 'talk-quiz')}${button(state.conversationGame ? '대화 이어하기' : '슬라임과 대화', 'talk-conversation', 'secondary')}</div></div>`;
 }
 
 function openTalkQuiz() {
@@ -562,7 +594,7 @@ function talkQuizView() {
 
 function moveTalkToken(id, zone, index = null) {
   if (!talkQuiz || talkQuiz.solved) return;
-  playEffect('place');
+  playEffect(zone === 'answer' ? 'tilein' : 'tileout');
   talkQuiz.bank = talkQuiz.bank.filter((value) => value !== id);
   talkQuiz.answer = talkQuiz.answer.filter((value) => value !== id);
   const list = zone === 'answer' ? talkQuiz.answer : talkQuiz.bank;
@@ -573,8 +605,9 @@ function moveTalkToken(id, zone, index = null) {
 }
 
 function clickableWord(text, meaning = '') {
-  const word = text.toLowerCase().replace(/[^a-z']/g, '');
-  const gloss = meaning || vocabulary.find((item) => item.word.toLowerCase() === word)?.meaning || commonMeanings[word];
+  const word = text.toLowerCase().replaceAll('’', "'").replace(/^[^a-z]+|[^a-z]+$/g, '');
+  const gloss = meaning || vocabulary.find((item) => item.word.toLowerCase() === word)?.meaning ||
+    (Object.hasOwn(commonMeanings, word) ? commonMeanings[word] : '');
   if (!word) return escapeHtml(text);
   return `<button type="button" class="inline-word" data-dictionary-word="${escapeHtml(word)}" data-meaning="${escapeHtml(gloss)}">${escapeHtml(text)}</button>`;
 }
@@ -593,13 +626,13 @@ function learnedGamePool() {
 
 function review() {
   const words = rankedWords(state).filter(({ id }) => byId(id));
-  const pageSize = 4;
+  const pageSize = reviewPageSize;
   const pages = Math.max(1, Math.ceil(words.length / pageSize));
   reviewPage = Math.min(reviewPage, pages - 1);
   const list = words.slice(reviewPage * pageSize, (reviewPage + 1) * pageSize);
   return `<div class="page review-page"><div class="page-intro"><h1>복습</h1></div>
     ${button('복습하기', 'review-game', 'primary', !words.length)}
-    <section class="review-words"><h2>배운 단어 보기</h2>
+    <section class="review-words"><h2>배운 단어 <small>${words.length}개</small></h2>
     ${list.length ? `<ul>${list.map(({ id, score }) => `<li><strong>${clickableWord(byId(id).word, byId(id).meaning)}</strong><span>${byId(id).meaning}</span><small>${score}점</small></li>`).join('')}</ul>` : '<p>학습을 마치면 여기에 단어가 표시돼요.</p>'}</section>
     ${pages > 1 ? `<div class="review-pager">${button('이전', 'review-prev', 'secondary', !reviewPage)}<span>${reviewPage + 1} / ${pages}</span>${button('다음', 'review-next', 'secondary', reviewPage === pages - 1)}</div>` : ''}
   </div>`;
@@ -625,6 +658,7 @@ function resetLocalData() {
   state = structuredClone(initialState);
   draftMajor = state.preferences.major;
   draftDifficulty = state.preferences.difficulty;
+  draftSkin = state.preferences.skin;
   onboardingStep = 0;
   reviewPage = 0;
   resetOpen = false;
@@ -635,16 +669,22 @@ function settings() {
   const reset = resetOpen
     ? `<p role="alert">현재 접속 주소에 저장된 학습 기록, 점수, 설정이 지워져요. 되돌릴 수 없어요.</p><div class="game-over-actions">${button('취소', 'settings-reset-cancel', 'secondary')}${button('모두 지우기', 'settings-reset-confirm', 'danger')}</div>`
     : button('데이터 초기화', 'settings-reset', 'quiet');
-  return `<div class="page page--narrow"><h1>설정</h1>${card(`<label>전공<select data-setting="major">${Object.entries(majorLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.major === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>난이도<select data-setting="difficulty">${Object.entries(difficultyLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.difficulty === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><div class="fixed-goal"><span>하루 목표</span><strong>5단어 · 약 5분</strong></div><label>희망 시간<input data-setting="reminderTime" type="time" value="${state.preferences.reminderTime}"></label>`, 'form-card')}${button('저장', 'settings-done')}<section class="card settings-reset"><h2>저장 데이터</h2>${reset}</section></div>`;
+  return `<div class="page page--narrow"><h1>설정</h1>${card(`<label>전공<select data-setting="major">${Object.entries(majorLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.major === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>난이도<select data-setting="difficulty">${Object.entries(difficultyLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.difficulty === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><div class="fixed-goal"><span>하루 목표</span><strong>5단어 · 약 5분</strong></div><label>희망 시간<input data-setting="reminderTime" type="time" value="${state.preferences.reminderTime}"></label>`, 'form-card')}${card(`<h2>화면 스타일</h2>${skinChoices(activeSkin(), 'settings-skin')}`, 'settings-style')}${button('저장', 'settings-done')}<section class="card settings-reset"><h2>저장 데이터</h2>${reset}</section></div>`;
+}
+
+function activeSkin() {
+  const selected = screen === 'onboarding' && onboardingStep === 3 ? draftSkin : state.preferences.skin;
+  return selected === 'pixel' ? 'pixel' : 'modern';
 }
 
 function paint() {
+  document.documentElement.dataset.skin = activeSkin();
   const views = { onboarding, home, learn, quick: quickCheck, smalltalk: smallTalk, smalltalkquiz: talkQuizView, conversation: conversation.view, review, stats, settings, duel: orchard.view, result: resultView, typing: typingGame.view };
   const isOnboarding = screen === 'onboarding';
   const isImmersive = ['learn', 'quick', 'duel', 'result', 'typing', 'smalltalkquiz', 'conversation'].includes(screen);
   const activeStage = screen === 'learn' ? learningSession?.stage || '' : screen;
   root.className = [isOnboarding ? 'app--onboarding' : '', isImmersive ? 'app--immersive' : ''].filter(Boolean).join(' ');
-  root.innerHTML = `${isOnboarding ? '' : header()}${notice ? `<div class="notice" role="status">${escapeHtml(notice)}</div>` : ''}<main id="main" data-screen="${screen}" data-stage="${activeStage}" class="${isOnboarding ? 'main main--onboarding' : 'main'}">${(views[screen] || home)()}</main>${isOnboarding || isImmersive ? '' : nav()}${successBurst()}`;
+  root.innerHTML = `${isOnboarding ? `<div class="onboarding-tools">${themeSlime()}</div>` : header()}${notice ? `<div class="notice" role="status">${escapeHtml(notice)}</div>` : ''}<main id="main" data-screen="${screen}" data-stage="${activeStage}" class="${isOnboarding ? 'main main--onboarding' : 'main'}">${(views[screen] || home)()}</main>${isOnboarding || isImmersive ? '' : nav()}${successBurst()}`;
   animateBossHit();
   if (screen === 'home') absorbPendingXp();
   if (screen === 'learn' && learningSession?.stage === 'search') updateTimerUI();
@@ -709,6 +749,15 @@ function render({ resetScroll = false } = {}) {
   });
 }
 window.addEventListener('resize', drawMatchLines);
+for (const query of [reviewWide, reviewLarge]) {
+  query.addEventListener('change', () => {
+    const nextSize = reviewLarge.matches ? 15 : reviewWide.matches ? 10 : 4;
+    if (nextSize === reviewPageSize) return;
+    reviewPage = Math.floor(reviewPage * reviewPageSize / nextSize);
+    reviewPageSize = nextSize;
+    if (screen === 'review') render();
+  });
+}
 
 function recordLearningAnswer(id, result) {
   if (result === 'incorrect') playEffect('retry');
@@ -722,10 +771,11 @@ function evaluateMatch() {
   window.clearTimeout(matchFeedbackTimer);
   const word = session.selectedWord;
   const meaning = session.selectedMeaning;
-  if (word === meaning) {
+  if (byId(word).meaning === byId(meaning).meaning) {
+    if (word !== meaning) session.meaningOrder = session.meaningOrder.map((id) => id === meaning ? word : id === word ? meaning : id);
     session.matched.push(word);
     session.pendingMatchLine = word;
-    playEffect('correct');
+    playEffect('match');
     recordLearningAnswer(word, 'correct');
     session.feedback = { type: 'correct', text: `좋아요! ${byId(word).word}의 뜻을 찾았어요.`, word };
     if (session.matched.length === session.items.length) { hitLessonBoss('match'); triggerCelebration('단어를 모두 연결했어요'); }
@@ -746,7 +796,7 @@ function evaluateMatch() {
 function moveToken(tokenId, destination, insertionIndex = null) {
   const session = learningSession;
   if (session.sentenceSolved) return;
-  playEffect('place');
+  playEffect(destination === 'answer' ? 'tilein' : 'tileout');
   session.sentenceBank = session.sentenceBank.filter((id) => id !== tokenId);
   session.sentenceAnswer = session.sentenceAnswer.filter((id) => id !== tokenId);
   const destinationItems = destination === 'answer' ? session.sentenceAnswer : session.sentenceBank;
@@ -816,21 +866,23 @@ function paintDragPath(path) {
 
 function resolveSearchPath(path) {
   const session = learningSession;
+  const letters = path.map((index) => session.grid.cells[index]).join('');
+  const reverse = [...letters].reverse().join('');
   const target = session.grid.placements.find((placement) => {
     if (session.foundIds.includes(placement.id)) return false;
-    return path.length === placement.indices.length
-      && (path.every((cell, index) => cell === placement.indices[index])
-      || path.every((cell, index) => cell === placement.indices.at(-1 - index)));
+    return letters === placement.word || reverse === placement.word;
   });
   if (target) {
-    playEffect('correct');
+    target.indices = letters === target.word ? [...path] : [...path].reverse();
+    playEffect('search');
     session.foundIds.push(target.id);
+    session.justFoundId = target.id;
     session.remaining += 10;
     if (session.mode === 'arcade') {
       session.score += wordSearchPoints(session.searchRules, 100);
       saveBest('search', session.score);
     } else recordLearningAnswer(target.id, 'correct');
-    session.feedback = { type: 'correct', text: `${byId(target.id).word} · +10초`, targetId: target.id };
+    session.feedback = { type: 'correct', text: `${byId(target.id).word} · +10초` };
     session.wrongPath = [];
     if (session.foundIds.length === session.targets.length) {
       stopSearchTimer();
@@ -840,6 +892,7 @@ function resolveSearchPath(path) {
         session.score += bonus;
         session.setsCleared += 1;
         session.searchTransitioning = true;
+        playEffect('searchclear');
         session.feedback = { type: 'correct', text: `3개 완료! +20초 · 세트 보너스 +${bonus}점` };
         saveBest('search', session.score);
         searchTransitionTimer = window.setTimeout(nextArcadeBoard, 400);
@@ -862,8 +915,12 @@ function resolveSearchPath(path) {
 }
 
 function playTouchEffect(event) {
+  if (event.target.closest(':disabled, [data-action="toggle-theme"]')) return;
+  if (event.target.closest('.apple-field, .letter-grid')) return;
+  if (event.target.closest('[data-nav]')) return playEffect('navigate');
+  if (event.target.closest('.listen-button')) return playEffect('listen');
   const word = event.target.closest('[data-dictionary-word], [data-match-side="word"], .word-token, [data-apple-index]');
-  if (event.target.closest('.pixel-sprite--slime, .typing-enemy:not(.typing-item)')) return playEffect('place');
+  if (event.target.closest('.pixel-sprite--slime, .typing-enemy:not(.typing-item)')) return playEffect('bounce');
   const control = event.target.closest('button, input, select, label, a');
   playEffect(word ? 'word' : control ? 'tap' : 'surface');
 }
@@ -909,6 +966,17 @@ root.addEventListener('click', (event) => {
   if (target.dataset.quickAnswer !== undefined && !quickSession.submitted) { quickSession.selection = target.dataset.quickAnswer; return render(); }
   const action = target.dataset.action;
   if (!action) return;
+  if (action === 'toggle-theme') return toggleTheme();
+  if (action.startsWith('preview-skin:') || action.startsWith('settings-skin:')) {
+    const [context, skin] = action.split(':');
+    if (!Object.hasOwn(skinLabels, skin)) return;
+    if (context === 'preview-skin') draftSkin = skin;
+    else {
+      state.preferences.skin = skin;
+      persist();
+    }
+    return render();
+  }
   if (action === 'boss-intro-start') {
     learningSession.stage = 'preview';
     return render({ resetScroll: true });
@@ -919,10 +987,10 @@ root.addEventListener('click', (event) => {
   if (action === 'talk-done') return navigate('smalltalk');
   if (action === 'talk-check') {
     if (!talkQuiz || talkQuiz.bank.length) return;
-    const wrong = talkQuiz.answer.findIndex((id, index) => id !== index);
+    const wrong = talkQuiz.answer.findIndex((id, index) => talkQuiz.tokens[id].word !== talkQuiz.tokens[index].word);
     talkQuiz.solved = wrong < 0;
     if (talkQuiz.solved) speakSmallTalk();
-    playEffect(wrong < 0 ? 'correct' : 'retry');
+    else playEffect('retry');
     talkQuiz.wrongIndex = wrong;
     talkQuiz.feedback = wrong < 0 ? '문장 완성!' : `${wrong + 1}번째 단어부터 다시 확인하세요.`;
     if (wrong < 0) triggerCelebration('문장을 정확하게 완성했어요', 'talk');
@@ -935,7 +1003,7 @@ root.addEventListener('click', (event) => {
   if (action === 'onboarding-next') { onboardingStep += 1; return render(); }
   if (action === 'onboarding-back') { onboardingStep = Math.max(0, onboardingStep - 1); return render(); }
   if (action === 'onboarding-finish') {
-    state = { ...state, onboarded: true, preferences: { ...state.preferences, major: draftMajor, difficulty: draftDifficulty, dailyGoal: 5 } };
+    state = { ...state, onboarded: true, preferences: { ...state.preferences, major: draftMajor, difficulty: draftDifficulty, skin: draftSkin, dailyGoal: 5 } };
     persist();
     return goHome('오늘 학습이 준비됐어요.');
   }
@@ -948,7 +1016,7 @@ root.addEventListener('click', (event) => {
   if (action === 'start-quick') {
     const major = state.preferences.major;
     const stage = nextStage(state, major);
-    return startQuickCheck(stage > 1 ? stageWords(major, stage - 1) : state.lastBatchIds);
+    return startQuickCheck(validIds(state.lastBatchIds).length ? state.lastBatchIds : stage > 1 ? stageWords(major, stage - 1) : []);
   }
   if (action === 'review-game') return startQuickCheck(pickReviewWords(rankedWords(state).filter(({ id }) => byId(id))), true);
   if (action === 'review-prev') { reviewPage = Math.max(0, reviewPage - 1); return render(); }
@@ -974,9 +1042,10 @@ root.addEventListener('click', (event) => {
   }
   if (action === 'start-sentence') { learningSession.stage = 'sentence'; prepareSentence(0); return render({ resetScroll: true }); }
   if (action === 'check-sentence') {
-    const expected = learningSession.sentenceTokens.map((token) => token.id);
-    const wrongPositions = learningSession.sentenceAnswer.map((id, index) => id === expected[index] ? -1 : index).filter((index) => index >= 0);
     if (learningSession.sentenceSolved || learningSession.sentenceBank.length) return;
+    const expected = learningSession.sentenceTokens.map((token) => token.text);
+    const words = new Map(learningSession.sentenceTokens.map(({ id, text }) => [id, text]));
+    const wrongPositions = learningSession.sentenceAnswer.flatMap((id, index) => words.get(id) === expected[index] ? [] : [index]);
     recordLearningAnswer(learningSession.items[learningSession.itemIndex].id, wrongPositions.length ? 'incorrect' : 'correct');
     if (wrongPositions.length) {
       learningSession.mistakes += 1;
@@ -1177,7 +1246,7 @@ root.addEventListener('pointermove', (event) => {
     }
     return;
   }
-  if (!searchPointer?.active || !learningSession) return;
+  if (!searchPointer?.active || searchPointer.pointerId !== event.pointerId || !learningSession) return;
   event.preventDefault();
   const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-grid-index]');
   if (!cell) return;
@@ -1207,11 +1276,13 @@ function endSentencePointer(event) {
 }
 
 function endSearchPointer(event) {
-  if (!searchPointer?.active || !learningSession) return;
+  if (!searchPointer?.active || searchPointer.pointerId !== event.pointerId || !learningSession) return;
   event.preventDefault();
   const path = learningSession.dragPath;
   searchPointer = null;
-  if (event.type !== 'pointercancel' && path.length > 1) resolveSearchPath(path);
+  const singleLetter = path.length === 1 && learningSession.grid.placements.some((placement) =>
+    placement.word === learningSession.grid.cells[path[0]] && !learningSession.foundIds.includes(placement.id));
+  if (event.type !== 'pointercancel' && (path.length > 1 || singleLetter)) resolveSearchPath(path);
   else paintDragPath([]);
 }
 root.addEventListener('pointerup', endSearchPointer);

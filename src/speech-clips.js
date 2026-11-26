@@ -1,4 +1,40 @@
 export const speechClips = {
+  "Hi!": [
+    "183.wav",
+    [
+      0.0
+    ]
+  ],
+  "Thank you.": [
+    "184.wav",
+    [
+      0.0,
+      0.3367
+    ]
+  ],
+  "I am ready.": [
+    "185.wav",
+    [
+      0.0,
+      0.3051,
+      0.5195
+    ]
+  ],
+  "I like it.": [
+    "186.wav",
+    [
+      0.0,
+      0.209,
+      0.4992
+    ]
+  ],
+  "See you.": [
+    "187.wav",
+    [
+      0.0,
+      0.2902
+    ]
+  ],
   "Could you help me?": [
     "0.wav",
     [
@@ -131,6 +167,96 @@ export const speechClips = {
   ],
   "Can you tell me more?": [
     "18.wav",
+    [
+      0
+    ]
+  ],
+  "I go home.": [
+    "188.wav",
+    [
+      0
+    ]
+  ],
+  "I eat rice.": [
+    "189.wav",
+    [
+      0
+    ]
+  ],
+  "I see a cat.": [
+    "190.wav",
+    [
+      0
+    ]
+  ],
+  "It is a book.": [
+    "191.wav",
+    [
+      0
+    ]
+  ],
+  "I drink water.": [
+    "192.wav",
+    [
+      0
+    ]
+  ],
+  "I like music.": [
+    "193.wav",
+    [
+      0
+    ]
+  ],
+  "I have a pen.": [
+    "194.wav",
+    [
+      0
+    ]
+  ],
+  "I want tea.": [
+    "195.wav",
+    [
+      0
+    ]
+  ],
+  "Open the door.": [
+    "196.wav",
+    [
+      0
+    ]
+  ],
+  "I read books.": [
+    "197.wav",
+    [
+      0
+    ]
+  ],
+  "I eat an apple.": [
+    "198.wav",
+    [
+      0
+    ]
+  ],
+  "You are my friend.": [
+    "199.wav",
+    [
+      0
+    ]
+  ],
+  "We learn English.": [
+    "200.wav",
+    [
+      0
+    ]
+  ],
+  "I have a class today.": [
+    "201.wav",
+    [
+      0
+    ]
+  ],
+  "I work after class.": [
+    "202.wav",
     [
       0
     ]
@@ -435,8 +561,20 @@ export const speechClips = {
       0
     ]
   ],
+  "a": [
+    "203.wav",
+    [
+      0
+    ]
+  ],
   "about": [
     "69.wav",
+    [
+      0
+    ]
+  ],
+  "after": [
+    "204.wav",
     [
       0
     ]
@@ -459,8 +597,32 @@ export const speechClips = {
       0
     ]
   ],
+  "an": [
+    "205.wav",
+    [
+      0
+    ]
+  ],
+  "and": [
+    "206.wav",
+    [
+      0
+    ]
+  ],
+  "annual": [
+    "207.wav",
+    [
+      0
+    ]
+  ],
   "anything": [
     "73.wav",
+    [
+      0
+    ]
+  ],
+  "apple": [
+    "208.wav",
     [
       0
     ]
@@ -489,8 +651,38 @@ export const speechClips = {
       0
     ]
   ],
+  "at": [
+    "209.wav",
+    [
+      0
+    ]
+  ],
   "battery": [
     "78.wav",
+    [
+      0
+    ]
+  ],
+  "be": [
+    "210.wav",
+    [
+      0
+    ]
+  ],
+  "before": [
+    "211.wav",
+    [
+      0
+    ]
+  ],
+  "book": [
+    "212.wav",
+    [
+      0
+    ]
+  ],
+  "books": [
+    "213.wav",
     [
       0
     ]
@@ -507,8 +699,56 @@ export const speechClips = {
       0
     ]
   ],
+  "building": [
+    "214.wav",
+    [
+      0
+    ]
+  ],
+  "cable": [
+    "215.wav",
+    [
+      0
+    ]
+  ],
   "can": [
     "81.wav",
+    [
+      0
+    ]
+  ],
+  "cat": [
+    "216.wav",
+    [
+      0
+    ]
+  ],
+  "change": [
+    "217.wav",
+    [
+      0
+    ]
+  ],
+  "changes": [
+    "218.wav",
+    [
+      0
+    ]
+  ],
+  "check": [
+    "219.wav",
+    [
+      0
+    ]
+  ],
+  "checked": [
+    "220.wav",
+    [
+      0
+    ]
+  ],
+  "checks": [
+    "221.wav",
     [
       0
     ]
@@ -519,8 +759,38 @@ export const speechClips = {
       0
     ]
   ],
+  "class": [
+    "222.wav",
+    [
+      0
+    ]
+  ],
+  "clear": [
+    "223.wav",
+    [
+      0
+    ]
+  ],
+  "clients": [
+    "224.wav",
+    [
+      0
+    ]
+  ],
   "clinic": [
     "83.wav",
+    [
+      0
+    ]
+  ],
+  "code": [
+    "225.wav",
+    [
+      0
+    ]
+  ],
+  "company": [
+    "226.wav",
     [
       0
     ]
@@ -531,8 +801,44 @@ export const speechClips = {
       0
     ]
   ],
+  "computer": [
+    "227.wav",
+    [
+      0
+    ]
+  ],
+  "confirmed": [
+    "228.wav",
+    [
+      0
+    ]
+  ],
+  "connects": [
+    "229.wav",
+    [
+      0
+    ]
+  ],
   "context": [
     "85.wav",
+    [
+      0
+    ]
+  ],
+  "continued": [
+    "230.wav",
+    [
+      0
+    ]
+  ],
+  "controls": [
+    "231.wav",
+    [
+      0
+    ]
+  ],
+  "correct": [
+    "232.wav",
     [
       0
     ]
@@ -567,6 +873,18 @@ export const speechClips = {
       0
     ]
   ],
+  "customers": [
+    "233.wav",
+    [
+      0
+    ]
+  ],
+  "data": [
+    "234.wav",
+    [
+      0
+    ]
+  ],
   "database": [
     "91.wav",
     [
@@ -585,8 +903,20 @@ export const speechClips = {
       0
     ]
   ],
+  "detects": [
+    "235.wav",
+    [
+      0
+    ]
+  ],
   "diagnosis": [
     "94.wav",
+    [
+      0
+    ]
+  ],
+  "displays": [
+    "236.wav",
     [
       0
     ]
@@ -597,8 +927,44 @@ export const speechClips = {
       0
     ]
   ],
+  "doctor": [
+    "237.wav",
+    [
+      0
+    ]
+  ],
+  "documents": [
+    "238.wav",
+    [
+      0
+    ]
+  ],
+  "door": [
+    "239.wav",
+    [
+      0
+    ]
+  ],
   "dosage": [
     "96.wav",
+    [
+      0
+    ]
+  ],
+  "drink": [
+    "240.wav",
+    [
+      0
+    ]
+  ],
+  "drives": [
+    "241.wav",
+    [
+      0
+    ]
+  ],
+  "eat": [
+    "242.wav",
     [
       0
     ]
@@ -615,8 +981,32 @@ export const speechClips = {
       0
     ]
   ],
+  "english": [
+    "243.wav",
+    [
+      0
+    ]
+  ],
+  "enough": [
+    "244.wav",
+    [
+      0
+    ]
+  ],
+  "error": [
+    "245.wav",
+    [
+      0
+    ]
+  ],
   "ethics": [
     "99.wav",
+    [
+      0
+    ]
+  ],
+  "every": [
+    "246.wav",
     [
       0
     ]
@@ -627,8 +1017,56 @@ export const speechClips = {
       0
     ]
   ],
+  "expected": [
+    "247.wav",
+    [
+      0
+    ]
+  ],
   "explain": [
     "101.wav",
+    [
+      0
+    ]
+  ],
+  "explains": [
+    "248.wav",
+    [
+      0
+    ]
+  ],
+  "factory": [
+    "249.wav",
+    [
+      0
+    ]
+  ],
+  "faster": [
+    "250.wav",
+    [
+      0
+    ]
+  ],
+  "feels": [
+    "251.wav",
+    [
+      0
+    ]
+  ],
+  "fever": [
+    "252.wav",
+    [
+      0
+    ]
+  ],
+  "final": [
+    "253.wav",
+    [
+      0
+    ]
+  ],
+  "finds": [
+    "254.wav",
     [
       0
     ]
@@ -639,14 +1077,50 @@ export const speechClips = {
       0
     ]
   ],
+  "flows": [
+    "255.wav",
+    [
+      0
+    ]
+  ],
+  "focuses": [
+    "256.wav",
+    [
+      0
+    ]
+  ],
+  "for": [
+    "257.wav",
+    [
+      0
+    ]
+  ],
+  "friend": [
+    "258.wav",
+    [
+      0
+    ]
+  ],
   "function": [
     "103.wav",
     [
       0
     ]
   ],
+  "gauge": [
+    "259.wav",
+    [
+      0
+    ]
+  ],
   "glad": [
     "104.wav",
+    [
+      0
+    ]
+  ],
+  "go": [
+    "260.wav",
     [
       0
     ]
@@ -663,6 +1137,12 @@ export const speechClips = {
       0
     ]
   ],
+  "guides": [
+    "261.wav",
+    [
+      0
+    ]
+  ],
   "happened": [
     "107.wav",
     [
@@ -671,6 +1151,12 @@ export const speechClips = {
   ],
   "happy": [
     "108.wav",
+    [
+      0
+    ]
+  ],
+  "have": [
+    "262.wav",
     [
       0
     ]
@@ -687,8 +1173,44 @@ export const speechClips = {
       0
     ]
   ],
+  "her": [
+    "263.wav",
+    [
+      0
+    ]
+  ],
   "hi": [
     "111.wav",
+    [
+      0
+    ]
+  ],
+  "high": [
+    "264.wav",
+    [
+      0
+    ]
+  ],
+  "his": [
+    "265.wav",
+    [
+      0
+    ]
+  ],
+  "home": [
+    "266.wav",
+    [
+      0
+    ]
+  ],
+  "hour": [
+    "267.wav",
+    [
+      0
+    ]
+  ],
+  "hours": [
+    "268.wav",
     [
       0
     ]
@@ -707,6 +1229,36 @@ export const speechClips = {
   ],
   "identity": [
     "114.wav",
+    [
+      0
+    ]
+  ],
+  "illness": [
+    "269.wav",
+    [
+      0
+    ]
+  ],
+  "in": [
+    "270.wav",
+    [
+      0
+    ]
+  ],
+  "increased": [
+    "271.wav",
+    [
+      0
+    ]
+  ],
+  "information": [
+    "272.wav",
+    [
+      0
+    ]
+  ],
+  "input": [
+    "273.wav",
     [
       0
     ]
@@ -735,14 +1287,62 @@ export const speechClips = {
       0
     ]
   ],
+  "its": [
+    "274.wav",
+    [
+      0
+    ]
+  ],
+  "keeps": [
+    "275.wav",
+    [
+      0
+    ]
+  ],
+  "language": [
+    "276.wav",
+    [
+      0
+    ]
+  ],
+  "lasted": [
+    "277.wav",
+    [
+      0
+    ]
+  ],
   "later": [
     "119.wav",
     [
       0
     ]
   ],
+  "learn": [
+    "278.wav",
+    [
+      0
+    ]
+  ],
   "let": [
     "120.wav",
+    [
+      0
+    ]
+  ],
+  "like": [
+    "279.wav",
+    [
+      0
+    ]
+  ],
+  "local": [
+    "280.wav",
+    [
+      0
+    ]
+  ],
+  "loyal": [
+    "281.wav",
     [
       0
     ]
@@ -759,8 +1359,20 @@ export const speechClips = {
       0
     ]
   ],
+  "marketing": [
+    "282.wav",
+    [
+      0
+    ]
+  ],
   "me": [
     "123.wav",
+    [
+      0
+    ]
+  ],
+  "measure": [
+    "283.wav",
     [
       0
     ]
@@ -777,8 +1389,32 @@ export const speechClips = {
       0
     ]
   ],
+  "movement": [
+    "284.wav",
+    [
+      0
+    ]
+  ],
+  "music": [
+    "285.wav",
+    [
+      0
+    ]
+  ],
+  "my": [
+    "286.wav",
+    [
+      0
+    ]
+  ],
   "need": [
     "126.wav",
+    [
+      0
+    ]
+  ],
+  "needs": [
+    "287.wav",
     [
       0
     ]
@@ -789,8 +1425,26 @@ export const speechClips = {
       0
     ]
   ],
+  "new": [
+    "288.wav",
+    [
+      0
+    ]
+  ],
+  "nine": [
+    "289.wav",
+    [
+      0
+    ]
+  ],
   "no": [
     "128.wav",
+    [
+      0
+    ]
+  ],
+  "nurse": [
+    "290.wav",
     [
       0
     ]
@@ -801,8 +1455,50 @@ export const speechClips = {
       0
     ]
   ],
+  "office": [
+    "291.wav",
+    [
+      0
+    ]
+  ],
+  "old": [
+    "292.wav",
+    [
+      0
+    ]
+  ],
+  "on": [
+    "293.wav",
+    [
+      0
+    ]
+  ],
+  "open": [
+    "294.wav",
+    [
+      0
+    ]
+  ],
+  "opens": [
+    "295.wav",
+    [
+      0
+    ]
+  ],
   "opinion": [
     "130.wav",
+    [
+      0
+    ]
+  ],
+  "our": [
+    "296.wav",
+    [
+      0
+    ]
+  ],
+  "pain": [
+    "297.wav",
     [
       0
     ]
@@ -819,8 +1515,26 @@ export const speechClips = {
       0
     ]
   ],
+  "pen": [
+    "298.wav",
+    [
+      0
+    ]
+  ],
+  "personal": [
+    "299.wav",
+    [
+      0
+    ]
+  ],
   "perspective": [
     "133.wav",
+    [
+      0
+    ]
+  ],
+  "please": [
+    "300.wav",
     [
       0
     ]
@@ -831,8 +1545,38 @@ export const speechClips = {
       0
     ]
   ],
+  "powers": [
+    "301.wav",
+    [
+      0
+    ]
+  ],
+  "prepared": [
+    "302.wav",
+    [
+      0
+    ]
+  ],
+  "preserves": [
+    "303.wav",
+    [
+      0
+    ]
+  ],
   "pressure": [
     "135.wav",
+    [
+      0
+    ]
+  ],
+  "prevents": [
+    "304.wav",
+    [
+      0
+    ]
+  ],
+  "private": [
+    "305.wav",
     [
       0
     ]
@@ -843,8 +1587,26 @@ export const speechClips = {
       0
     ]
   ],
+  "produces": [
+    "306.wav",
+    [
+      0
+    ]
+  ],
+  "product": [
+    "307.wav",
+    [
+      0
+    ]
+  ],
   "profit": [
     "137.wav",
+    [
+      0
+    ]
+  ],
+  "protects": [
+    "308.wav",
     [
       0
     ]
@@ -855,14 +1617,86 @@ export const speechClips = {
       0
     ]
   ],
+  "provided": [
+    "309.wav",
+    [
+      0
+    ]
+  ],
   "pulse": [
     "139.wav",
     [
       0
     ]
   ],
+  "quick": [
+    "310.wav",
+    [
+      0
+    ]
+  ],
+  "quickly": [
+    "311.wav",
+    [
+      0
+    ]
+  ],
+  "read": [
+    "312.wav",
+    [
+      0
+    ]
+  ],
+  "ready": [
+    "313.wav",
+    [
+      0
+    ]
+  ],
+  "received": [
+    "314.wav",
+    [
+      0
+    ]
+  ],
   "recovery": [
     "140.wav",
+    [
+      0
+    ]
+  ],
+  "reduced": [
+    "315.wav",
+    [
+      0
+    ]
+  ],
+  "reflects": [
+    "316.wav",
+    [
+      0
+    ]
+  ],
+  "reply": [
+    "317.wav",
+    [
+      0
+    ]
+  ],
+  "research": [
+    "318.wav",
+    [
+      0
+    ]
+  ],
+  "responsible": [
+    "319.wav",
+    [
+      0
+    ]
+  ],
+  "rest": [
+    "320.wav",
     [
       0
     ]
@@ -879,8 +1713,44 @@ export const speechClips = {
       0
     ]
   ],
+  "rice": [
+    "321.wav",
+    [
+      0
+    ]
+  ],
+  "rights": [
+    "322.wav",
+    [
+      0
+    ]
+  ],
+  "rising": [
+    "323.wav",
+    [
+      0
+    ]
+  ],
+  "score": [
+    "324.wav",
+    [
+      0
+    ]
+  ],
   "see": [
     "143.wav",
+    [
+      0
+    ]
+  ],
+  "send": [
+    "325.wav",
+    [
+      0
+    ]
+  ],
+  "sends": [
+    "326.wav",
     [
       0
     ]
@@ -891,8 +1761,26 @@ export const speechClips = {
       0
     ]
   ],
+  "sentence": [
+    "327.wav",
+    [
+      0
+    ]
+  ],
+  "serious": [
+    "328.wav",
+    [
+      0
+    ]
+  ],
   "server": [
     "145.wav",
+    [
+      0
+    ]
+  ],
+  "shapes": [
+    "329.wav",
     [
       0
     ]
@@ -903,14 +1791,44 @@ export const speechClips = {
       0
     ]
   ],
+  "shows": [
+    "330.wav",
+    [
+      0
+    ]
+  ],
   "signal": [
     "147.wav",
     [
       0
     ]
   ],
+  "simple": [
+    "331.wav",
+    [
+      0
+    ]
+  ],
+  "small": [
+    "332.wav",
+    [
+      0
+    ]
+  ],
+  "social": [
+    "333.wav",
+    [
+      0
+    ]
+  ],
   "society": [
     "148.wav",
+    [
+      0
+    ]
+  ],
+  "solves": [
+    "334.wav",
     [
       0
     ]
@@ -927,8 +1845,32 @@ export const speechClips = {
       0
     ]
   ],
+  "store": [
+    "335.wav",
+    [
+      0
+    ]
+  ],
+  "stores": [
+    "336.wav",
+    [
+      0
+    ]
+  ],
   "strategy": [
     "151.wav",
+    [
+      0
+    ]
+  ],
+  "student": [
+    "337.wav",
+    [
+      0
+    ]
+  ],
+  "sudden": [
+    "338.wav",
     [
       0
     ]
@@ -969,8 +1911,44 @@ export const speechClips = {
       0
     ]
   ],
+  "tea": [
+    "339.wav",
+    [
+      0
+    ]
+  ],
+  "team": [
+    "340.wav",
+    [
+      0
+    ]
+  ],
+  "technology": [
+    "341.wav",
+    [
+      0
+    ]
+  ],
   "tell": [
     "158.wav",
+    [
+      0
+    ]
+  ],
+  "tested": [
+    "342.wav",
+    [
+      0
+    ]
+  ],
+  "testing": [
+    "343.wav",
+    [
+      0
+    ]
+  ],
+  "than": [
+    "344.wav",
     [
       0
     ]
@@ -983,6 +1961,12 @@ export const speechClips = {
   ],
   "that": [
     "160.wav",
+    [
+      0
+    ]
+  ],
+  "the": [
+    "345.wav",
     [
       0
     ]
@@ -1001,6 +1985,12 @@ export const speechClips = {
   ],
   "this": [
     "163.wav",
+    [
+      0
+    ]
+  ],
+  "through": [
+    "346.wav",
     [
       0
     ]
@@ -1035,8 +2025,20 @@ export const speechClips = {
       0
     ]
   ],
+  "travels": [
+    "347.wav",
+    [
+      0
+    ]
+  ],
   "treatment": [
     "169.wav",
+    [
+      0
+    ]
+  ],
+  "two": [
+    "348.wav",
     [
       0
     ]
@@ -1053,8 +2055,26 @@ export const speechClips = {
       0
     ]
   ],
+  "use": [
+    "349.wav",
+    [
+      0
+    ]
+  ],
+  "user": [
+    "350.wav",
+    [
+      0
+    ]
+  ],
   "vaccine": [
     "172.wav",
+    [
+      0
+    ]
+  ],
+  "valuable": [
+    "351.wav",
     [
       0
     ]
@@ -1065,8 +2085,20 @@ export const speechClips = {
       0
     ]
   ],
+  "very": [
+    "352.wav",
+    [
+      0
+    ]
+  ],
   "voltage": [
     "174.wav",
+    [
+      0
+    ]
+  ],
+  "want": [
+    "353.wav",
     [
       0
     ]
@@ -1077,8 +2109,20 @@ export const speechClips = {
       0
     ]
   ],
+  "water": [
+    "354.wav",
+    [
+      0
+    ]
+  ],
   "we": [
     "176.wav",
+    [
+      0
+    ]
+  ],
+  "website": [
+    "355.wav",
     [
       0
     ]
@@ -1095,6 +2139,12 @@ export const speechClips = {
       0
     ]
   ],
+  "wheel": [
+    "356.wav",
+    [
+      0
+    ]
+  ],
   "when": [
     "179.wav",
     [
@@ -1103,6 +2153,24 @@ export const speechClips = {
   ],
   "which": [
     "180.wav",
+    [
+      0
+    ]
+  ],
+  "wire": [
+    "357.wav",
+    [
+      0
+    ]
+  ],
+  "work": [
+    "358.wav",
+    [
+      0
+    ]
+  ],
+  "writer": [
+    "359.wav",
     [
       0
     ]

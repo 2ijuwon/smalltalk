@@ -19,12 +19,24 @@ function specialEffect(kind, sound = kind) {
   setTimeout(() => flash.remove(), 800);
 }
 
+function applyTheme(dark) {
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#151d29' : '#eaf5ff';
+  document.querySelectorAll('[data-action="toggle-theme"]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(dark));
+  });
+}
+
 export function initializeTheme() {
   const preferredTheme = matchMedia('(prefers-color-scheme: dark)');
-  document.documentElement.dataset.theme = preferredTheme.matches ? 'dark' : 'light';
-  preferredTheme.addEventListener('change', (event) => {
-    document.documentElement.dataset.theme = event.matches ? 'dark' : 'light';
-  });
+  applyTheme(preferredTheme.matches);
+  preferredTheme.addEventListener('change', ({ matches }) => applyTheme(matches));
+}
+
+export function toggleTheme() {
+  const dark = document.documentElement.dataset.theme !== 'dark';
+  applyTheme(dark);
+  playEffect(dark ? 'moon' : 'sun');
 }
 
 const slimeReactionTimers = new WeakMap();
@@ -91,12 +103,7 @@ function reactToSlime(sprite) {
     { translate: '0 0' },
   ], { duration: 300, easing: 'ease-out' });
   reaction.faceTimer = setTimeout(() => sprite.classList.remove('slime-delighted'), 320);
-  if (reaction.count >= 6) {
-    const page = document.documentElement;
-    page.dataset.theme = page.dataset.theme === 'dark' ? 'light' : 'dark';
-    reaction.count = 0;
-  }
-  sprite.style.setProperty('--slime-tint', `${reaction.count > 1 ? reaction.count * 12 : 0}deg`);
+  sprite.style.setProperty('--slime-tint', `${reaction.count > 1 ? Math.min(reaction.count, 6) * 12 : 0}deg`);
   reaction.tintTimer = setTimeout(() => {
     sprite.classList.add('slime-tint-returning');
     sprite.style.setProperty('--slime-tint', '0deg');
@@ -164,7 +171,7 @@ function effectPlayer(kind) {
   if (!player) {
     player = new Audio();
     player.preload = 'auto';
-    player.src = new URL(`./audio/fx-${kind}.wav`, import.meta.url);
+    player.src = new URL(`./audio/fx-${kind}.wav?v=2`, import.meta.url);
     effectPlayers.set(kind, player);
   }
   return player;

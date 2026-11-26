@@ -12,6 +12,8 @@ export const difficultyLabels = {
 
 export const lessonSize = 5;
 export const stageCount = Math.ceil(vocabulary.length / lessonSize);
+const foundations = vocabulary.filter((item) => item.major === 'common');
+export const foundationWordCount = foundations.length;
 
 export function itemsForMajor(major) {
   const items = vocabulary.filter((item) => item.major === major);
@@ -22,6 +24,7 @@ export function stageWords(major, stage) {
   const order = { basic: 0, intermediate: 1, advanced: 2 };
   const sort = (a, b) => order[a.difficulty] - order[b.difficulty] || a.word.length - b.word.length;
   const own = itemsForMajor(major).sort(sort);
-  const rest = vocabulary.filter((item) => !own.includes(item)).sort(sort);
-  return [...own, ...rest].slice((stage - 1) * lessonSize, stage * lessonSize).map((item) => item.id);
+  const ownIds = new Set(own.map(({ id }) => id));
+  const rest = vocabulary.filter((item) => item.major !== 'common' && !ownIds.has(item.id)).sort(sort);
+  return [...foundations, ...own, ...rest].slice((stage - 1) * lessonSize, stage * lessonSize).map((item) => item.id);
 }

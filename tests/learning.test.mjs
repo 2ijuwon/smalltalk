@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { lessonSize, majorLabels, stageCount, stageWords, vocabulary } from '../src/data.js';
+import { foundationWordCount, lessonSize, majorLabels, stageCount, stageWords, vocabulary } from '../src/data.js';
 import { nextStage, rankedWords, pickReviewWords } from '../src/domain.js';
 import { addReview, applyGradedResult, applyLearningBatch, applySelfCheck, bestScore, withBestScore, loadState, getLearnedIds, getStats, getTodayStats, initialState, wordSearchRules, wordSearchPoints } from '../src/domain.js';
 
@@ -122,6 +122,19 @@ test('오답 점수는 정답 뒤에도 남고 복습은 오답 단어를 먼저
   assert.equal(new Set(first).size, 5);
   assert.deepEqual(new Set(first.slice(0, 2)), new Set(['a', 'b']));
   assert.notDeepEqual(first, second);
+});
+
+test('입문 단어를 앞에 배치하고, 온전한 전공 묶음은 이전 완료 기록을 유지한다', () => {
+  const foundations = vocabulary.filter(({ major }) => major === 'common').map(({ id }) => id);
+  assert.deepEqual(stageWords('computer', 1).slice(0, Math.min(lessonSize, foundationWordCount)), foundations.slice(0, lessonSize));
+  if (stageCount <= foundationWordCount / lessonSize + 1 || foundationWordCount % lessonSize) return;
+  const state = { ...initialState, sessions: [{ mode: 'new', curriculumMajor: 'computer', stage: 1 }] };
+  assert.equal(nextStage(state, 'computer'), foundationWordCount ? 1 : 2);
+  const afterFoundations = { ...state, sessions: [...state.sessions] };
+  for (let stage = 1; stage <= foundationWordCount / lessonSize; stage += 1) {
+    afterFoundations.sessions.push({ mode: 'new', curriculumMajor: 'computer', stage, itemIds: stageWords('computer', stage) });
+  }
+  assert.equal(nextStage(afterFoundations, 'computer'), foundationWordCount / lessonSize + 2);
 });
 
 test('퀴즈 채점과 복습 완료만으로는 학습 스트릭이 늘지 않는다', () => {

@@ -191,7 +191,7 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
       const distance = (previousY - boss.y) / 100 * (node.parentElement?.clientHeight || 0);
       node.animate([{ translate: `0 ${distance}px` }, { translate: '0 0' }], { duration: 420, easing: 'cubic-bezier(.16, 1, .3, 1)' });
     }
-    playEffect('correct');
+    playEffect('parry');
   }
 
   function tickTyping(now) {
@@ -205,7 +205,7 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
       typing.stoppedUntil = 0;
       root.classList.remove('typing-time-stop');
       resumeTypingShots();
-      playEffect('finish');
+      playEffect('unfreeze');
     }
     const dt = Math.min(.05, (now - typingLast) / 1000);
     typingLast = now;
@@ -257,7 +257,7 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
         node?.remove();
         if (enemy.item || now < typing.immuneUntil) continue;
         typing.immuneUntil = now + 1000;
-        playEffect('hit');
+        playEffect('damage');
         const damage = Math.min(typing.hp, missDamage(enemy.hp, typing.stats.vitality, enemy.shield));
         typing.hp -= damage;
         typing.message = `${enemy.word} 놓침 · 체력 −${damage}${enemy.shield ? ' · 방패 추가 피해' : ''}`;
@@ -339,7 +339,8 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
       }
       if (typing.augments.includes('ice')) enemy.freezeLeft = enemy.boss ? .5 : 2;
     }
-    if (!chain) playEffect(result.defeated ? 'correct' : 'hit');
+    if (result.defeated && enemy.boss) playEffect('bossdown');
+    else if (!chain && !interrupt) playEffect(result.defeated ? 'kill' : result.shieldBroken ? 'shield' : 'impact');
     if (result.defeated) {
       typing.enemies = typing.enemies.filter((entry) => entry !== enemy);
       typing.score += typingPoints(typing.difficulty, enemy.boss);
@@ -409,7 +410,7 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
     const wordRevision = enemy.wordRevision;
     if (frozen) rotateTypingWord(enemy, node);
     enemy.pendingShots += 1;
-    playEffect('place');
+    playEffect('shot');
     const game = typing;
     typingProjectile(input, node).then(() => {
       if (typing !== game || getScreen() !== 'typing' || game.phase !== 'playing') return;
@@ -439,6 +440,7 @@ export function createTypingArcade({ root, getState, getScreen, setScreen, rende
       if (typing.coins < cost) return;
       typing.coins -= cost;
       typing.stats[key] += 1;
+      playEffect('upgrade');
       if (key === 'vitality') { typing.maxHp += 12; typing.hp += 12; }
       return render();
     }
