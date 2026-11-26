@@ -17,7 +17,7 @@ let html = (await readFile(join(root, 'index.html'), 'utf8')).replace(
   './src/styles/font.css',
 );
 const modules = (await readdir(join(out, 'src'))).filter((name) => name.endsWith('.js')).sort();
-const versionedAssets = [...modules.map((name) => `src/${name}`), 'src/styles/pixel.css'];
+const versionedAssets = [...modules.map((name) => `src/${name}`), 'src/styles/pixel.css', 'src/brand-icon.svg'];
 const contents = await Promise.all(versionedAssets.map((path) => readFile(join(out, path), 'utf8')));
 const hash = createHash('sha256');
 versionedAssets.forEach((path, index) => hash.update(path).update('\0').update(contents[index]).update('\0'));
@@ -28,7 +28,7 @@ for (let index = 0; index < modules.length; index += 1) {
     (_, before, specifier, after) => `${before}${specifier}?v=${version}${after}`);
   await writeFile(join(out, versionedAssets[index]), code);
 }
-for (const path of ['src/styles/pixel.css', 'src/app.js']) {
+for (const path of ['src/styles/pixel.css', 'src/app.js', 'src/brand-icon.svg']) {
   html = html.replace(`"./${path}"`, `"./${path}?v=${version}"`);
 }
 await writeFile(join(out, 'index.html'), html);

@@ -1,3 +1,5 @@
+import { slimeColors, slimePaths, slimeRows } from './slime-art.js';
+
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
 function shuffle(items) {
   const result = [...items];
@@ -44,18 +46,6 @@ const spriteColors = {
   B: '#56718b', N: '#344b63', P: '#a8c5dc', E: '#a9bed3',
 };
 const spriteRows = {
-  mascot: [
-    '................', '.....oooooo.....', '...oossssssoo...', '..osssssssssso..',
-    '.osssllllllssso.', '.osllllllllllso.', 'osllllkllkllllso', 'osllllkllkllllso',
-    'osllllllllllllso', 'osllllkllkllllso', '.osllllkkllllso.', '.osllllllllllso.',
-    '..osllllllllso..', '...oossssssoo...', '.....oooooo.....', '................',
-  ],
-  boss: [
-    '................', '.....oooooo.....', '...oovvvvvvoo...', '..ovvvvvvvvvvo..',
-    '.ovvvmmmmmmvvvo.', '.ovmmmmmmmmmmvo.', 'ovmmmmkmmkmmmmvo', 'ovmmmmkmmkmmmmvo',
-    'ovmmmmmmmmmmmmvo', 'ovmmmmkkkkmmmmvo', '.ovmmmkkkkmmmvo.', '.ovmmmmmmmmmmvo.',
-    '..ovmmmmmmmmvo..', '...oovvvvvvoo...', '.....oooooo.....', '................',
-  ],
   book: [
     '................', '................', '...oooo.oooo....', '..ollllollllo...',
     '..olwllolwllo...', '..ollllollllo...', '..olwwlolwwlo...', '..ollllollllo...',
@@ -100,39 +90,7 @@ const spriteRows = {
   ],
 };
 
-const spriteFrames = {
-  mascot: [
-    '................', '.....oooooo.....', '...oossssssoo...', '..osssssssssso..',
-    '.osssllllllssso.', '.osllllllllllso.', 'osllllkllkllllso', 'osllllkllkllllso',
-    'osllllllllllllso', 'osllllkllkllllso', '.oslllllkklllso.', '.osllllllllllso.',
-    '..osllllllllso..', '...oossssssoo...', '....oooooooo....', '................',
-  ],
-  boss: [
-    '................', '.....oooooo.....', '...oovvvvvvoo...', '..ovvvvvvvvvvo..',
-    '.ovvvmmmmmmvvvo.', '.ovmmmmmmmmmmvo.', 'ovmmmmkmmkmmmmvo', 'ovmmmmkmmkmmmmvo',
-    'ovmmmmmmmmmmmmvo', 'ovmmmmkkkkmmmmvo', '.ovmmmmkkmmmmvo.', '.ovmmmmmmmmmmvo.',
-    '..ovmmmmmmmmvo..', '...oovvvvvvoo...', '....oooooooo....', '................',
-  ],
-};
-
 const spriteMarkup = new Map();
-
-const themeFaces = {
-  sun: ['.....y.....', '.y.......y.', '...yyyyy...', '..yyyyyyy..', '..yykykyy..',
-    'yyyyyyyyyyy', '..yykykyy..', '..yyykyyy..', '...yyyyy...', '.y.......y.', '.....y.....'],
-  moon: ['....lll....', '...ll......', '..ll.......', '.ll......l.', '.lll....l..',
-    '.llklllll..', '.llllklll..', '..lklkll...', '...llll....', '....lll....', '...........'],
-};
-
-const themeIcons = Object.entries(themeFaces).map(([name, rows]) => {
-  const pixels = rows.flatMap((row, y) => [...row].map((cell, x) => spriteColors[cell]
-    ? `<rect x="${x}" y="${y}" width="1" height="1" fill="${spriteColors[cell]}"/>` : '')).join('');
-  return `<svg class="theme-slime__${name}" viewBox="0 0 11 11" shape-rendering="crispEdges" aria-hidden="true">${pixels}</svg>`;
-}).join('');
-
-function themeSlime() {
-  return `<button type="button" class="theme-slime" data-action="toggle-theme" aria-label="다크 모드" aria-pressed="${document.documentElement.dataset.theme === 'dark'}">${themeIcons}<span>테마</span></button>`;
-}
 
 function pixelSprite(name) {
   if (!spriteMarkup.has(name)) spriteMarkup.set(name, renderPixelSprite(name));
@@ -155,14 +113,12 @@ function roundedSlime(name) {
 
 function renderPixelSprite(name) {
   if (['mascot', 'boss', 'surprised'].includes(name)) {
-    const sprites = name === 'surprised'
-      ? [spriteFrames.mascot.map((row, y) => {
-        if (y === 9) return 'osllllkkkkllllso';
-        if (y === 11) return '.oslllllkklllso.';
-        return row;
-      })]
-      : slimeFrames(name);
-    const frames = sprites.map((rows, frame) => `<g class="slime-frame slime-frame--${frame}">${rows.flatMap((row, y) => [...row].map((cell, x) => spriteColors[cell] ? `<rect data-pixel="${cell}" x="${x}" y="${y}" width="1" height="1" fill="${spriteColors[cell]}"/>` : '')).join('')}</g>`).join('');
+    const frameCount = name === 'surprised' ? 1 : 3;
+    const frames = Array.from({ length: frameCount }, (_, frame) => {
+      const shapes = slimePaths(slimeRows(name, frame)).map(([cell, path]) =>
+        `<path data-pixel="${cell}" d="${path}" fill="${slimeColors[cell]}"/>`).join('');
+      return `<g class="slime-frame slime-frame--${frame}">${shapes}</g>`;
+    }).join('');
     return `<span class="pixel-sprite pixel-sprite--slime${name === 'boss' ? ' pixel-sprite--boss' : ''}" aria-hidden="true"><svg class="pixel-art" viewBox="0 0 16 16" shape-rendering="crispEdges" focusable="false">${frames}</svg>${roundedSlime(name)}</span>`;
   }
   const spriteCells = (rows) => rows.flatMap((row, y) => [...row].flatMap((cell, x) =>
@@ -177,23 +133,6 @@ function renderPixelSprite(name) {
   return `<span class="pixel-sprite${art ? ' has-rounded-art' : ''}" aria-hidden="true" style="--sprite:${cells.join(',')}">${art ? `<svg class="rounded-art" viewBox="0 0 16 16" focusable="false">${art}</svg>` : ''}</span>`;
 }
 
-function slimeFrames(name) {
-  const base = spriteRows[name];
-  const fill = name === 'boss' ? 'v' : 's';
-  const light = name === 'boss' ? 'm' : 'l';
-  const blink = base.map((row, y) => {
-    if (y === 6) return row.replaceAll('k', light);
-    if (y === 7) return `o${fill}${light.repeat(3)}kk${light.repeat(2)}kk${light.repeat(3)}${fill}o`;
-    return row;
-  });
-  const smile = blink.map((row, y) => {
-    if (y === 9) return `o${fill}${light.repeat(3)}k${light.repeat(4)}k${light.repeat(3)}${fill}o`;
-    if (y === 10) return `.o${fill}${light.repeat(3)}kkkk${light.repeat(3)}${fill}o.`;
-    return row;
-  });
-  return [base, blink, smile];
-}
-
 function brandMark() { return `<span class="brand-mark">${pixelSprite('mascot')}</span>`; }
 function button(label, action, variant = 'primary', disabled = false) { return `<button class="button button--${variant}" data-action="${action}" ${disabled ? 'disabled' : ''}>${label}</button>`; }
 function card(content, className = '') { return `<section class="card ${className}">${content}</section>`; }
@@ -206,4 +145,4 @@ function gameOverActions(restart, score, startingBest) {
   return `<div class="game-over"><strong class="record-banner" ${score > startingBest ? '' : 'hidden'}>신기록 달성!</strong><div class="game-over-actions"><button class="button button--secondary" data-nav="home">게임 종료</button>${button('다시 시작', restart)}</div></div>`;
 }
 
-export { escapeHtml, shuffle, randomInt, pixelIcon, pixelSprite, brandMark, button, card, progress, gameOverActions, themeSlime };
+export { escapeHtml, shuffle, randomInt, pixelIcon, pixelSprite, brandMark, button, card, progress, gameOverActions };

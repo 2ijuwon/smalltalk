@@ -1,6 +1,7 @@
 import { buildWordGrid, straightPath } from './word-search.js';
-import { escapeHtml, shuffle, randomInt, pixelIcon, pixelSprite, brandMark, button, card, progress, gameOverActions, themeSlime } from './ui.js';
-import { initializeTheme, toggleTheme, reactToSlime, showLaunch, playEffect, specialEffect } from './effects.js';
+import { escapeHtml, shuffle, randomInt, pixelIcon, pixelSprite, brandMark, button, card, progress, gameOverActions } from './ui.js';
+import { reactToSlime, showLaunch, playEffect, specialEffect } from './effects.js';
+import { initializeTheme, resetTheme, selectTheme, themeSettings, toggleThemeLock } from './theme.js';
 import { createLayoutMotion } from './layout-motion.js';
 import { createSpeech } from './speech.js';
 import { createConversation } from './conversation.js';
@@ -166,7 +167,7 @@ function absorbPendingXp() {
 }
 
 function header() {
-  return `<header class="topbar"><button class="brand" data-nav="home" aria-label="smalltalk 홈">${brandMark()}<strong>smalltalk</strong></button><div class="topbar-tools"><div class="xp"><span>XP</span><strong>${state.xp}</strong></div>${themeSlime()}</div></header>`;
+  return `<header class="topbar"><button class="brand" data-nav="home" aria-label="smalltalk 홈">${brandMark()}<strong>smalltalk</strong></button><div class="xp"><span>XP</span><strong>${state.xp}</strong></div></header>`;
 }
 
 function nav() {
@@ -656,6 +657,7 @@ function resetLocalData() {
   xpClaimTimer = 0;
   celebration = null;
   state = structuredClone(initialState);
+  resetTheme();
   draftMajor = state.preferences.major;
   draftDifficulty = state.preferences.difficulty;
   draftSkin = state.preferences.skin;
@@ -669,7 +671,15 @@ function settings() {
   const reset = resetOpen
     ? `<p role="alert">현재 접속 주소에 저장된 학습 기록, 점수, 설정이 지워져요. 되돌릴 수 없어요.</p><div class="game-over-actions">${button('취소', 'settings-reset-cancel', 'secondary')}${button('모두 지우기', 'settings-reset-confirm', 'danger')}</div>`
     : button('데이터 초기화', 'settings-reset', 'quiet');
-  return `<div class="page page--narrow"><h1>설정</h1>${card(`<label>전공<select data-setting="major">${Object.entries(majorLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.major === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><label>난이도<select data-setting="difficulty">${Object.entries(difficultyLabels).map(([value, label]) => `<option value="${value}" ${state.preferences.difficulty === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label><div class="fixed-goal"><span>하루 목표</span><strong>5단어 · 약 5분</strong></div><label>희망 시간<input data-setting="reminderTime" type="time" value="${state.preferences.reminderTime}"></label>`, 'form-card')}${card(`<h2>화면 스타일</h2>${skinChoices(activeSkin(), 'settings-skin')}`, 'settings-style')}${button('저장', 'settings-done')}<section class="card settings-reset"><h2>저장 데이터</h2>${reset}</section></div>`;
+  const { major, difficulty, reminderTime } = state.preferences;
+  return `<div class="page page--narrow"><h1>설정</h1>
+    ${card(`<label>전공<select data-setting="major">${Object.entries(majorLabels).map(([value, label]) => `<option value="${value}" ${major === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+    <label>난이도<select data-setting="difficulty">${Object.entries(difficultyLabels).map(([value, label]) => `<option value="${value}" ${difficulty === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+    <div class="fixed-goal"><span>하루 목표</span><strong>5단어 · 약 5분</strong></div>
+    <label>희망 시간<input data-setting="reminderTime" type="time" value="${escapeHtml(reminderTime)}"></label>
+    ${themeSettings()}`, 'form-card')}
+    ${card(`<h2>화면 스타일</h2>${skinChoices(activeSkin(), 'settings-skin')}`, 'settings-style')}
+    ${button('저장', 'settings-done')}<section class="card settings-reset"><h2>저장 데이터</h2>${reset}</section></div>`;
 }
 
 function activeSkin() {
@@ -684,7 +694,7 @@ function paint() {
   const isImmersive = ['learn', 'quick', 'duel', 'result', 'typing', 'smalltalkquiz', 'conversation'].includes(screen);
   const activeStage = screen === 'learn' ? learningSession?.stage || '' : screen;
   root.className = [isOnboarding ? 'app--onboarding' : '', isImmersive ? 'app--immersive' : ''].filter(Boolean).join(' ');
-  root.innerHTML = `${isOnboarding ? `<div class="onboarding-tools">${themeSlime()}</div>` : header()}${notice ? `<div class="notice" role="status">${escapeHtml(notice)}</div>` : ''}<main id="main" data-screen="${screen}" data-stage="${activeStage}" class="${isOnboarding ? 'main main--onboarding' : 'main'}">${(views[screen] || home)()}</main>${isOnboarding || isImmersive ? '' : nav()}${successBurst()}`;
+  root.innerHTML = `${isOnboarding ? '' : header()}${notice ? `<div class="notice" role="status">${escapeHtml(notice)}</div>` : ''}<main id="main" data-screen="${screen}" data-stage="${activeStage}" class="${isOnboarding ? 'main main--onboarding' : 'main'}">${(views[screen] || home)()}</main>${isOnboarding || isImmersive ? '' : nav()}${successBurst()}`;
   animateBossHit();
   if (screen === 'home') absorbPendingXp();
   if (screen === 'learn' && learningSession?.stage === 'search') updateTimerUI();
@@ -749,6 +759,11 @@ function render({ resetScroll = false } = {}) {
   });
 }
 window.addEventListener('resize', drawMatchLines);
+function setSpriteGrid() {
+  document.documentElement.style.setProperty('--screen-dot', `${1 / devicePixelRatio}px`);
+  document.documentElement.style.setProperty('--slime-grid-step', `${16 / devicePixelRatio}px`);
+}
+window.addEventListener('resize', setSpriteGrid);
 for (const query of [reviewWide, reviewLarge]) {
   query.addEventListener('change', () => {
     const nextSize = reviewLarge.matches ? 15 : reviewWide.matches ? 10 : 4;
@@ -915,7 +930,7 @@ function resolveSearchPath(path) {
 }
 
 function playTouchEffect(event) {
-  if (event.target.closest(':disabled, [data-action="toggle-theme"]')) return;
+  if (event.target.closest(':disabled, .theme-options button')) return;
   if (event.target.closest('.apple-field, .letter-grid')) return;
   if (event.target.closest('[data-nav]')) return playEffect('navigate');
   if (event.target.closest('.listen-button')) return playEffect('listen');
@@ -966,7 +981,8 @@ root.addEventListener('click', (event) => {
   if (target.dataset.quickAnswer !== undefined && !quickSession.submitted) { quickSession.selection = target.dataset.quickAnswer; return render(); }
   const action = target.dataset.action;
   if (!action) return;
-  if (action === 'toggle-theme') return toggleTheme();
+  if (action === 'theme-lock') return toggleThemeLock();
+  if (action.startsWith('theme:')) return selectTheme(action.slice(6));
   if (action.startsWith('preview-skin:') || action.startsWith('settings-skin:')) {
     const [context, skin] = action.split(':');
     if (!Object.hasOwn(skinLabels, skin)) return;
@@ -1356,7 +1372,12 @@ const orchard = createOrchard({
   recordMistake: (id) => { state = applyGradedResult(state, id, 'incorrect', new Date(), { reward: false }); persist(); },
 });
 const typingGame = createTypingArcade({ root, getState, getScreen, setScreen, render, learnedGamePool, saveBest });
-initializeTheme();
+initializeTheme(state.preferences.themeLock, (mode) => {
+  if (state.preferences.themeLock === mode) return;
+  state.preferences.themeLock = mode;
+  persist();
+});
+setSpriteGrid();
 
 render();
 showLaunch();

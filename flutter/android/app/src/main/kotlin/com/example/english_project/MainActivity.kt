@@ -14,6 +14,28 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        val appearance = getSharedPreferences("smalltalk_appearance", MODE_PRIVATE)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "smalltalk/theme")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "read" -> result.success(appearance.getString("theme_lock", null))
+                    "write" -> {
+                        val mode = call.arguments as? String
+                        val editor = appearance.edit()
+                        when (mode) {
+                            "light", "dark" -> editor.putString("theme_lock", mode)
+                            "system" -> editor.remove("theme_lock")
+                            else -> {
+                                result.error("invalid_mode", "Unknown appearance mode", null)
+                                return@setMethodCallHandler
+                            }
+                        }
+                        editor.apply()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "smalltalk/speech")
             .setMethodCallHandler { call, result ->
                 when {

@@ -1,4 +1,4 @@
-import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusPosition, sliceBonusTime, sliceCutShape, sliceDifficulty, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
+import { bonusFallStart, bonusSliceDuration, bonusSlicePieces, sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusPosition, sliceBonusTime, sliceCutShape, sliceDifficulty, sliceDuration, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, sliceReward, swipeHit } from './apple-slice.js';
 import { getLearnedIds, bestScore } from './domain.js';
 import { button, escapeHtml, gameOverActions, pixelSprite, randomInt, shuffle } from './ui.js';
 import { effectPlayer, playEffect, specialEffect } from './effects.js';
@@ -139,7 +139,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     game.phase = 'playing';
     game.feedback = '';
     game.resolved = false;
-    game.penalized = false;
+    game.bombDamageTaken = false;
     const distractors = shuffle(game.pool.filter(item => !game.questionTargets.some(target =>
       item.id === target.id || (!game.listen && item.meaning === target.meaning))));
     const targets = [];
@@ -163,9 +163,9 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       shuffle(Array.from({ length: slotCount - 1 }, (_, index) => index + 1)).slice(0, game.answersTotal);
     const answerBySlot = new Map(answerSlots.map((slot, index) => [slot, game.questionTargets[index % game.questionTargets.length]]));
     const ordered = Array.from({ length: slotCount }, (_, index) => answerBySlot.get(index) ?? others.shift());
-    game.fruit = game.bonusRound ? [{ bonus: true }] : ordered.map((item) => ({ ...item, spent: false }));
+    game.fruit = game.bonusRound ? [{ bonus: true, cuts: 0 }] : ordered.map((item) => ({ ...item, spent: false }));
     const start = game.flightTime + (game.listen ? 420 : 0);
-    const duration = game.bonusRound ? 5600 : sliceFlight(game.round);
+    const duration = game.bonusRound ? bonusSliceDuration : sliceFlight(game.round);
     game.answerDeadline = start + duration * (game.bonusRound ? 1 : sliceFlightEnd(Math.max(...answerSlots)));
     if (firstRound) render();
     else {
@@ -194,6 +194,9 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       if (game.remaining <= 0) return finishAppleGame();
       game.flights = game.flights.filter(({ fruit, node, start, duration, index, round }) => {
         const progress = (game.flightTime - start) / duration;
+        if (fruit.bonus && !fruit.spent && fruit.cuts && progress >= bonusFallStart) {
+          shatterBonusApple(node, fruit);
+        }
         if (fruit.spent ? game.flightTime >= fruit.removeAt : progress >= (fruit.bonus ? 1 : sliceFlightEnd(index))) {
           node.remove();
           return false;
@@ -257,7 +260,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
   }
 
   function missAppleRound() {
-    if (!apples.penalized) apples.hearts -= 1;
+    if (!apples.bombDamageTaken) apples.hearts -= 1;
     apples.combo = 0;
     playEffect('retry');
     if (apples.includeListening) speakText(apples.target.word);
@@ -275,7 +278,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     node.style.setProperty('--blade-angle', `${cut.angle}deg`);
     node.style.setProperty('--blade-x', `${bounds.left - parent.left + bounds.width * cut.x / 100}px`);
     node.style.setProperty('--blade-y', `${bounds.top - parent.top + bounds.height * cut.y / 100}px`);
-    if (!spread) return;
+    if (!spread) return cut;
     const halves = [shape.querySelector('.apple-fruit__left'), shape.querySelector('.apple-fruit__right')];
     halves.forEach((half, index) => {
       const distance = index === 0 ? -spread : spread;
@@ -283,6 +286,19 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       half.style.setProperty('--half-x', `${cut.nx * distance}px`);
       half.style.setProperty('--half-y', `${cut.ny * distance}px`);
     });
+  }
+
+  function shatterBonusApple(node, fruit) {
+    fruit.spent = true;
+    fruit.removeAt = apples.flightTime + 840;
+    node.disabled = true;
+    node.classList.add('apple-fruit--shattered');
+    const parts = bonusSlicePieces(fruit.cuts, fruit.firstCut);
+    const shape = node.querySelector('.apple-shape');
+    shape.insertAdjacentHTML('beforeend', parts.map(({ clip, x, y }, index) =>
+      `<span class="apple-bonus-piece" style="clip-path:${clip};--piece-x:${x * (40 + index % 3 * 10)}px;--piece-y:${y * 40}px;--piece-spin:${x * 58}deg">${orchardAppleArt}</span>`).join(''));
+    playEffect('goldcut');
+    updateAppleHud(`${fruit.cuts}번 베기 · ${parts.length}조각`);
   }
 
   function explodeBomb(node) {
@@ -318,7 +334,9 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       fruit.nextHitAt = game.flightTime + 85;
       game.score += 100;
       playEffect('bonuscut');
-      carveApple(node, from, to, 0);
+      fruit.cuts += 1;
+      const cut = carveApple(node, from, to, 0);
+      if (cut) fruit.firstCut ??= cut;
       const stroke = document.createElement('i');
       stroke.className = 'apple-bonus-cut';
       stroke.setAttribute('aria-hidden', 'true');
@@ -328,7 +346,7 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
       node.append(stroke);
       stroke.addEventListener('animationend', () => stroke.remove(), { once: true });
       node.animate([{ filter: 'brightness(1.45)' }, { filter: 'none' }], { duration: 125 });
-      updateAppleHud('보너스 +100점');
+      updateAppleHud(`${fruit.cuts}번 베기 · +100점`);
       return;
     }
     fruit.spent = true;
@@ -346,8 +364,8 @@ export function createOrchard({ root, getState, getScreen, setScreen, render, va
     if (outcome !== 'correct') {
       node.disabled = true;
       game.combo = 0;
-      game.penalized = true;
       if (outcome === 'bomb') {
+        game.bombDamageTaken = true;
         game.hearts -= 1;
         game.dullUntil = game.flightTime + 1000;
         explodeBomb(node);

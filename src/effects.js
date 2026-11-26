@@ -1,4 +1,5 @@
 import { pixelSprite } from './ui.js';
+import { stokeSlimeFire } from './slime-fire.js';
 
 const effectPlayers = new Map();
 
@@ -19,73 +20,7 @@ function specialEffect(kind, sound = kind) {
   setTimeout(() => flash.remove(), 800);
 }
 
-function applyTheme(dark) {
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  document.querySelector('meta[name="theme-color"]').content = dark ? '#151d29' : '#eaf5ff';
-  document.querySelectorAll('[data-action="toggle-theme"]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(dark));
-  });
-}
-
-export function initializeTheme() {
-  const preferredTheme = matchMedia('(prefers-color-scheme: dark)');
-  applyTheme(preferredTheme.matches);
-  preferredTheme.addEventListener('change', ({ matches }) => applyTheme(matches));
-}
-
-export function toggleTheme() {
-  const dark = document.documentElement.dataset.theme !== 'dark';
-  applyTheme(dark);
-  playEffect(dark ? 'moon' : 'sun');
-}
-
 const slimeReactionTimers = new WeakMap();
-const slimeFireDuration = 4400;
-
-function stokeSlimeFire(sprite, reaction, now) {
-  const remaining = (reaction.fireLevel ?? 0) * Math.max(0, 1 - (now - (reaction.fireAt ?? now)) / slimeFireDuration);
-  if (!remaining && reaction.streak !== 100) return;
-
-  if (!reaction.flame) {
-    const flame = document.createElement('span');
-    flame.className = 'slime-fire';
-    flame.setAttribute('aria-hidden', 'true');
-    flame.innerHTML = '<i></i><i></i><i></i>';
-    document.body.append(flame);
-    reaction.flame = flame;
-    const follow = () => {
-      if (!sprite.isConnected || reaction.flame !== flame) {
-        flame.remove();
-        return;
-      }
-      const bounds = sprite.getBoundingClientRect();
-      flame.style.left = `${bounds.left + bounds.width * .05}px`;
-      flame.style.top = `${bounds.top - bounds.height * .24}px`;
-      flame.style.width = `${bounds.width * .9}px`;
-      flame.style.height = `${bounds.height * .57}px`;
-      reaction.flameFrame = requestAnimationFrame(follow);
-    };
-    follow();
-  }
-
-  const flame = reaction.flame;
-  reaction.fireAt = now;
-  reaction.fireLevel = remaining ? Math.min(1, remaining + .13) : .4;
-  reaction.fireAnimation?.cancel();
-  const level = reaction.fireLevel;
-  reaction.fireAnimation = flame.animate([
-    { opacity: .55 + level * .45, scale: `${.6 + level * .55} ${.45 + level * .85}` },
-    { opacity: 0, scale: '.55 .12' },
-  ], { duration: slimeFireDuration, fill: 'forwards' });
-  reaction.fireAnimation.onfinish = () => {
-    cancelAnimationFrame(reaction.flameFrame);
-    flame.remove();
-    reaction.flame = null;
-    reaction.fireLevel = 0;
-    reaction.fireAnimation = null;
-  };
-}
-
 function reactToSlime(sprite) {
   const now = performance.now();
   const reaction = slimeReactionTimers.get(sprite) || { count: 0, streak: 0, lastTap: -Infinity };
@@ -97,7 +32,8 @@ function reactToSlime(sprite) {
   slimeReactionTimers.set(sprite, reaction);
   sprite.classList.remove('slime-tint-returning');
   sprite.classList.add('slime-delighted');
-  sprite.animate([
+  reaction.bounce?.cancel();
+  reaction.bounce = sprite.animate([
     { translate: '0 0' },
     { translate: '0 -9px' },
     { translate: '0 0' },
@@ -109,7 +45,7 @@ function reactToSlime(sprite) {
     sprite.style.setProperty('--slime-tint', '0deg');
     reaction.count = 0;
   }, 650);
-  stokeSlimeFire(sprite, reaction, now);
+  reaction.fire = stokeSlimeFire(sprite, reaction.streak, reaction.fire, now);
 }
 
 function showLaunch() {

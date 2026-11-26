@@ -79,9 +79,11 @@ export function createLayoutMotion(root) {
   }
 
   function animateFluidLayout(previous) {
-    motionNodes().forEach(({ element, key }, index) => {
-      const before = previous.get(key);
-      const after = element.getBoundingClientRect();
+    const modern = document.documentElement.dataset.skin === 'modern';
+    const movedParents = new Set();
+    const planned = motionNodes().map(({ element, key }) =>
+      ({ element, before: previous.get(key), after: element.getBoundingClientRect() }));
+    planned.forEach(({ element, before, after }, index) => {
       if (!after.width || !after.height) return;
       const options = { duration: 180, easing: 'cubic-bezier(.16, 1, .3, 1)', fill: 'backwards' };
 
@@ -104,8 +106,14 @@ export function createLayoutMotion(root) {
       const changed = before.text !== element.textContent.trim() || before.className !== element.className;
 
       if (moved) {
+        if (modern) {
+          for (let parent = element.parentElement; parent && parent !== root; parent = parent.parentElement) {
+            if (movedParents.has(parent)) return;
+          }
+          movedParents.add(element);
+        }
         element.animate([
-          { transform: `translate(${dx}px, ${dy}px)` },
+          { transform: `translate(${modern ? Math.round(dx) : dx}px, ${modern ? Math.round(dy) : dy}px)` },
           { transform: 'none' },
         ], options);
       } else if (changed) {

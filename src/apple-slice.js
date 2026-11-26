@@ -1,4 +1,6 @@
 export const sliceDuration = 60_000;
+export const bonusSliceDuration = 7800;
+export const bonusFallStart = .86;
 export function sliceBonusTime(elapsedMs) {
   if (elapsedMs < 60_000) return 5000;
   if (elapsedMs < 120_000) return 3000;
@@ -44,8 +46,23 @@ export function slicePosition(round, index, progress) {
 export function sliceBonusPosition(progress) {
   if (progress <= 0 || progress >= 1) return null;
   const rise = Math.min(1, progress / .14);
-  const fall = Math.max(0, (progress - .86) / .14);
+  const fall = Math.max(0, (progress - bonusFallStart) / (1 - bonusFallStart));
   return { x: 50 + Math.sin(progress * Math.PI * 2) * 13, y: 108 - 62 * rise + 66 * fall };
+}
+
+export function bonusSlicePieces(cuts, firstCut) {
+  if (!cuts || !firstCut) return [];
+  if (cuts <= 2) return firstCut.halves.map((clip, index) => ({
+    clip, x: firstCut.nx * (index ? 1 : -1), y: firstCut.ny * (index ? 1 : -1),
+  }));
+  const angle = firstCut.angle * Math.PI / 180;
+  const point = (theta) => `${(50 + 150 * Math.cos(theta)).toFixed(2)}% ${(57 + 150 * Math.sin(theta)).toFixed(2)}%`;
+  const arc = Math.PI * 2 / cuts;
+  return Array.from({ length: cuts }, (_, index) => {
+    const start = angle + arc * index;
+    const center = start + arc / 2;
+    return { clip: `polygon(50% 57%, ${point(start)}, ${point(start + arc)})`, x: Math.cos(center), y: Math.sin(center) };
+  });
 }
 
 export function sliceOutcome(fruit, targets) {

@@ -15,7 +15,7 @@ export function wordSearchPoints(rules, points) {
 
 export const initialState = {
   version: 1, onboarded: false,
-  preferences: { major: 'computer', difficulty: 'basic', dailyGoal: 5, reminderTime: '20:00', skin: 'modern' },
+  preferences: { major: 'computer', difficulty: 'basic', dailyGoal: 5, reminderTime: '20:00', skin: 'modern', themeLock: null },
   events: [], reviews: [], favorites: [], lastBatchIds: [], sessions: [], xp: 0, pendingXp: 0,
   bestScores: { search: 0, duel: 0, slice: 0, typing: 0 },
 };

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusPosition, sliceBonusTime, sliceCutShape, sliceDifficulty, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
+import { bonusFallStart, bonusSliceDuration, bonusSlicePieces, sliceAnswerCount, sliceBladeColor, sliceBodyHit, sliceBonusPosition, sliceBonusTime, sliceCutShape, sliceDifficulty, sliceDuration, sliceReward, sliceFlight, sliceFlightEnd, sliceOutcome, slicePosition, swipeHit } from '../src/apple-slice.js';
 
 test('후반에는 더 많은 표적과 폭탄이 나오고 두 단어 보너스 확률도 올라간다', () => {
   const stages = [0, 30_000, 60_000, 120_000, 180_000].map(sliceDifficulty);
@@ -9,6 +9,16 @@ test('후반에는 더 많은 표적과 폭탄이 나오고 두 단어 보너스
   assert.deepEqual(stages.map(stage => stage.dualChance), [0, 0, .25, .4, .55]);
   assert.ok(slicePosition(41, 8, .8));
   assert.equal(sliceBonusPosition(.2).y, sliceBonusPosition(.8).y);
+});
+
+test('보너스 사과는 공중에 머문 뒤 벤 횟수에 맞춰 조각이 난다', () => {
+  const cut = sliceCutShape({ left: 0, top: 0, width: 100 }, { x: 20, y: 50 }, { x: 80, y: 55 });
+  assert.ok(bonusSliceDuration * (bonusFallStart - .14) >= 5000);
+  assert.equal(sliceBonusPosition(.3).y, sliceBonusPosition(bonusFallStart).y);
+  assert.ok(sliceBonusPosition(.93).y > sliceBonusPosition(bonusFallStart).y);
+  assert.equal(bonusSlicePieces(0, cut).length, 0);
+  assert.deepEqual(bonusSlicePieces(1, cut).map(({ clip }) => clip), cut.halves);
+  assert.equal(new Set(bonusSlicePieces(9, cut).map(({ clip }) => clip)).size, 9);
 });
 
 test('사과 분할 경계는 중심에서 빗나간 스와이프 위치도 따라간다', () => {

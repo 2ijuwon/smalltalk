@@ -36,7 +36,8 @@ class EnglishWebView extends StatefulWidget {
   State<EnglishWebView> createState() => _EnglishWebViewState();
 }
 
-class _EnglishWebViewState extends State<EnglishWebView> {
+class _EnglishWebViewState extends State<EnglishWebView>
+    with WidgetsBindingObserver {
   static const _background = Color(0xFFEAF5FF);
   static const _darkBackground = Color(0xFF151D29);
   // Keep the WebView origin stable so localStorage survives app restarts.
@@ -52,6 +53,8 @@ class _EnglishWebViewState extends State<EnglishWebView> {
   };
 
   static final _onlineUri = Uri.https('smalltalk-2ijuwon.vercel.app', '/');
+  static const _themeChannel = MethodChannel('smalltalk/theme');
+  String? _themeLock;
   bool _usingLocal = false;
   bool _hasShownPage = false;
   Timer? _connectionTimer;
@@ -63,6 +66,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _openSite();
   }
 
@@ -96,6 +100,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
         );
       if (controller.platform case final AndroidWebViewController android) {
         await android.setMediaPlaybackRequiresUserGesture(false);
+        _themeLock = await _themeChannel.invokeMethod<String>('read');
         await controller.addJavaScriptChannel(
           'SmalltalkMic',
           onMessageReceived: (_) => _recognizeSpeech(controller),
@@ -104,6 +109,11 @@ class _EnglishWebViewState extends State<EnglishWebView> {
           'SmalltalkVolume',
           onMessageReceived: (message) =>
               _checkMediaVolume(controller, message.message),
+        );
+        await controller.addJavaScriptChannel(
+          'SmalltalkTheme',
+          onMessageReceived: (message) =>
+              _handleTheme(controller, message.message),
         );
       }
       if (!mounted) return;
@@ -227,6 +237,41 @@ class _EnglishWebViewState extends State<EnglishWebView> {
     return mounted && _controller == controller && trustedOrigin;
   }
 
+  bool get _deviceDark =>
+      WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+      Brightness.dark;
+
+  Future<void> _handleTheme(
+    WebViewController controller,
+    String request,
+  ) async {
+    if (!await _isCurrentAppPage(controller)) return;
+    if (request == 'read') {
+      await controller.runJavaScript(
+        'window.receiveSmalltalkTheme?.($_deviceDark, ${jsonEncode(_themeLock)})',
+      );
+      return;
+    }
+    if (!const ['light', 'dark', 'system'].contains(request)) return;
+    await _themeChannel.invokeMethod<void>('write', request);
+    if (mounted) {
+      setState(() => _themeLock = request == 'system' ? null : request);
+    }
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    final controller = _controller;
+    if (controller != null) unawaited(_sendDeviceTheme(controller));
+  }
+
+  Future<void> _sendDeviceTheme(WebViewController controller) async {
+    if (!await _isCurrentAppPage(controller)) return;
+    await controller.runJavaScript(
+      'window.receiveSmalltalkSystemTheme?.($_deviceDark)',
+    );
+  }
+
   Future<void> _checkMediaVolume(
     WebViewController controller,
     String message,
@@ -314,6 +359,7 @@ class _EnglishWebViewState extends State<EnglishWebView> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _connectionTimer?.cancel();
     _server?.close(force: true);
     super.dispose();
@@ -321,7 +367,9 @@ class _EnglishWebViewState extends State<EnglishWebView> {
 
   @override
   Widget build(BuildContext context) {
-    final dark = MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+    final dark = _themeLock == null
+        ? MediaQuery.platformBrightnessOf(context) == Brightness.dark
+        : _themeLock == 'dark';
     final iconBrightness = dark ? Brightness.light : Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
